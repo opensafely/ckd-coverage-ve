@@ -1,0 +1,91 @@
+-- Data Summary ------------------------
+                           Values
+Name                       data  
+Number of rows             9730  
+Number of columns          66    
+_______________________          
+Column type frequency:           
+  Date                     23    
+  character                5     
+  factor                   7     
+  numeric                  31    
+________________________         
+Group variables            None  
+
+-- Variable type: Date ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   skim_variable                         n_missing complete_rate min        max        median     n_unique
+ 1 covid_vacc_date_1                           806        0.917  2020-12-09 2021-12-31 2021-04-18      388
+ 2 covid_vacc_date_2                          3247        0.666  2020-12-30 2021-12-31 2021-08-19      367
+ 3 covid_vacc_date_3                          5443        0.441  2021-09-25 2021-12-31 2021-11-15       98
+ 4 covid_vacc_date_4                          8944        0.0808 2021-09-25 2021-12-31 2021-11-19       98
+ 5 pfizer_date_1                               477        0.951  2020-12-09 2021-12-31 2021-06-21      388
+ 6 pfizer_date_2                              1951        0.799  2020-12-30 2021-12-31 2021-06-30      367
+ 7 pfizer_date_3                              4871        0.499  2021-09-25 2021-12-31 2021-11-12       98
+ 8 pfizer_date_4                              8758        0.0999 2021-09-25 2021-12-31 2021-11-11       98
+ 9 astrazeneca_date_1                         4714        0.516  2020-12-01 2021-12-31 2021-06-22      396
+10 astrazeneca_date_2                         1963        0.798  2020-01-05 2021-12-31 2020-12-27      727
+11 astrazeneca_date_3                         4854        0.501  2021-09-25 2021-12-31 2021-11-12       98
+12 astrazeneca_date_4                         8768        0.0989 2021-09-25 2021-12-31 2021-11-15       98
+13 moderna_date_1                             4027        0.586  2020-12-01 2021-12-31 2021-06-18      396
+14 moderna_date_2                             1949        0.800  2020-04-02 2021-12-31 2021-02-14      639
+15 moderna_date_3                             4819        0.505  2021-09-25 2021-12-31 2021-11-13       98
+16 moderna_date_4                             8756        0.100  2021-09-25 2021-12-31 2021-11-13       98
+17 chronic_kidney_disease_diagnostic           701        0.928  1970-01-02 2021-12-31 1996-02-15     7256
+18 chronic_kidney_disease_all_stages          7229        0.257  1970-01-08 2021-12-25 1992-04-17     2351
+19 chronic_kidney_disease_all_stages_3_5      7129        0.267  1970-01-22 2021-12-17 1999-05-29     2426
+20 prior_positive_test_date                   9629        0.0104 2021-03-01 2021-12-31 2021-11-09       75
+21 prior_primary_care_covid_case_date         9627        0.0106 2020-10-14 2021-12-31 2021-11-14       79
+22 prior_covidadmitted_date                   9629        0.0104 2020-11-30 2021-12-30 2021-11-22       68
+23 prior_covid_date                           9427        0.0311 2020-10-14 2021-12-31 2021-11-14      146
+
+-- Variable type: character ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  skim_variable    n_missing complete_rate   min   max empty n_unique whitespace
+1 bmi                      0         1         5     9     0        2          0
+2 smoking_status        7727         0.206     3     3     0        2          0
+3 ethnicity_6           2473         0.746     1     1     0        5          0
+4 ethnicity_6_sus       1979         0.797     1     1     0        5          0
+5 ethnicity_filled       504         0.948     1     1     0        5          0
+
+-- Variable type: factor -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  skim_variable   n_missing complete_rate ordered n_unique top_counts                                
+1 sex                     0       1       FALSE          2 Fem: 5022, Mal: 4708                      
+2 imd                    97       0.990   FALSE          5 4: 1967, 1 m: 1961, 3: 1943, 5 l: 1889    
+3 region                  0       1       FALSE          9 Lon: 1947, Sou: 1027, Nor: 1001, Nor: 994 
+4 ageband2                0       1       FALSE          5 16-: 9166, 80-: 273, 85-: 176, 90-: 86    
+5 ethnicity               0       1       FALSE          6 Bla: 1860, Oth: 1857, Whi: 1848, Asi: 1846
+6 bpcat                   0       1       FALSE          1 Unk: 9730, Nor: 0                         
+7 prior_covid_cat      9662       0.00699 FALSE          2 Bet: 43, Pri: 25                          
+
+-- Variable type: numeric ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   skim_variable                       n_missing complete_rate        mean         sd    p0      p25      p50      p75    p100
+ 1 immunosuppression_diagnosis_date            0        1           0.199       0.400   0        0        0        0        1 
+ 2 immunosuppression_medication_date           0        1           0.200       0.400   0        0        0        0        1 
+ 3 sev_mental_ill                              0        1           0.2         0.400   0        0        0        0        1 
+ 4 end_stage_renal                             0        1           0.201       0.400   0        0        0        0        1 
+ 5 care_home                                   0        1           0.201       0.401   0        0        0        0        1 
+ 6 shielded                                    0        1           0.255       0.436   0        0        0        1        1 
+ 7 hscworker                                   0        1           0.206       0.404   0        0        0        0        1 
+ 8 age                                         0        1          48.8        19.0    18       33       48       63      107 
+ 9 asthma                                      0        1           0.198       0.399   0        0        0        0        1 
+10 asplenia                                    0        1           0.200       0.400   0        0        0        0        1 
+11 bp_sys                                   3896        0.600      79.9        10.1    45.5     72.9     79.8     86.9    113.
+12 bp_dias                                  3801        0.609     120.         10.0    80.7    113.     120.     127.     159.
+13 cancer                                      0        1           0.202       0.402   0        0        0        0        1 
+14 haem_cancer                                 0        1           0.208       0.406   0        0        0        0        1 
+15 chd                                         0        1           0.193       0.394   0        0        0        0        1 
+16 chronic_neuro_dis_inc_sig_learn_dis         0        1           0.198       0.398   0        0        0        0        1 
+17 chronic_resp_dis                            0        1           0.200       0.400   0        0        0        0        1 
+18 cld                                         0        1           0.202       0.402   0        0        0        0        1 
+19 diabetes                                    0        1           0.198       0.398   0        0        0        0        1 
+20 learning_disability                         0        1           0.204       0.403   0        0        0        0        1 
+21 organ_transplant                            0        1           0.198       0.399   0        0        0        0        1 
+22 tests_conducted_any                      9252        0.0491      3.51        1.05    1        3        3        4        7 
+23 tests_conducted_positive                 9626        0.0107      1.5         0.502   1        1        1.5      2        2 
+24 patient_id                                  0        1      503600.     289956.    111   255880.  505319   754238.  999987 
+25 care_home_65plus                            0        1           0.0483      0.214   0        0        0        0        1 
+26 ageband                                  1958        0.799       1.22        0.535   1        1        1        1        3 
+27 chronic_kidney_disease                      0        1           1           0       1        1        1        1        1 
+28 immunosuppression                           0        1           0.357       0.479   0        0        0        1        1 
+29 tbv1_2                                   3875        0.602     124.         87.6     1       51      107      185      386 
+30 tbv2_3                                   7026        0.278     119.         81.8     1       51      105      175      353 
+31 tbv3_4                                   9507        0.0229     32.9        22.9     1       14       28       51       95 

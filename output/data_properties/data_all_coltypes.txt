@@ -1,0 +1,198 @@
+$covid_vacc_date_1
+[1] "Date"
+
+$covid_vacc_date_2
+[1] "Date"
+
+$covid_vacc_date_3
+[1] "Date"
+
+$covid_vacc_date_4
+[1] "Date"
+
+$pfizer_date_1
+[1] "Date"
+
+$pfizer_date_2
+[1] "Date"
+
+$pfizer_date_3
+[1] "Date"
+
+$pfizer_date_4
+[1] "Date"
+
+$astrazeneca_date_1
+[1] "Date"
+
+$astrazeneca_date_2
+[1] "Date"
+
+$astrazeneca_date_3
+[1] "Date"
+
+$astrazeneca_date_4
+[1] "Date"
+
+$moderna_date_1
+[1] "Date"
+
+$moderna_date_2
+[1] "Date"
+
+$moderna_date_3
+[1] "Date"
+
+$moderna_date_4
+[1] "Date"
+
+$chronic_kidney_disease_diagnostic
+[1] "Date"
+
+$chronic_kidney_disease_all_stages
+[1] "Date"
+
+$chronic_kidney_disease_all_stages_3_5
+[1] "Date"
+
+$immunosuppression_diagnosis_date
+[1] "integer"
+
+$immunosuppression_medication_date
+[1] "integer"
+
+$sev_mental_ill
+[1] "integer"
+
+$prior_positive_test_date
+[1] "Date"
+
+$prior_primary_care_covid_case_date
+[1] "Date"
+
+$prior_covidadmitted_date
+[1] "Date"
+
+$end_stage_renal
+[1] "integer"
+
+$care_home
+[1] "integer"
+
+$shielded
+[1] "numeric"
+
+$hscworker
+[1] "integer"
+
+$age
+[1] "integer"
+
+$sex
+[1] "factor"
+
+$bmi
+[1] "character"
+
+$smoking_status
+[1] "character"
+
+$ethnicity_6
+[1] "character"
+
+$ethnicity_6_sus
+[1] "character"
+
+$imd
+[1] "factor"
+
+$region
+[1] "factor"
+
+$asthma
+[1] "integer"
+
+$asplenia
+[1] "integer"
+
+$bp_sys
+[1] "numeric"
+
+$bp_dias
+[1] "numeric"
+
+$cancer
+[1] "integer"
+
+$haem_cancer
+[1] "integer"
+
+$chd
+[1] "integer"
+
+$chronic_neuro_dis_inc_sig_learn_dis
+[1] "integer"
+
+$chronic_resp_dis
+[1] "integer"
+
+$cld
+[1] "integer"
+
+$diabetes
+[1] "integer"
+
+$learning_disability
+[1] "integer"
+
+$organ_transplant
+[1] "integer"
+
+$tests_conducted_any
+[1] "numeric"
+
+$tests_conducted_positive
+[1] "numeric"
+
+$patient_id
+[1] "integer"
+
+$care_home_65plus
+[1] "numeric"
+
+$ageband
+[1] "integer"
+
+$ageband2
+[1] "factor"
+
+$ethnicity_filled
+[1] "character"
+
+$ethnicity
+[1] "factor"
+
+$bpcat
+[1] "factor"
+
+$chronic_kidney_disease
+[1] "integer"
+
+$immunosuppression
+[1] "integer"
+
+$tbv1_2
+[1] "numeric"
+
+$tbv2_3
+[1] "numeric"
+
+$tbv3_4
+[1] "numeric"
+
+$prior_covid_date
+[1] "Date"
+
+$prior_covid_cat
+[1] "factor"
+
