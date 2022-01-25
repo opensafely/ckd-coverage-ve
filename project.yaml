@@ -39,7 +39,7 @@ actions:
     needs: [data_process]
     outputs:
       moderately_sensitive:
-        table: output/tables/table1*.html
+        table: output/tables/table1_redacted.html
 
   # Coverage summaries ----
   vaccine_coverage:

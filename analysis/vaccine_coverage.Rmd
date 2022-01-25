@@ -106,7 +106,10 @@ data_processed = data_processed %>%
     dose_1_product = ifelse(!is.na(pfizer_date_1) & is.na(astrazeneca_date_1) & is.na(moderna_date_1),1,NA),
     dose_1_product = ifelse(is.na(pfizer_date_1) & !is.na(astrazeneca_date_1) & is.na(moderna_date_1),2,NA),
     dose_1_product = ifelse(is.na(pfizer_date_1) & is.na(astrazeneca_date_1) & !is.na(moderna_date_1),3,NA),
-    dose_1_product = ifelse((is.na(pfizer_date_1) + is.na(astrazeneca_date_1) + is.na(moderna_date_1))>1,4,NA),
+    dose_1_product = ifelse(
+      ((is.na(pfizer_date_1) + is.na(astrazeneca_date_1) + is.na(moderna_date_1))>1) |
+      (!is.na(covid_vacc_date_1) & is.na(pfizer_date_1) & is.na(astrazeneca_date_1) & is.na(moderna_date_1)),
+      4,NA),
     dose_1_product = fct_case_when(
       dose_1_product == 1 ~ "pfi",
       dose_1_product == 2 ~ "az",
@@ -118,7 +121,10 @@ data_processed = data_processed %>%
     dose_2_product = ifelse(!is.na(pfizer_date_2) & is.na(astrazeneca_date_2) & is.na(moderna_date_2),1,NA), 
     dose_2_product = ifelse(is.na(pfizer_date_2) & !is.na(astrazeneca_date_2) & is.na(moderna_date_2),2,NA),
     dose_2_product = ifelse(is.na(pfizer_date_2) & is.na(astrazeneca_date_2) & !is.na(moderna_date_2),3,NA),
-    dose_2_product = ifelse((is.na(pfizer_date_2) + is.na(astrazeneca_date_2) + is.na(moderna_date_2))>1,4,NA),
+    dose_2_product = ifelse(
+      ((is.na(pfizer_date_2) + is.na(astrazeneca_date_2) + is.na(moderna_date_2))>1) |
+      (!is.na(covid_vacc_date_2) & is.na(pfizer_date_2) & is.na(astrazeneca_date_2) & is.na(moderna_date_2)),
+      4,NA),
     dose_2_product = fct_case_when(
       dose_2_product == 1 ~ "pfi",
       dose_2_product == 2 ~ "az",
@@ -130,7 +136,10 @@ data_processed = data_processed %>%
     dose_3_product = ifelse(!is.na(pfizer_date_3) & is.na(astrazeneca_date_3) & is.na(moderna_date_3),1,NA),
     dose_3_product = ifelse(is.na(pfizer_date_3) & !is.na(astrazeneca_date_3) & is.na(moderna_date_3),2,NA),
     dose_3_product = ifelse(is.na(pfizer_date_3) & is.na(astrazeneca_date_3) & !is.na(moderna_date_3),3,NA),
-    dose_3_product = ifelse((is.na(pfizer_date_3) + is.na(astrazeneca_date_3) + is.na(moderna_date_3))>1,4,NA),
+    dose_3_product = ifelse(
+      ((is.na(pfizer_date_3) + is.na(astrazeneca_date_3) + is.na(moderna_date_3))>1) |
+      (!is.na(covid_vacc_date_3) & is.na(pfizer_date_3) & is.na(astrazeneca_date_3) & is.na(moderna_date_3)),
+      4,NA),
     dose_3_product = fct_case_when(
       dose_3_product == 1 ~ "pfi",
       dose_3_product == 2 ~ "az",
@@ -142,7 +151,10 @@ data_processed = data_processed %>%
     dose_4_product = ifelse(!is.na(pfizer_date_4) & is.na(astrazeneca_date_4) & is.na(moderna_date_4),1,NA),
     dose_4_product = ifelse(is.na(pfizer_date_4) & !is.na(astrazeneca_date_4) & is.na(moderna_date_4),2,NA),
     dose_4_product = ifelse(is.na(pfizer_date_4) & is.na(astrazeneca_date_4) & !is.na(moderna_date_4),3,NA),
-    dose_4_product = ifelse((is.na(pfizer_date_4) + is.na(astrazeneca_date_4) + is.na(moderna_date_4))>1,4,NA),
+    dose_4_product = ifelse(
+      ((is.na(pfizer_date_4) + is.na(astrazeneca_date_4) + is.na(moderna_date_4))>1) |
+      (!is.na(covid_vacc_date_4) & is.na(pfizer_date_4) & is.na(astrazeneca_date_4) & is.na(moderna_date_4)),
+      4,NA),
     dose_4_product = fct_case_when(
       dose_4_product == 1 ~ "pfi",
       dose_4_product == 2 ~ "az",

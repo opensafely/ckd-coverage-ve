@@ -116,6 +116,5 @@ table1_redacted <- table1_redacted %>%
   mutate(Count = plyr::round_any(Count, 5))
 
 # Save as html ----
-gt::gtsave(gt(table1), here::here("output","tables", "table1.html"))
 gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_redacted.html"))
 
