@@ -5,7 +5,7 @@
 version: '3.0'
 
 expectations:
-  population_size: 100000
+  population_size: 30000
 
 actions:
 
@@ -25,18 +25,29 @@ actions:
         data: output/data/data_processed.rds
         csv: output/data/data_processed.csv
         
- # Data properties ----      
-  data_properties:
-    run: r:latest analysis/data_properties.R output/data/data_processed.rds output/data_properties
+# Select cohort ----
+  data_selection:
+    run: r:latest analysis/data_selection.R
     needs: [data_process]
     outputs:
+      highly_sensitive:
+        data: output/data/data_cohort.rds
+        csv: output/data/data_cohort.csv
       moderately_sensitive:
-        cohort: output/data_properties/data_processed*.txt
+        csv: output/data/flowchart.csv
+
+ # Data properties ----      
+  data_properties:
+    run: r:latest analysis/data_properties.R output/data/data_cohort.rds output/data_properties
+    needs: [data_selection]
+    outputs:
+      moderately_sensitive:
+        cohort: output/data_properties/data_cohort*.txt
         
   # Table 1 ----
   table_1:
     run: r:latest analysis/table_1.R
-    needs: [data_process]
+    needs: [data_selection]
     outputs:
       moderately_sensitive:
         table: output/tables/table1_redacted.html
@@ -44,9 +55,9 @@ actions:
   # Coverage summaries ----
   vaccine_coverage:
     run: r:latest -e 'rmarkdown::render("analysis/vaccine_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [generate_study_population, data_process]
+    needs: [data_selection]
     outputs:
       moderately_sensitive:
         html: output/markdown/vaccine_coverage.html
-        csv: output/data/coverage_over_time_redacted.csv
+        csv: output/tables/coverage_over_time_rounded.csv
 

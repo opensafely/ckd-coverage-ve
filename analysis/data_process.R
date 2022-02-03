@@ -4,6 +4,7 @@
 # - imports data extracted by the cohort extractor
 # - combines ethnicity columns
 # - standardises some variables (eg convert to factor) and derives some new ones
+# - applies additional dummy data processing steps via dummy_data.R script if being run locally (skipped if being run on OpenSAFELY server)
 # - saves processed dataset
 
 ######################################
@@ -11,23 +12,16 @@
 
 # Preliminaries ----
 
-## Import libraries
+## packages
 library('tidyverse')
 library('lubridate')
+library('here')
 
-## Custom functions
-fct_case_when <- function(...) {
-  # uses dplyr::case_when but converts the output to a factor,
-  # with factors ordered as they appear in the case_when's  ... argument
-  args <- as.list(match.call())
-  levels <- sapply(args[-1], function(f) f[[3]])  # extract RHS of formula
-  levels <- levels[!is.na(levels)]
-  factor(dplyr::case_when(...), levels=levels)
-}
+## Import custom user functions and packages
+source(here::here("analysis", "functions.R"))
 
 ## Output processed data to rds
 dir.create(here::here("output", "data"), showWarnings = FALSE, recursive=TRUE)
-
 
 # Process data ----
 
@@ -39,7 +33,7 @@ read_csv(here::here("output", "data", "input.csv"),
   print()
 
 ## Read in data (don't rely on defaults)
-data_extract0 <- read_csv(
+data_extract <- read_csv(
   here::here("output", "data", "input.csv"),
   col_types = cols_only(
     
@@ -47,28 +41,30 @@ data_extract0 <- read_csv(
     patient_id = col_integer(),
     
     # Vaccination dates
-    covid_vacc_date_1 = col_date(format="%Y-%m-%d"),
-    covid_vacc_date_2 = col_date(format="%Y-%m-%d"),
-    covid_vacc_date_3 = col_date(format="%Y-%m-%d"),
-    covid_vacc_date_4 = col_date(format="%Y-%m-%d"),
+    covid_vax_date_1 = col_date(format="%Y-%m-%d"),
+    covid_vax_date_2 = col_date(format="%Y-%m-%d"),
+    covid_vax_date_3 = col_date(format="%Y-%m-%d"),
+    covid_vax_date_4 = col_date(format="%Y-%m-%d"),
     pfizer_date_1 = col_date(format="%Y-%m-%d"),
     pfizer_date_2 = col_date(format="%Y-%m-%d"),
     pfizer_date_3 = col_date(format="%Y-%m-%d"),
     pfizer_date_4 = col_date(format="%Y-%m-%d"),
-    astrazeneca_date_1 = col_date(format="%Y-%m-%d"),
-    astrazeneca_date_2 = col_date(format="%Y-%m-%d"),
-    astrazeneca_date_3 = col_date(format="%Y-%m-%d"),
-    astrazeneca_date_4 = col_date(format="%Y-%m-%d"),
+    az_date_1 = col_date(format="%Y-%m-%d"),
+    az_date_2 = col_date(format="%Y-%m-%d"),
+    az_date_3 = col_date(format="%Y-%m-%d"),
+    az_date_4 = col_date(format="%Y-%m-%d"),
     moderna_date_1 = col_date(format="%Y-%m-%d"),
     moderna_date_2 = col_date(format="%Y-%m-%d"),
     moderna_date_3 = col_date(format="%Y-%m-%d"),
     moderna_date_4 = col_date(format="%Y-%m-%d"),
     
     # CKD groups
-    chronic_kidney_disease_diagnostic = col_date(format="%Y-%m-%d"),
+    #chronic_kidney_disease_diagnostic = col_date(format="%Y-%m-%d"),
+    creatinine_date = col_date(format="%Y-%m-%d"),
     chronic_kidney_disease_all_stages = col_date(format="%Y-%m-%d"),
     chronic_kidney_disease_all_stages_3_5 = col_date(format="%Y-%m-%d"),
-    end_stage_renal = col_logical(), 
+    creatinine = col_double(), 
+    dialysis = col_logical(), 
     
     # Priority groups
     care_home = col_logical(),
@@ -86,7 +82,9 @@ data_extract0 <- read_csv(
     region = col_character(),
     asthma = col_logical(),
     asplenia = col_logical(),
+    bp_sys_date_measured = col_date(format="%Y-%m-%d"),
     bp_sys = col_double(),
+    bp_dias_date_measured = col_date(format="%Y-%m-%d"),
     bp_dias = col_double(),
     cancer = col_logical(),
     haem_cancer = col_logical(),
@@ -107,13 +105,12 @@ data_extract0 <- read_csv(
     prior_covidadmitted_date = col_date(format="%Y-%m-%d"),
     tests_conducted_any = col_double(),
     tests_conducted_positive = col_double()
-    
   ),
   na = character() # more stable to convert to missing later
 )
 
 ## Parse NAs
-data_extract <- data_extract0 %>%
+data_extract <- data_extract %>%
   mutate(across(
     .cols = where(is.character),
     .fns = ~na_if(.x, "")
@@ -154,8 +151,6 @@ data_processed <- data_extract %>%
     sex = fct_case_when(
       sex == "F" ~ "Female",
       sex == "M" ~ "Male",
-      #sex == "I" ~ "Inter-sex",
-      #sex == "U" ~ "Unknown",
       TRUE ~ NA_character_
     ),
     
@@ -203,7 +198,6 @@ data_processed <- data_extract %>%
       region == "South West" ~ "South West",
       region == "West Midlands" ~ "West Midlands",
       region == "Yorkshire and The Humber" ~ "Yorkshire and the Humber",
-      #TRUE ~ "Unknown",
       TRUE ~ NA_character_),
     
     ## Blood pressure
@@ -217,17 +211,11 @@ data_processed <- data_extract %>%
       bpcat == 2 ~ "Elevated",
       bpcat == 3 ~ "High",
       bpcat == 4 ~ "Unknown",
-      #TRUE ~ "Unknown",
       TRUE ~ NA_character_
     ),
     
     # CKD
-    chronic_kidney_disease = case_when(
-      !is.na(chronic_kidney_disease_diagnostic) ~ TRUE,
-      is.na(chronic_kidney_disease_all_stages) ~ FALSE,
-      !is.na(chronic_kidney_disease_all_stages_3_5) & (chronic_kidney_disease_all_stages_3_5 >= chronic_kidney_disease_all_stages) ~ TRUE,
-      TRUE ~ FALSE
-    ),
+    ckd_inclusion = ifelse(creatinine < 60 | dialysis==TRUE, 1, 0),
     
     # Immunosuppression
     immunosuppression_diagnosis_date = !is.na(immunosuppression_diagnosis_date),
@@ -237,29 +225,11 @@ data_processed <- data_extract %>%
     # Mental illness
     sev_mental_ill = !is.na(sev_mental_ill),
     
-    # Time between vaccinations
-    tbv1_2 = as.numeric(covid_vacc_date_2 - covid_vacc_date_1),
-    tbv2_3 = as.numeric(covid_vacc_date_3 - covid_vacc_date_2),
-    tbv3_4 = as.numeric(covid_vacc_date_4 - covid_vacc_date_3),
-    
     # Prior covid
     prior_covid_date = pmin(prior_positive_test_date, 
                            prior_primary_care_covid_case_date, 
                            prior_covidadmitted_date,
-                           na.rm=TRUE), 
-    
-    prior_covid_cat = ifelse(prior_covid_date < covid_vacc_date_3 & prior_covid_date >= covid_vacc_date_2, 1, NA),
-    prior_covid_cat = ifelse(prior_covid_date < covid_vacc_date_2 & prior_covid_date >= covid_vacc_date_1, 2, NA),
-    prior_covid_cat = ifelse(prior_covid_date < covid_vacc_date_1, 3, prior_covid_cat),
-    
-    prior_covid_cat = fct_case_when(
-      prior_covid_cat == 1 ~ "Between second and third dose",
-      prior_covid_cat == 2 ~ "Between first and second dose",
-      prior_covid_cat == 3 ~ "Prior to first dose",
-      #TRUE ~ "Unknown",
-      TRUE ~ NA_character_
-    )
-    
+                           na.rm=TRUE)
   ) %>%
   droplevels() %>%
   mutate(
@@ -268,23 +238,142 @@ data_processed <- data_extract %>%
       where(is.logical),
       ~.x*1L
     )
+  ) 
+
+# apply dummy data script if not running in the server
+if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")){
+  source(here::here("analysis", "dummy_data.R"))
+  # add binary flag to signal whether dummy data processing steps have been applied
+  data_processed$mock_data_flag=1
+} else {
+  data_processed$mock_data_flag=0
+}
+
+# linearise the vaccination dates of each individual, then determine the product and index for each dose
+data_vax <- local({
+  
+  data_vax_pfizer <- data_processed %>%
+    select(patient_id, matches("pfizer\\_date\\_\\d+")) %>%
+    pivot_longer(
+      cols = -patient_id,
+      values_to = "date",
+      values_drop_na = TRUE
+    ) %>%
+    arrange(patient_id, date) %>%
+    mutate(type = "pfizer") %>%
+    select(-name)
+
+  data_vax_az <- data_processed %>%
+    select(patient_id, matches("az\\_date\\_\\d+")) %>%
+    pivot_longer(
+      cols = -patient_id,
+      values_to = "date",
+      values_drop_na = TRUE
+    ) %>%
+    arrange(patient_id, date) %>%
+    mutate(type = "az") %>%
+    select(-name)
+  
+  data_vax_moderna <- data_processed %>%
+    select(patient_id, matches("moderna\\_date\\_\\d+")) %>%
+    pivot_longer(
+      cols = -patient_id,
+      values_to = "date",
+      values_drop_na = TRUE
+    ) %>%
+    arrange(patient_id, date) %>%
+    mutate(type = "moderna") %>%
+    select(-name)
+  
+  data_vax <- rbind(data_vax_pfizer, data_vax_az, data_vax_moderna) %>%
+    arrange(patient_id, date) %>%
+    group_by(patient_id) %>%
+    mutate(
+      vax_index=row_number()
+    ) %>%
+    ungroup()
+  
+  data_vax
+  
+})
+
+# pivot to wide-form table that lists dates and products for up to 4 sequential doses
+data_vax_wide = data_vax %>%
+  pivot_wider(
+    id_cols= patient_id,
+    names_from = c("vax_index"),
+    values_from = c("date", "type"),
+    names_glue = "covid_vax_{vax_index}_{.value}"
+  )
+
+# merge with full data-set
+data_processed_updated <- data_processed %>%
+  left_join(data_vax_wide, by ="patient_id") %>%
+  mutate(
+    vax1_type = covid_vax_1_type,
+    vax2_type = covid_vax_2_type,
+    vax3_type = covid_vax_3_type,
+    vax4_type = covid_vax_4_type,
+    
+    vax12_type = paste0(vax1_type, "-", vax2_type),
+    vax123_type = paste0(vax12_type, "-", vax3_type),
+
+    # add new descriptor variables with formal product names
+    vax1_type_descr = fct_case_when(
+      vax1_type == "pfizer" ~ "BNT162b2",
+      vax1_type == "az" ~ "ChAdOx1",
+      vax1_type == "moderna" ~ "Moderna",
+      TRUE ~ NA_character_
+    ),
+    vax2_type_descr = fct_case_when(
+      vax2_type == "pfizer" ~ "BNT162b2",
+      vax2_type == "az" ~ "ChAdOx1",
+      vax2_type == "moderna" ~ "Moderna",
+      TRUE ~ NA_character_
+    ),
+    vax3_type_descr = fct_case_when(
+      vax3_type == "pfizer" ~ "BNT162b2",
+      vax3_type == "az" ~ "ChAdOx1",
+      vax3_type == "moderna" ~ "Moderna",
+      TRUE ~ NA_character_
+    ),
+    vax4_type_descr = fct_case_when(
+      vax4_type == "pfizer" ~ "BNT162b2",
+      vax4_type == "az" ~ "ChAdOx1",
+      vax4_type == "moderna" ~ "Moderna",
+      TRUE ~ NA_character_
+    ),
+    
+    vax1_date = covid_vax_1_date,
+    vax2_date = covid_vax_2_date,
+    vax3_date = covid_vax_3_date,
+    vax4_date = covid_vax_4_date, 
+    
+    # Calculate time between vaccinations
+    tbv1_2 = as.numeric(vax2_date - vax1_date),
+    tbv2_3 = as.numeric(vax3_date - vax2_date),
+    tbv3_4 = as.numeric(vax4_date - vax3_date), 
+    
+    prior_covid_cat = ifelse(prior_covid_date < vax3_date & prior_covid_date >= vax2_date, 1, NA),
+    prior_covid_cat = ifelse(prior_covid_date < vax2_date & prior_covid_date >= vax1_date, 2, NA),
+    prior_covid_cat = ifelse(prior_covid_date < vax1_date, 3, prior_covid_cat),
+    
+    prior_covid_cat = fct_case_when(
+      prior_covid_cat == 1 ~ "Between second and third dose",
+      prior_covid_cat == 2 ~ "Between first and second dose",
+      prior_covid_cat == 3 ~ "Prior to first dose",
+      TRUE ~ NA_character_
+    )
   ) %>%
-  filter(tbv1_2>0 | is.na(tbv1_2), 
-         tbv2_3>0 | is.na(tbv2_3),
-         tbv3_4>0 | is.na(tbv3_4),
-         age >= 18,
-         age < 120,
-         !is.na(sex),
-         chronic_kidney_disease == 1)
+  # Remove unneccessary variables including overall and product-specific dates (now replaced by vax{N}_date)
+  select(
+    -starts_with(c("covid_vax_", "pfizer_date_", "az_date_", "moderna_date_", "immunosuppression_"))
+  )
+
+# remove type combinations if latter vaccine not administered
+data_processed_updated$vax12_type[is.na(data_processed_updated$vax2_type)] = NA_character_
+data_processed_updated$vax123_type[is.na(data_processed_updated$vax3_type)] = NA_character_
 
 # Save dataset as .rds files ----
-write_rds(data_processed, here::here("output", "data", "data_processed.rds"), compress = "gz")
-write_csv(data_processed, here::here("output", "data", "data_processed.csv"))
-
-
-
-
-
-
-
-
+write_rds(data_processed_updated, here::here("output", "data", "data_processed.rds"), compress = "gz")
+write_csv(data_processed_updated, here::here("output", "data", "data_processed.csv"))

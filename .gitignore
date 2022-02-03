@@ -1,0 +1,4 @@
+analysis/archive/
+output/*
+metadata/*
+analysis/*.html

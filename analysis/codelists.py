@@ -124,12 +124,22 @@ crs_codes = codelist_from_csv(
     column = "code",
 )
 
-## Chronic kidney disease diagnostic codes
-chronic_kidney_disease_diagnostic_codes = codelist_from_csv(
-    "codelists/primis-covid19-vacc-uptake-ckd_cov.csv",
-    system = "snomed",
-    column = "code",
+## Creatinine level
+creatinine_codes = codelist(["XE2q5"], system="ctv3")
+
+## Chronic kidney disease - history of dialysis or end-stage renal disease
+dialysis_codes = codelist_from_csv(
+  "codelists/opensafely-chronic-kidney-disease.csv",
+  system = "ctv3",
+  column = "CTV3ID"
 )
+
+## Chronic kidney disease diagnostic codes
+#chronic_kidney_disease_diagnostic_codes = codelist_from_csv(
+#    "codelists/primis-covid19-vacc-uptake-ckd_cov.csv",
+#    system = "snomed",
+#    column = "code",
+#)
 
 ## Chronic kidney disease codes - all stages
 chronic_kidney_disease_all_stages_codes = codelist_from_csv(
@@ -143,13 +153,6 @@ chronic_kidney_disease_all_stages_3_5_codes = codelist_from_csv(
     "codelists/primis-covid19-vacc-uptake-ckd35.csv",
     system="snomed",
     column="code",
-)
-
-## Chronic kidney disease - end-stage renal disease
-ckd_codes = codelist_from_csv(
-  "codelists/opensafely-chronic-kidney-disease.csv", 
-  system = "ctv3", 
-  column = "CTV3ID"
 )
 
 ## Chronic Liver disease codes
@@ -226,5 +229,10 @@ covid_primary_care_sequalae = codelist_from_csv(
     column = "CTV3ID",
 )
 
-
+# Patients in long-stay nursing and residential care
+carehome = codelist_from_csv(
+    "codelists/primis-covid19-vacc-uptake-longres.csv",
+    system="snomed",
+    column="code",
+)
 

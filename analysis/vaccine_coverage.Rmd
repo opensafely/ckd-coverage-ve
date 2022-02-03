@@ -5,10 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-```
 
-### Coverage over time
-```{r, message=FALSE}
 ## Import libraries
 library('tidyverse')
 library('here')
@@ -16,51 +13,71 @@ library('glue')
 library('gt')
 library('gtsummary')
 library('reshape2')
+library('plyr')
+library('kableExtra')
 
 ## Import custom user functions
-#source(here("analysis", "functions.R"))
+source(here::here("analysis", "functions.R"))
 
 ## Create output directory
 fs::dir_create(here::here("output", "tables"))
 
 ## Import data
-data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))
+data_cohort <- read_rds(here::here("output", "data", "data_cohort.rds"))
 
+if (data_cohort$mock_data_flag[1]==1) { flag = "present" } else { flag = "absent" }
+```
+
+### Cohort summary
+* Total N of `r formatC(nrow(data_cohort), big.mark=",")` meeting inclusion criteria (see *output/data/flowchart.csv*)   
+* See *output/tables/table1_redacted.html* for summary of key covariates    
+* Dummy data flag: `r flag` (should be _absent_ if data processing has been performed on OpenSAFELY server)
+
+### Coverage over time
+```{r, message=FALSE}
 # Create vector of dates between first and last recorded vaccines
-campaign_start <- min(data_processed$covid_vacc_date_1, na.rm=T)
-end_date <- max(c(data_processed$covid_vacc_date_1, 
-                 data_processed$covid_vacc_date_2, 
-                 data_processed$covid_vacc_date_3, 
-                 data_processed$covid_vacc_date_4), na.rm=T)
+campaign_start <- min(data_cohort$vax1_date, na.rm=T)
+end_date <- max(c(data_cohort$vax1_date, data_cohort$vax2_date, data_cohort$vax3_date, data_cohort$vax4_date), na.rm=T)
+
+# create vector containing every other week
 date_vec <- seq(campaign_start, end_date, by="weeks")
+date_vec <- date_vec[seq(1, length(date_vec), 2)]
 
 # cumulative table
 t_all <- data.frame(date = date_vec)
 for (i in 1:nrow(t_all)) {
   date_ref = t_all$date[i]
-  t_all$dose1_total[i] = sum(data_processed$covid_vacc_date_1<date_ref, na.rm=T) 
-  t_all$dose2_total[i] = sum(data_processed$covid_vacc_date_2<date_ref, na.rm=T) 
-  t_all$dose3_total[i] = sum(data_processed$covid_vacc_date_3<date_ref, na.rm=T) 
-  t_all$dose4_total[i] = sum(data_processed$covid_vacc_date_4<date_ref, na.rm=T)
-  t_all$dose1_total_pfi[i] = sum(data_processed$pfizer_date_1<date_ref, na.rm=T) 
-  t_all$dose2_total_pfi[i] = sum(data_processed$pfizer_date_2<date_ref, na.rm=T) 
-  t_all$dose3_total_pfi[i] = sum(data_processed$pfizer_date_3<date_ref, na.rm=T) 
-  t_all$dose4_total_pfi[i] = sum(data_processed$pfizer_date_4<date_ref, na.rm=T)
-  t_all$dose1_total_az[i] = sum(data_processed$astrazeneca_date_1<date_ref, na.rm=T) 
-  t_all$dose2_total_az[i] = sum(data_processed$astrazeneca_date_2<date_ref, na.rm=T) 
-  t_all$dose3_total_az[i] = sum(data_processed$astrazeneca_date_3<date_ref, na.rm=T) 
-  t_all$dose4_total_az[i] = sum(data_processed$astrazeneca_date_4<date_ref, na.rm=T)
-  t_all$dose1_total_mod[i] = sum(data_processed$moderna_date_1<date_ref, na.rm=T) 
-  t_all$dose2_total_mod[i] = sum(data_processed$moderna_date_2<date_ref, na.rm=T) 
-  t_all$dose3_total_mod[i] = sum(data_processed$moderna_date_3<date_ref, na.rm=T) 
-  t_all$dose4_total_mod[i] = sum(data_processed$moderna_date_4<date_ref, na.rm=T)
+  t_all$dose1_total[i] = round_any(sum(data_cohort$vax1_date<date_ref, na.rm=T), 5)
+  t_all$dose2_total[i] = round_any(sum(data_cohort$vax2_date<date_ref, na.rm=T), 5) 
+  t_all$dose3_total[i] = round_any(sum(data_cohort$vax3_date<date_ref, na.rm=T), 5)
+  t_all$dose4_total[i] = round_any(sum(data_cohort$vax4_date<date_ref, na.rm=T), 5)
+
+  t_all$dose1_pfizer[i] = round_any(sum(data_cohort$vax1_type=="pfizer" & data_cohort$vax1_date<date_ref, na.rm=T), 5)
+  t_all$dose2_pfizer[i] = round_any(sum(data_cohort$vax2_type=="pfizer" &data_cohort$vax2_date<date_ref, na.rm=T), 5) 
+  t_all$dose3_pfizer[i] = round_any(sum(data_cohort$vax2_type=="pfizer" &data_cohort$vax3_date<date_ref, na.rm=T), 5) 
+  t_all$dose4_pfizer[i] = round_any(sum(data_cohort$vax2_type=="pfizer" &data_cohort$vax4_date<date_ref, na.rm=T), 5)
+
+  t_all$dose1_az[i] = round_any(sum(data_cohort$vax1_type=="az" & data_cohort$vax1_date<date_ref, na.rm=T), 5) 
+  t_all$dose2_az[i] = round_any(sum(data_cohort$vax2_type=="az" &data_cohort$vax2_date<date_ref, na.rm=T), 5) 
+  t_all$dose3_az[i] = round_any(sum(data_cohort$vax3_type=="az" &data_cohort$vax3_date<date_ref, na.rm=T), 5) 
+  t_all$dose4_az[i] = round_any(sum(data_cohort$vax4_type=="az" &data_cohort$vax4_date<date_ref, na.rm=T), 5)
+
+  t_all$dose1_moderna[i] = round_any(sum(data_cohort$vax1_type=="moderna" & data_cohort$vax1_date<date_ref, na.rm=T), 5)
+  t_all$dose2_moderna[i] = round_any(sum(data_cohort$vax2_type=="moderna" &data_cohort$vax2_date<date_ref, na.rm=T), 5) 
+  t_all$dose3_moderna[i] = round_any(sum(data_cohort$vax3_type=="moderna" &data_cohort$vax3_date<date_ref, na.rm=T), 5) 
+  t_all$dose4_moderna[i] = round_any(sum(data_cohort$vax4_type=="moderna" &data_cohort$vax4_date<date_ref, na.rm=T), 5)
+  
+  t_all$az_az[i] = round_any(sum(data_cohort$vax2_date<date_ref & data_cohort$vax12_type=="az-az", na.rm=T), 5)
+  t_all$pfizer_pfizer[i] = round_any(sum(data_cohort$vax2_date<date_ref & data_cohort$vax12_type=="pfizer-pfizer", na.rm=T), 5)
+  t_all$moderna_moderna[i] = round_any(sum(data_cohort$vax2_date<date_ref & data_cohort$vax12_type=="moderna-moderna", na.rm=T), 5)
+  t_all$heterologous_dose2[i] = round_any(sum(data_cohort$vax2_date<date_ref & (data_cohort$vax1_type!=data_cohort$vax2_type), na.rm=T), 5)
 }
-t_all[,2:17][t_all[,2:17]<5] = NA
 
 # Save as html ----
-write_csv(t_all, here::here("output", "data", "coverage_over_time_redacted.csv"))
+write_csv(t_all, here::here("output", "tables", "coverage_over_time_rounded.csv"))
 ```
 
+### Cumulative dose distribution over time
 ```{r}
 palette = c("#3B9AB2","#78B7C5","#EBCC2A","#E1AF00","#B40F20")
 t_plot = rbind(
@@ -75,136 +92,80 @@ ggplot(t_plot, aes(x = date, y = total, colour = dose)) + geom_line() +
   theme(plot.title = element_text(size=14, hjust=0.5), axis.text = element_text(size=14), axis.title = element_text(size=14))
 ```
 
-
-
-
+### Primary series product distribution over time
+```{r}
+palette = c("#003c30","#b2182b","#74add1","grey")
+t_plot = rbind(
+  data.frame(Product = "2 x ChAdOx1-S", total = t_all$az_az, date = t_all$date),
+  data.frame(Product = "2 x Moderna", total = t_all$pfizer_pfizer, date = t_all$date),
+  data.frame(Product = "2 x Pfizer", total = t_all$moderna_moderna, date = t_all$date),
+  data.frame(Product = "Heterologous", total = t_all$heterologous, date = t_all$date)
+)
+ggplot(t_plot, aes(x = date, y = total, colour = Product)) + geom_line() +
+          theme_bw() + ylab("doses given") + scale_colour_manual(values = palette[c(1,2,3,4)]) +
+          theme(legend.position="right") +
+  theme(plot.title = element_text(size=14, hjust=0.5), axis.text = element_text(size=14), axis.title = element_text(size=14))
+```
 
 ## Population profile
 
-### N
-```{r}
-total_n = nrow(data_processed)
-total_n
-```
-
 ### Dose 1 profile
 ```{r}
-## Custom functions
-fct_case_when <- function(...) {
-  # uses dplyr::case_when but converts the output to a factor,
-  # with factors ordered as they appear in the case_when's  ... argument
-  args <- as.list(match.call())
-  levels <- sapply(args[-1], function(f) f[[3]])  # extract RHS of formula
-  levels <- levels[!is.na(levels)]
-  factor(dplyr::case_when(...), levels=levels)
-}
-
-# assign products
-data_processed = data_processed %>%
-  mutate(
-    # pick out dose 1 product
-    dose_1_product = ifelse(!is.na(pfizer_date_1) & is.na(astrazeneca_date_1) & is.na(moderna_date_1),1,NA),
-    dose_1_product = ifelse(is.na(pfizer_date_1) & !is.na(astrazeneca_date_1) & is.na(moderna_date_1),2,NA),
-    dose_1_product = ifelse(is.na(pfizer_date_1) & is.na(astrazeneca_date_1) & !is.na(moderna_date_1),3,NA),
-    dose_1_product = ifelse(
-      ((is.na(pfizer_date_1) + is.na(astrazeneca_date_1) + is.na(moderna_date_1))>1) |
-      (!is.na(covid_vacc_date_1) & is.na(pfizer_date_1) & is.na(astrazeneca_date_1) & is.na(moderna_date_1)),
-      4,NA),
-    dose_1_product = fct_case_when(
-      dose_1_product == 1 ~ "pfi",
-      dose_1_product == 2 ~ "az",
-      dose_1_product == 3 ~ "mod",
-      dose_1_product == 4 ~ "unclear", # unclear if more than one product listed in dose 1 window
-      TRUE ~ NA_character_
-    ),
-
-    dose_2_product = ifelse(!is.na(pfizer_date_2) & is.na(astrazeneca_date_2) & is.na(moderna_date_2),1,NA), 
-    dose_2_product = ifelse(is.na(pfizer_date_2) & !is.na(astrazeneca_date_2) & is.na(moderna_date_2),2,NA),
-    dose_2_product = ifelse(is.na(pfizer_date_2) & is.na(astrazeneca_date_2) & !is.na(moderna_date_2),3,NA),
-    dose_2_product = ifelse(
-      ((is.na(pfizer_date_2) + is.na(astrazeneca_date_2) + is.na(moderna_date_2))>1) |
-      (!is.na(covid_vacc_date_2) & is.na(pfizer_date_2) & is.na(astrazeneca_date_2) & is.na(moderna_date_2)),
-      4,NA),
-    dose_2_product = fct_case_when(
-      dose_2_product == 1 ~ "pfi",
-      dose_2_product == 2 ~ "az",
-      dose_2_product == 3 ~ "mod",
-      dose_2_product == 4 ~ "unclear", # unclear if more than one product listed in dose 2 window
-      TRUE ~ NA_character_
-    ),
-    
-    dose_3_product = ifelse(!is.na(pfizer_date_3) & is.na(astrazeneca_date_3) & is.na(moderna_date_3),1,NA),
-    dose_3_product = ifelse(is.na(pfizer_date_3) & !is.na(astrazeneca_date_3) & is.na(moderna_date_3),2,NA),
-    dose_3_product = ifelse(is.na(pfizer_date_3) & is.na(astrazeneca_date_3) & !is.na(moderna_date_3),3,NA),
-    dose_3_product = ifelse(
-      ((is.na(pfizer_date_3) + is.na(astrazeneca_date_3) + is.na(moderna_date_3))>1) |
-      (!is.na(covid_vacc_date_3) & is.na(pfizer_date_3) & is.na(astrazeneca_date_3) & is.na(moderna_date_3)),
-      4,NA),
-    dose_3_product = fct_case_when(
-      dose_3_product == 1 ~ "pfi",
-      dose_3_product == 2 ~ "az",
-      dose_3_product == 3 ~ "mod",
-      dose_3_product == 4 ~ "unclear", # unclear if more than one product listed in dose 3 window
-      TRUE ~ NA_character_
-    ),
-    
-    dose_4_product = ifelse(!is.na(pfizer_date_4) & is.na(astrazeneca_date_4) & is.na(moderna_date_4),1,NA),
-    dose_4_product = ifelse(is.na(pfizer_date_4) & !is.na(astrazeneca_date_4) & is.na(moderna_date_4),2,NA),
-    dose_4_product = ifelse(is.na(pfizer_date_4) & is.na(astrazeneca_date_4) & !is.na(moderna_date_4),3,NA),
-    dose_4_product = ifelse(
-      ((is.na(pfizer_date_4) + is.na(astrazeneca_date_4) + is.na(moderna_date_4))>1) |
-      (!is.na(covid_vacc_date_4) & is.na(pfizer_date_4) & is.na(astrazeneca_date_4) & is.na(moderna_date_4)),
-      4,NA),
-    dose_4_product = fct_case_when(
-      dose_4_product == 1 ~ "pfi",
-      dose_4_product == 2 ~ "az",
-      dose_4_product == 3 ~ "mod",
-      dose_4_product == 4 ~ "unclear", # unclear if more than one product listed in dose 4 window
-      TRUE ~ NA_character_
-    )
-)
-
-
-t_dose1 = table(data_processed$dose_1_product)
-t_dose1[t_dose1>0 & t_dose1<8] = "<8"
-t_dose1
+t_dose = data.frame(table(data_cohort$vax1_type_descr))
+t_dose$Freq = round_any(t_dose$Freq,5)
+t_dose$Prop = round(t_dose$Freq/sum(t_dose$Freq)*100,1)
+names(t_dose) = c("Vaccine", "Frequency", "Percent")
+t_dose
 ```
+Rounded to nearest 5
 
 ### Dose 2 profile
 ```{r}
-t_dose2 = table(data_processed$dose_2_product)
-t_dose2[t_dose2>0 & t_dose2<8] = "<8"
-t_dose2
+t_dose = data.frame(table(data_cohort$vax2_type_descr))
+t_dose$Freq = round_any(t_dose$Freq,5)
+t_dose$Prop = round(t_dose$Freq/sum(t_dose$Freq)*100,1)
+names(t_dose) = c("Vaccine", "Frequency", "Percent")
+t_dose
 ```
+Rounded to nearest 5
 
 ### Dose 3 profile
 ```{r}
-t_dose3 = table(data_processed$dose_3_product)
-t_dose3[t_dose3>0 & t_dose3<8] = "<8"
-t_dose3
+t_dose = data.frame(table(data_cohort$vax3_type_descr))
+t_dose$Freq = round_any(t_dose$Freq,5)
+t_dose$Prop = round(t_dose$Freq/sum(t_dose$Freq)*100,1)
+names(t_dose) = c("Vaccine", "Frequency", "Percent")
+t_dose
 ```
+Rounded to nearest 5
 
 ### Dose 4 profile
 ```{r}
-t_dose4 = table(data_processed$dose_4_product)
-t_dose4[t_dose4>0 & t_dose4<8] = "<8"
-t_dose4
+t_dose = data.frame(table(data_cohort$vax4_type_descr))
+t_dose$Freq = round_any(t_dose$Freq,5)
+t_dose$Prop = round(t_dose$Freq/sum(t_dose$Freq)*100,1)
+names(t_dose) = c("Vaccine", "Frequency", "Percent")
+t_dose
 ```
+Rounded to nearest 5
 
-### Dose 1-2 combination
-```{r}
-# dose 1-2 combination profile
-data_processed$combo_1_2 = paste0(data_processed$dose_1_product,"-",data_processed$dose_2_product)
-t_dose1_2 = table(data_processed$combo_1_2)
-t_dose1_2[t_dose1_2>0 & t_dose1_2<8] = "<8"
-t_dose1_2
-```
 
-### Dose 1-2-3 combination
+### Dose 1-2 combination 
 ```{r}
-# dose 1-2-3 combination profile
-data_processed$combo_1_2_3 = paste0(data_processed$dose_1_product,"-",data_processed$dose_2_product,"-",data_processed$dose_3_product)
-t_dose1_2_3 = table(data_processed$combo_1_2_3)
-t_dose1_2_3[t_dose1_2_3>0 & t_dose1_2_3<8] = "<8"
-t_dose1_2_3
+t_dose = data.frame(table(data_cohort$vax12_type))
+t_dose$Freq = round_any(t_dose$Freq,5)
+t_dose$Prop = round(t_dose$Freq/sum(t_dose$Freq)*100,1)
+names(t_dose) = c("Vaccine", "Frequency", "Percent")
+t_dose
 ```
+Rounded to nearest 5
+
+### Dose 1-2-3 combination 
+```{r}
+t_dose = data.frame(table(data_cohort$vax123_type))
+t_dose$Freq = round_any(t_dose$Freq,5)
+t_dose$Prop = round(t_dose$Freq/sum(t_dose$Freq)*100,1)
+names(t_dose) = c("Vaccine", "Frequency", "Percent")
+t_dose
+```
+Rounded to nearest 5

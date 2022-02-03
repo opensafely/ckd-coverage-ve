@@ -24,7 +24,7 @@ library('reshape2')
 fs::dir_create(here::here("output", "tables"))
 
 ## Import data
-data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))
+data_processed <- read_rds(here::here("output", "data", "data_cohort.rds"))
 
 ## Format data
 data_processed <- data_processed %>%
@@ -43,9 +43,6 @@ data_processed <- data_processed %>%
            right = FALSE)) %>%
   group_by(patient_id) %>%
   ungroup()
-
-
-# Table 2 ----
 
 ## Counts
 counts0 <- data_processed %>%
@@ -74,12 +71,12 @@ counts0 <- data_processed %>%
          chd,
          haem_cancer,
          immunosuppression,
-         chronic_kidney_disease,
+         #chronic_kidney_disease,
          learning_disability,
          cld,
          chronic_neuro_dis_inc_sig_learn_dis,
          chronic_resp_dis,
-         end_stage_renal, 
+         dialysis, 
          sev_mental_ill, 
          organ_transplant,
          time_between_vaccinations1_2,
@@ -114,6 +111,7 @@ table1_redacted <- table1 %>%
 ## Round to nearest 5
 table1_redacted <- table1_redacted %>%
   mutate(Count = plyr::round_any(Count, 5))
+table1_redacted$Percent = round(table1_redacted$Count/nrow(data_processed)*100,1)
 
 # Save as html ----
 gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_redacted.html"))
