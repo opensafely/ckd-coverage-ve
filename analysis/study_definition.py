@@ -505,7 +505,7 @@ study = StudyDefinition(
   bp_dias = patients.mean_recorded_value(
     diastolic_blood_pressure_codes,
     on_most_recent_day_of_measurement = True,
-    on_or_before="covid_vax_date_1",
+    on_or_before = "index_date - 1 day",
     include_measurement_date = True,
     date_format = "YYYY-MM-DD", #include_month=True,
     return_expectations ={
@@ -521,48 +521,48 @@ study = StudyDefinition(
       other_cancer_codes
     ),
     returning = "binary_flag",
-    find_first_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day",
   ),
   
   ## Cancer (haematological)
   haem_cancer = patients.with_these_clinical_events(
     haem_cancer_codes,
     returning = "binary_flag",
-    find_first_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day",
   ),
   
   ## Chronic heart disease codes
   chd = patients.with_these_clinical_events(
     chd_codes,
     returning = "binary_flag",
-    find_first_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day",
   ),
   
   ## Chronic neurological disease (including Significant Learning Disorder)
   chronic_neuro_dis_inc_sig_learn_dis = patients.with_these_clinical_events(
     cnd_inc_sig_learn_dis_codes,
     returning = "binary_flag",
-    find_first_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day",
   ),
   
   ## Chronic respiratory disease
   chronic_resp_dis = patients.with_these_clinical_events(
     crs_codes,
     returning = "binary_flag",
-    find_first_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day",
   ),
   
   ## Chronic Liver disease codes
   cld = patients.with_these_clinical_events(
     cld_codes,
     returning = "binary_flag",
-    find_first_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day",
     date_format = "YYYY-MM-DD",
   ),
   
@@ -571,7 +571,7 @@ study = StudyDefinition(
     diab_codes,
     returning = "binary_flag",
     find_last_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
+    on_or_before = "index_date - 1 day",
   ),
   
   ## Immunosuppression diagnosis
@@ -579,7 +579,7 @@ study = StudyDefinition(
     immunosuppression_diagnosis_codes,
     returning = "date",
     find_last_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
+    on_or_before = "index_date - 1 day",
     date_format = "YYYY-MM-DD",
   ),
   
@@ -588,7 +588,7 @@ study = StudyDefinition(
     immunosuppression_medication_codes,
     returning = "date",
     find_last_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
+    on_or_before = "index_date - 1 day",
     date_format = "YYYY-MM-DD",
   ),
   
@@ -597,7 +597,7 @@ study = StudyDefinition(
     learning_disability_codes,
     returning = "binary_flag",
     find_last_match_in_period = True,
-    on_or_before = "covid_vax_date_1"
+    on_or_before = "index_date - 1 day"
   ),
   
   ### Severe mental illness
@@ -605,7 +605,7 @@ study = StudyDefinition(
     sev_mental_ill_codes,
     returning = "date",
     find_last_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
+    on_or_before = "index_date - 1 day",
     date_format = "YYYY-MM-DD",
   ),
   
@@ -614,16 +614,24 @@ study = StudyDefinition(
     organ_transplant_codes,
     returning = "binary_flag",
     find_last_match_in_period = True,
-    on_or_before = "covid_vax_date_1"
+    on_or_before = "index_date - 1 day"
   ),
   
-  ## Positive test prior to vaccination
+  ## Non-kidney transplant
+  non_kidney_transplant = patients.with_these_clinical_events(
+    non_kidney_transplant_codes,
+    returning = "binary_flag",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day"
+  ),
+  
+  ## Positive test prior to study period
   prior_positive_test_date = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "positive",
     returning = "date",
     date_format = "YYYY-MM-DD",
-    on_or_before = "covid_vax_date_3",
+    on_or_before = "index_date - 1 day",
     find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
     return_expectations = {
@@ -633,7 +641,7 @@ study = StudyDefinition(
     },
   ),
   
-  ## Positive case identification prior to vaccination
+  ## Positive case identification prior to study period
   prior_primary_care_covid_case_date = patients.with_these_clinical_events(
     combine_codelists(
       covid_primary_care_code,
@@ -642,7 +650,7 @@ study = StudyDefinition(
     ),
     returning = "date",
     date_format = "YYYY-MM-DD",
-    on_or_before = "covid_vax_date_3",
+    on_or_before = "index_date - 1 day",
     find_first_match_in_period=True,
     return_expectations = {
       "date": {"earliest": "2020-02-01"},
@@ -651,11 +659,11 @@ study = StudyDefinition(
     },
   ),
   
-  ## Positive covid admission prior to vaccination
+  ## Positive covid admission prior to study period
   prior_covidadmitted_date = patients.admitted_to_hospital(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
-    on_or_before = "covid_vax_date_3",
+    on_or_before = "index_date - 1 day",
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
@@ -665,12 +673,12 @@ study = StudyDefinition(
     },
   ),
   
-  ## Count of tests (any)
+  ## Count of tests (any) in study period
   tests_conducted_any = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "any",
     returning = "number_of_matches_in_period",
-    between = ["covid_vax_date_2 + 14 days", end_date],
+    between = ["index_date", end_date],
     restrict_to_earliest_specimen_date = False,
     return_expectations={
       "int": {"distribution": "normal", "mean": 4, "stddev": 1},
@@ -678,12 +686,12 @@ study = StudyDefinition(
     },
   ),
   
-  ## Count of tests (positive)
+  ## Count of tests (positive) in study period
   tests_conducted_positive = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "positive",
     returning = "number_of_matches_in_period",
-    between = ["covid_vax_date_2 + 14 days", end_date],
+    between = ["index_date", end_date],
     restrict_to_earliest_specimen_date = False,
     return_expectations={
       "int": {"distribution": "normal", "mean": 2, "stddev": 0.1},

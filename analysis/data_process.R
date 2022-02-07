@@ -61,6 +61,7 @@ data_extract <- read_csv(
     # CKD groups
     #chronic_kidney_disease_diagnostic = col_date(format="%Y-%m-%d"),
     creatinine_date = col_date(format="%Y-%m-%d"),
+    chronic_kidney_disease_diagnostic = col_date(format="%Y-%m-%d"),
     chronic_kidney_disease_all_stages = col_date(format="%Y-%m-%d"),
     chronic_kidney_disease_all_stages_3_5 = col_date(format="%Y-%m-%d"),
     creatinine = col_double(), 
@@ -120,6 +121,39 @@ data_extract <- data_extract %>%
     .fns = ~na_if(.x, 0)
   )) %>%
   arrange(patient_id) 
+
+
+### eGFR calculations: adapted from cr_create_analysis_dataset.do in risk factor analysis repo
+# https://github.com/opensafely/risk-factors-research/
+
+# Set implausible creatinine values to missing (Note: zero changed to missing)
+data_extract$creatinine[data_extract$creatinine<=20 | data_extract$creatinine>=3000] = NA # stata code: replace creatinine = . if !inrange(creatinine, 20, 3000) 
+
+# Divide by 88.4 (to convert umol/l to mg/dl)
+data_extract$SCr_adj = data_extract$creatinine/88.4 # stata code: gen SCr_adj = creatinine/88.4
+
+# Set min for eGFR calculations
+data_extract$min = NA # stata code: gen min=.
+data_extract$min[data_extract$sex == "F"] = data_extract$SCr_adj[data_extract$sex == "F"]/0.7 # stata code: replace min = SCr_adj/0.7 if male==0
+data_extract$min[data_extract$sex == "M"] = data_extract$SCr_adj[data_extract$sex == "M"]/0.9 # stata code: replace min = SCr_adj/0.7 if male==0
+data_extract$min[data_extract$sex == "F"] = data_extract$min[data_extract$sex == "F"]^(-0.329) # stata code: replace min = min^-0.329  if male==0
+data_extract$min[data_extract$sex == "M"] = data_extract$min[data_extract$sex == "M"]^(-0.411) # stata code: replace min = min^-0.411  if male==1
+data_extract$min[data_extract$min<1] = 1 # stata code: replace min = 1 if min<1
+
+# Set max for eGFR calculations
+data_extract$max = NA # stata code: gen max=.
+data_extract$max[data_extract$sex == "F"] = data_extract$SCr_adj[data_extract$sex == "F"]/0.7 # stata code: replace max=SCr_adj/0.7 if male==0
+data_extract$max[data_extract$sex == "M"] = data_extract$SCr_adj[data_extract$sex == "M"]/0.9 # stata code: replace max=SCr_adj/0.9 if male==1
+data_extract$max = data_extract$max^(-1.209) # stata code: replace max=max^-1.209
+data_extract$max[data_extract$max>1] = 1 # stata code: replace max=1 if max>1
+
+# Calculate eGFR
+data_extract$egfr = data_extract$min*data_extract$max*141 # stata code: gen egfr=min*max*141
+data_extract$egfr = data_extract$egfr*(0.993^data_extract$age) # stata code: replace egfr=egfr*(0.993^age)
+data_extract$egfr[data_extract$sex == "F"] = data_extract$egfr[data_extract$sex == "F"]*1.018 # stata code: replace egfr=egfr*1.018 if male==0
+
+# Drop extra variables
+data_extract <- data_extract %>% select(-c(min, max, SCr_adj))
 
 ## Format columns (i.e, set factor levels)
 data_processed <- data_extract %>%
@@ -215,8 +249,9 @@ data_processed <- data_extract %>%
     ),
     
     # CKD
-    ckd_inclusion = ifelse(creatinine < 60 | dialysis==TRUE, 1, 0),
-    
+    ckd_inclusion_any = ifelse(egfr < 60 | dialysis==TRUE | !is.na(chronic_kidney_disease_diagnostic) | !is.na(chronic_kidney_disease_all_stages_3_5), 1, 0),
+    ckd_inclusion_strict = ifelse(egfr < 60 | dialysis==TRUE, 1, 0),
+
     # Immunosuppression
     immunosuppression_diagnosis_date = !is.na(immunosuppression_diagnosis_date),
     immunosuppression_medication_date = !is.na(immunosuppression_medication_date),
@@ -224,12 +259,12 @@ data_processed <- data_extract %>%
     
     # Mental illness
     sev_mental_ill = !is.na(sev_mental_ill),
-    
+
     # Prior covid
-    prior_covid_date = pmin(prior_positive_test_date, 
+    prior_covid_cat = !is.na(pmin(prior_positive_test_date,
                            prior_primary_care_covid_case_date, 
                            prior_covidadmitted_date,
-                           na.rm=TRUE)
+                           na.rm=TRUE))
   ) %>%
   droplevels() %>%
   mutate(
@@ -289,7 +324,8 @@ data_vax <- local({
     arrange(patient_id, date) %>%
     group_by(patient_id) %>%
     mutate(
-      vax_index=row_number()
+      vax_index=row_number(),
+      n_vax=max(row_number())
     ) %>%
     ungroup()
   
@@ -305,6 +341,10 @@ data_vax_wide = data_vax %>%
     values_from = c("date", "type"),
     names_glue = "covid_vax_{vax_index}_{.value}"
   )
+
+# pick out vaccine count for each individual, then merge
+data_vax_reduced = data_vax[!duplicated(data_vax$patient_id),c("patient_id", "n_vax")]
+data_vax_wide = data_vax_wide %>% left_join(data_vax_reduced, by ="patient_id")
 
 # merge with full data-set
 data_processed_updated <- data_processed %>%
@@ -352,18 +392,8 @@ data_processed_updated <- data_processed %>%
     # Calculate time between vaccinations
     tbv1_2 = as.numeric(vax2_date - vax1_date),
     tbv2_3 = as.numeric(vax3_date - vax2_date),
-    tbv3_4 = as.numeric(vax4_date - vax3_date), 
-    
-    prior_covid_cat = ifelse(prior_covid_date < vax3_date & prior_covid_date >= vax2_date, 1, NA),
-    prior_covid_cat = ifelse(prior_covid_date < vax2_date & prior_covid_date >= vax1_date, 2, NA),
-    prior_covid_cat = ifelse(prior_covid_date < vax1_date, 3, prior_covid_cat),
-    
-    prior_covid_cat = fct_case_when(
-      prior_covid_cat == 1 ~ "Between second and third dose",
-      prior_covid_cat == 2 ~ "Between first and second dose",
-      prior_covid_cat == 3 ~ "Prior to first dose",
-      TRUE ~ NA_character_
-    )
+    tbv3_4 = as.numeric(vax4_date - vax3_date) 
+
   ) %>%
   # Remove unneccessary variables including overall and product-specific dates (now replaced by vax{N}_date)
   select(
@@ -373,6 +403,9 @@ data_processed_updated <- data_processed %>%
 # remove type combinations if latter vaccine not administered
 data_processed_updated$vax12_type[is.na(data_processed_updated$vax2_type)] = NA_character_
 data_processed_updated$vax123_type[is.na(data_processed_updated$vax3_type)] = NA_character_
+
+# set n_vax to 0 if none recorded
+data_processed_updated$n_vax[is.na(data_processed_updated$n_vax)]=0
 
 # Save dataset as .rds files ----
 write_rds(data_processed_updated, here::here("output", "data", "data_processed.rds"), compress = "gz")

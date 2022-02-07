@@ -97,8 +97,8 @@ ggplot(t_plot, aes(x = date, y = total, colour = dose)) + geom_line() +
 palette = c("#003c30","#b2182b","#74add1","grey")
 t_plot = rbind(
   data.frame(Product = "2 x ChAdOx1-S", total = t_all$az_az, date = t_all$date),
-  data.frame(Product = "2 x Moderna", total = t_all$pfizer_pfizer, date = t_all$date),
-  data.frame(Product = "2 x Pfizer", total = t_all$moderna_moderna, date = t_all$date),
+  data.frame(Product = "2 x Pfizer", total = t_all$pfizer_pfizer, date = t_all$date),
+  data.frame(Product = "2 x Moderna", total = t_all$moderna_moderna, date = t_all$date),
   data.frame(Product = "Heterologous", total = t_all$heterologous, date = t_all$date)
 )
 ggplot(t_plot, aes(x = date, y = total, colour = Product)) + geom_line() +

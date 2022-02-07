@@ -72,23 +72,23 @@
       "downloaded_at": "2022-01-13 11:13:08.631668Z",
       "sha": "34a5bc7bd8a4e7a50ec86dec63bb9921d8c9b0f3"
     },
-    "primis-covid19-vacc-uptake-ckd15.csv": {
-      "id": "primis-covid19-vacc-uptake/ckd15/v1",
-      "url": "https://codelists.opensafely.org/codelist/primis-covid19-vacc-uptake/ckd15/v1/",
-      "downloaded_at": "2022-01-13 11:13:08.775722Z",
-      "sha": "88cc1ab0e8fc6e4be88929369a5b492cc402884a"
-    },
     "primis-covid19-vacc-uptake-ckd35.csv": {
       "id": "primis-covid19-vacc-uptake/ckd35/v1",
       "url": "https://codelists.opensafely.org/codelist/primis-covid19-vacc-uptake/ckd35/v1/",
       "downloaded_at": "2022-01-13 11:13:08.927654Z",
       "sha": "3a32f20ef7b33b9cdda2128754d3f394f28f0165"
     },
-    "opensafely-chronic-kidney-disease.csv": {
-      "id": "opensafely/chronic-kidney-disease/2020-04-14",
-      "url": "https://codelists.opensafely.org/codelist/opensafely/chronic-kidney-disease/2020-04-14/",
-      "downloaded_at": "2022-01-13 11:13:09.096142Z",
-      "sha": "08e003f1222fe26781288b2eeff22db99780f202"
+    "opensafely-dialysis.csv": {
+      "id": "opensafely/dialysis/3ce108ac",
+      "url": "https://codelists.opensafely.org/codelist/opensafely/dialysis/3ce108ac/",
+      "downloaded_at": "2022-02-07 21:55:25.866191Z",
+      "sha": "ace47eee209d55a7506e60e7e664f8e75ad9848c"
+    },
+    "opensafely-kidney-transplant.csv": {
+      "id": "opensafely/kidney-transplant/2020-07-15",
+      "url": "https://codelists.opensafely.org/codelist/opensafely/kidney-transplant/2020-07-15/",
+      "downloaded_at": "2022-02-07 21:55:26.089618Z",
+      "sha": "db6b47d17273b563cb428e4a97a7ba8b6d62afa9"
     },
     "primis-covid19-vacc-uptake-cld.csv": {
       "id": "primis-covid19-vacc-uptake/cld/v1",
@@ -131,6 +131,12 @@
       "url": "https://codelists.opensafely.org/codelist/opensafely/solid-organ-transplantation-snomed/2020-04-10/",
       "downloaded_at": "2022-01-13 11:13:10.504149Z",
       "sha": "cdb61aa51b4400c1aba2f8e4728c1b8130c4fd40"
+    },
+    "opensafely-other-organ-transplant.csv": {
+      "id": "opensafely/other-organ-transplant/79caeeee",
+      "url": "https://codelists.opensafely.org/codelist/opensafely/other-organ-transplant/79caeeee/",
+      "downloaded_at": "2022-02-07 21:55:28.196857Z",
+      "sha": "6191e62cf7520121e4b10346c766e6b71dfdda4c"
     },
     "opensafely-covid-identification.csv": {
       "id": "opensafely/covid-identification/2020-06-03",

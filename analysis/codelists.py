@@ -127,29 +127,36 @@ crs_codes = codelist_from_csv(
 ## Creatinine level
 creatinine_codes = codelist(["XE2q5"], system="ctv3")
 
-## Chronic kidney disease - history of dialysis or end-stage renal disease
+## Chronic kidney disease - history of dialysis
 dialysis_codes = codelist_from_csv(
-  "codelists/opensafely-chronic-kidney-disease.csv",
+  "codelists/opensafely-dialysis.csv",
+  system = "ctv3",
+  column = "CTV3ID"
+)
+
+## Chronic kidney disease - history of kidney transplant
+kidney_transplant_codes = codelist_from_csv(
+  "codelists/opensafely-kidney-transplant.csv",
   system = "ctv3",
   column = "CTV3ID"
 )
 
 ## Chronic kidney disease diagnostic codes
-#chronic_kidney_disease_diagnostic_codes = codelist_from_csv(
-#    "codelists/primis-covid19-vacc-uptake-ckd_cov.csv",
-#    system = "snomed",
-#    column = "code",
-#)
-
-## Chronic kidney disease codes - all stages
-chronic_kidney_disease_all_stages_codes = codelist_from_csv(
-    "codelists/primis-covid19-vacc-uptake-ckd15.csv",
-    system="snomed",
-    column="code",
+chronic_kidney_disease_diagnostic_codes = codelist_from_csv(
+    "codelists/primis-covid19-vacc-uptake-ckd_cov.csv",
+    system = "snomed",
+    column = "code",
 )
 
+## Chronic kidney disease codes - all stages
+#chronic_kidney_disease_all_stages_codes = codelist_from_csv(
+#    "codelists/primis-covid19-vacc-uptake-ckd15.csv",
+#    system="snomed",
+#    column="code",
+#)
+
 ## Chronic kidney disease codes-stages 3 - 5
-chronic_kidney_disease_all_stages_3_5_codes = codelist_from_csv(
+chronic_kidney_disease_stages_3_5_codes = codelist_from_csv(
     "codelists/primis-covid19-vacc-uptake-ckd35.csv",
     system="snomed",
     column="code",
@@ -202,6 +209,13 @@ organ_transplant_codes = codelist_from_csv(
     "codelists/opensafely-solid-organ-transplantation-snomed.csv",
     system = "snomed",
     column = "id",
+)
+
+## Non-kidney organ transplant
+non_kidney_transplant_codes = codelist_from_csv(
+    "codelists/opensafely-other-organ-transplant.csv",
+    system = "ctv3",
+    column = "CTV3ID",
 )
 
 ## Prior covid
