@@ -21,7 +21,7 @@ from cohortextractor import (
 from codelists import *
 
 ### Set initial date parameters
-campaign_start = "2020-12-07"
+start_date = "2020-12-01"
 end_date = "2021-12-31"
 
 study = StudyDefinition(
@@ -32,6 +32,9 @@ study = StudyDefinition(
         "incidence": 0.2,
     },
 
+    # Set index date to start date
+    index_date = start_date,
+
     # Define study population
     population=patients.satisfying(
         """
@@ -41,14 +44,14 @@ study = StudyDefinition(
         AND
         (age >= 16 AND age < 120)
         AND
-        (creatinine<60 OR dialysis)
+        (creatinine>0 OR dialysis OR kidney_transplant OR chronic_kidney_disease_diagnostic OR chronic_kidney_disease_stages_3_5)
         """,
         # registered before vaccine campaign commenced
         registered=patients.registered_as_of(
-            "covid_vax_date_1 - 1 days",
+            "index_date - 3 months",
         ),
         has_died=patients.died_from_any_cause(
-            on_or_before="covid_vax_date_1 - 1 days",
+            on_or_before="index_date - 1 day",
             returning="binary_flag",
         ),
     ),
@@ -60,7 +63,7 @@ study = StudyDefinition(
     # date of first COVID vaccination - source nhs-covid-vaccination-coverage
     covid_vax_date_1=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
-        on_or_after="2020-12-01",  # any dose recorded after 01/12/2020
+        between=["2020-12-01",end_date],  # any dose recorded after 01/12/2020
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -69,7 +72,7 @@ study = StudyDefinition(
     # date of second COVID vaccination - source nhs-covid-vaccination-coverage
     covid_vax_date_2=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
-        on_or_after="covid_vax_date_1 + 1 days", # from day after previous dose
+        between=["covid_vax_date_1 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -82,7 +85,7 @@ study = StudyDefinition(
     # 29 Nov 2021: 3rd dose (booster) recommended for 18–39y at >=3m
     covid_vax_date_3=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
-        on_or_after="covid_vax_date_2 + 1 days", # from day after previous dose
+        between=["covid_vax_date_2 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -94,7 +97,7 @@ study = StudyDefinition(
     # to capture above, include fourth doses from 77 days (84 - 7) to allow for early receipt within 12th week
     covid_vax_date_4=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
-        on_or_after="covid_vax_date_3 + 1 days", # from day after previous dose
+        between=["covid_vax_date_3 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -108,7 +111,7 @@ study = StudyDefinition(
     # date of first COVID vaccination - pfizer
     pfizer_date_1=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
-        on_or_after="2020-12-01", # any dose recorded after 01/12/2020
+        between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -117,7 +120,7 @@ study = StudyDefinition(
     # date of second COVID vaccination - pfizer
     pfizer_date_2=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
-        on_or_after="pfizer_date_1 + 1 days", # from day after previous dose
+        between=["pfizer_date_1 + 1 day",end_date],  # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -126,7 +129,7 @@ study = StudyDefinition(
     # date of third COVID vaccination - pfizer
     pfizer_date_3=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
-        on_or_after="pfizer_date_2 + 1 days",  # from day after previous dose
+        between=["pfizer_date_2 + 1 day",end_date],   # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -135,7 +138,7 @@ study = StudyDefinition(
     # date of fourth COVID vaccination - pfizer
     pfizer_date_4=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
-        on_or_after="pfizer_date_3 + 1 days", # from day after previous dose
+        between=["pfizer_date_3 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -148,7 +151,7 @@ study = StudyDefinition(
     # date of first COVID vaccination - astrazeneca
     az_date_1=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
-        on_or_after="2020-12-01", # any dose recorded after 01/12/2020
+        between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -157,7 +160,7 @@ study = StudyDefinition(
     # date of second COVID vaccination - astrazeneca
     az_date_2=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
-        on_or_after="az_date_1 + 1 days", # from day after previous dose
+        between=["az_date_1 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -166,7 +169,7 @@ study = StudyDefinition(
     # date of third COVID vaccination - astrazeneca
     az_date_3=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
-        on_or_after="az_date_2 + 1 days", # from day after previous dose
+        between=["az_date_2 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -175,7 +178,7 @@ study = StudyDefinition(
     # date of fourth COVID vaccination - astrazeneca
     az_date_4=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
-        on_or_after="az_date_3 + 1 days", # from day after previous dose
+        between=["az_date_3 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -188,7 +191,7 @@ study = StudyDefinition(
     # date of first COVID vaccination - moderna
     moderna_date_1=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
-        on_or_after="2020-12-01", # any dose recorded after 01/12/2020
+        between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -197,7 +200,7 @@ study = StudyDefinition(
     # date of second COVID vaccination - moderna
     moderna_date_2=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
-        on_or_after="moderna_date_1 + 1 days", # from day after previous dose
+        between=["moderna_date_1 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -206,7 +209,7 @@ study = StudyDefinition(
     # date of third COVID vaccination - moderna
     moderna_date_3=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
-        on_or_after="moderna_date_2 + 1 days", # from day after previous dose
+        between=["moderna_date_2 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -215,7 +218,7 @@ study = StudyDefinition(
     # date of fourth COVID vaccination - moderna
     moderna_date_4=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
-        on_or_after="moderna_date_3 + 1 days", # from day after previous dose
+        between=["moderna_date_3 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -224,21 +227,12 @@ study = StudyDefinition(
 ###############################################################################
 # CKD DEFINITIONS - adapted from https://github.com/opensafely/risk-factors-research
 ###############################################################################
-  ## Chronic kidney disease diagnostic codes
-  #chronic_kidney_disease_diagnostic = patients.with_these_clinical_events(
-  #  chronic_kidney_disease_diagnostic_codes,
-  #  returning = "date",
-  #  find_first_match_in_period = True,
-  #  on_or_before = "covid_vax_date_2",
-  #  date_format = "YYYY-MM-DD",
-  #),
-  
-  ## Chronic kidney disease
+  ## Creatinine level for eGFR calculation
   # https://github.com/ebmdatalab/tpp-sql-notebook/issues/17
   creatinine = patients.with_these_clinical_events(
     creatinine_codes,
     find_last_match_in_period=True,
-    between=["covid_vax_date_1 - 2 years","covid_vax_date_1"],
+    between=["index_date - 2 years","index_date - 1 day"],
     returning="numeric_value",
     include_date_of_match=True,
     date_format = "YYYY-MM-DD", #include_month=True,
@@ -247,33 +241,48 @@ study = StudyDefinition(
         "incidence": 0.95,
     },
   ),
-  
-  ## Chronic kidney disease codes - all stages
-  chronic_kidney_disease_all_stages = patients.with_these_clinical_events(
-    chronic_kidney_disease_all_stages_codes,
-    returning = "date",
-    find_last_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
-    date_format = "YYYY-MM-DD",
-  ),
-  
-  ## Chronic kidney disease codes-stages 3 - 5
-  chronic_kidney_disease_all_stages_3_5 = patients.with_these_clinical_events(
-    chronic_kidney_disease_all_stages_3_5_codes,
-    returning = "date",
-    find_last_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
-    date_format = "YYYY-MM-DD",
-  ),
-  
-  ## Chronic kidney disease - end-stage renal disease
+
+  ## Chronic kidney disease - dialysis
   dialysis = patients.with_these_clinical_events(
     dialysis_codes,
     returning = "binary_flag",
     find_last_match_in_period = True,
-    on_or_before = "covid_vax_date_1"
+    on_or_before = "index_date - 1 day"
   ),
-
+  
+  ## Chronic kidney disease - kidney transplant
+  kidney_transplant = patients.with_these_clinical_events(
+    kidney_transplant_codes,
+    returning = "binary_flag",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day"
+  ),
+  
+  ## Chronic kidney disease diagnostic codes
+  chronic_kidney_disease_diagnostic = patients.with_these_clinical_events(
+    chronic_kidney_disease_diagnostic_codes,
+    returning = "binary_flag",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day",
+  ),
+  
+  ## Chronic kidney disease codes - all stages
+ # chronic_kidney_disease_all_stages = patients.with_these_clinical_events(
+ #   chronic_kidney_disease_all_stages_codes,
+ #   returning = "date",
+ #   find_last_match_in_period = True,
+ #   on_or_before = "index_date - 1 day",
+ #   date_format = "YYYY-MM-DD",
+ # ),
+  
+  ## Chronic kidney disease codes-stages 3 - 5
+  chronic_kidney_disease_stages_3_5 = patients.with_these_clinical_events(
+    chronic_kidney_disease_stages_3_5_codes,
+    returning = "binary_flag",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day",
+   # date_format = "YYYY-MM-DD",
+  ),
 
 ###############################################################################
 # PRIORITY GROUPS
@@ -282,7 +291,7 @@ study = StudyDefinition(
   ## Care home
   care_home =  patients.with_these_clinical_events(
     carehome_primis_codes,
-    on_or_before = "covid_vax_date_1",
+    on_or_before = "index_date - 1 day",
     returning="binary_flag",
   ),
   
@@ -328,7 +337,7 @@ study = StudyDefinition(
   
   ## Age
   age = patients.age_as_of(
-    "2021-08-31",  # PHE defined date as used for https://github.com/opensafely/covid19-vaccine-coverage-tpp-emis
+    "index_date - 1 day",  # differs from 2021-08-31, which is PHE defined date as used for https://github.com/opensafely/covid19-vaccine-coverage-tpp-emis
     return_expectations = {
       "rate": "universal",
       "int": {"distribution": "population_ages"},
@@ -353,7 +362,7 @@ study = StudyDefinition(
       # set maximum to avoid any impossibly extreme values being classified as obese
     },
     bmi_value = patients.most_recent_bmi(
-      on_or_after = "covid_vax_date_1 - 5 years",
+      on_or_after = "index_date - 5 years",
       minimum_age_at_measurement = 16
     ),
     return_expectations = {
@@ -389,13 +398,13 @@ study = StudyDefinition(
     most_recent_smoking_code = patients.with_these_clinical_events(
       clear_smoking_codes,
       find_last_match_in_period = True,
-      on_or_before = "covid_vax_date_1",
+      on_or_before = "index_date - 1 day",
       returning="category",
     ),
     
     ever_smoked=patients.with_these_clinical_events(
       filter_codes_by_category(clear_smoking_codes, include=["S", "E"]),
-      on_or_before = "covid_vax_date_1",
+      on_or_before = "index_date - 1 day",
     ),
   ),
   
@@ -430,7 +439,7 @@ study = StudyDefinition(
       "5": """index_of_multiple_deprivation >= 32844*4/5 """,
     },
     index_of_multiple_deprivation = patients.address_as_of(
-      "covid_vax_date_1",
+      "index_date - 1 day",
       returning = "index_of_multiple_deprivation",
       round_to_nearest = 100,
     ),
@@ -450,7 +459,7 @@ study = StudyDefinition(
   
   ## Region - NHS England 9 regions
   region = patients.registered_practice_as_of(
-    "covid_vax_date_1",
+    "index_date - 1 day",
     returning = "nuts1_region_name",
     return_expectations = {
       "rate": "universal",
@@ -476,24 +485,23 @@ study = StudyDefinition(
   asthma = patients.with_these_clinical_events(
     asthma_codes,
     returning = "binary_flag",
-    find_first_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day",
   ),
   
   ## Asplenia or Dysfunction of the Spleen codes
   asplenia = patients.with_these_clinical_events(
     spln_codes,
     returning = "binary_flag",
-    find_first_match_in_period = True,
-    on_or_before = "covid_vax_date_1",
-    date_format = "YYYY-MM-DD",
+    find_last_match_in_period = True,
+    on_or_before = "index_date - 1 day",
   ),
   
   ## Blood pressure
   bp_sys = patients.mean_recorded_value(
     systolic_blood_pressure_codes,
     on_most_recent_day_of_measurement = True,
-    on_or_before = "covid_vax_date_1",
+    on_or_before = "index_date - 1 day",
     include_measurement_date = True,
     date_format = "YYYY-MM-DD", #include_month=True,
     return_expectations = {
