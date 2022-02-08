@@ -227,6 +227,7 @@ study = StudyDefinition(
 ###############################################################################
 # CKD DEFINITIONS - adapted from https://github.com/opensafely/risk-factors-research
 ###############################################################################
+
   ## Creatinine level for eGFR calculation
   # https://github.com/ebmdatalab/tpp-sql-notebook/issues/17
   creatinine = patients.with_these_clinical_events(
@@ -235,14 +236,14 @@ study = StudyDefinition(
     between=["index_date - 2 years","index_date - 1 day"],
     returning="numeric_value",
     include_date_of_match=True,
-    date_format = "YYYY-MM-DD", #include_month=True,
+    date_format = "YYYY-MM-DD", #formerly include_month=True,
     return_expectations={
         "float": {"distribution": "normal", "mean": 60.0, "stddev": 15},
         "incidence": 0.95,
     },
   ),
 
-  ## Chronic kidney disease - dialysis
+  ## CKD - dialysis
   dialysis = patients.with_these_clinical_events(
     dialysis_codes,
     returning = "binary_flag",
@@ -250,7 +251,7 @@ study = StudyDefinition(
     on_or_before = "index_date - 1 day"
   ),
   
-  ## Chronic kidney disease - kidney transplant
+  ## CKD - kidney transplant
   kidney_transplant = patients.with_these_clinical_events(
     kidney_transplant_codes,
     returning = "binary_flag",
@@ -258,7 +259,7 @@ study = StudyDefinition(
     on_or_before = "index_date - 1 day"
   ),
   
-  ## Chronic kidney disease diagnostic codes
+  ## CKD - diagnostic codes
   chronic_kidney_disease_diagnostic = patients.with_these_clinical_events(
     chronic_kidney_disease_diagnostic_codes,
     returning = "binary_flag",
@@ -266,7 +267,7 @@ study = StudyDefinition(
     on_or_before = "index_date - 1 day",
   ),
   
-  ## Chronic kidney disease codes - all stages
+  ## CKD codes - all stages
  # chronic_kidney_disease_all_stages = patients.with_these_clinical_events(
  #   chronic_kidney_disease_all_stages_codes,
  #   returning = "date",
@@ -275,13 +276,12 @@ study = StudyDefinition(
  #   date_format = "YYYY-MM-DD",
  # ),
   
-  ## Chronic kidney disease codes-stages 3 - 5
+  ## CKD codes - stages 3 - 5
   chronic_kidney_disease_stages_3_5 = patients.with_these_clinical_events(
     chronic_kidney_disease_stages_3_5_codes,
     returning = "binary_flag",
     find_last_match_in_period = True,
     on_or_before = "index_date - 1 day",
-   # date_format = "YYYY-MM-DD",
   ),
 
 ###############################################################################
@@ -329,7 +329,6 @@ study = StudyDefinition(
   
   ## HCW
   hscworker = patients.with_healthcare_worker_flag_on_covid_vaccine_record(returning = "binary_flag"),
-  
   
 ###############################################################################
 # CLINICAL/DEMOGRAPHIC COVARIATES
@@ -384,13 +383,12 @@ study = StudyDefinition(
       "S": "most_recent_smoking_code = 'S'",
       "E": """
                  most_recent_smoking_code = 'E' OR (
-                   most_recent_smoking_code = 'N' AND ever_smoked
+                 most_recent_smoking_code = 'N' AND ever_smoked
                  )
             """,
       "N": "most_recent_smoking_code = 'N' AND NOT ever_smoked",
       "M": "DEFAULT",
     },
-    
     return_expectations = {
       "category": {"ratios": {"S": 0.6, "E": 0.1, "N": 0.2, "M": 0.1}}
     },
@@ -706,10 +704,5 @@ study = StudyDefinition(
       "incidence": 0.01,
     },
   ),
-  
-###############################################################################
-# ADDITIONAL COVARIATES (derived from https://github.com/opensafely/booster-effectiveness)
-###############################################################################
 
-  
 )

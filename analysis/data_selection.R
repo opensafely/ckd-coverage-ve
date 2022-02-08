@@ -29,8 +29,8 @@ first_moderna = as_date("2021-04-13")
 data_criteria <- data_processed %>%
   transmute(
     patient_id,
-    has_ckd_any = !is.na(ckd_inclusion_any) & ckd_inclusion_any==1,
-    has_ckd_any_strict = !is.na(ckd_inclusion_strict) & ckd_inclusion_strict==1,
+    has_ckd_any = ckd_inclusion_any==1,
+    has_ckd_strict = ckd_inclusion_strict==1,
     
     has_age = !is.na(age) & age >=16 & age<120,
     has_sex = !is.na(sex),
@@ -41,24 +41,6 @@ data_criteria <- data_processed %>%
     #isnot_carehomeresident = !care_home_combined,
     #isnot_endoflife = !endoflife,
     #isnot_housebound = !housebound,
-    # vax_afterfirstvaxdate = case_when(
-    #   (vax1_type=="pfizer") & (vax1_date >= first_pfizer) ~ TRUE,
-    #   (vax1_type=="az") & (vax1_date >= first_az) ~ TRUE,
-    #   (vax1_type=="moderna") & (vax1_date >= first_moderna) ~ TRUE,
-    #   (vax2_type=="pfizer") & (vax2_date >= first_pfizer) ~ TRUE,
-    #   (vax2_type=="az") & (vax2_date >= first_az) ~ TRUE,
-    #   (vax2_type=="moderna") & (vax2_date >= first_moderna) ~ TRUE,
-    #   (vax3_type=="pfizer") & (vax3_date >= first_pfizer) ~ TRUE,
-    #   (vax3_type=="az") & (vax3_date >= first_az) ~ TRUE,
-    #   (vax3_type=="moderna") & (vax3_date >= first_moderna) ~ TRUE,
-    #   is.na(vax1_type) ~ TRUE,
-    #   TRUE ~ FALSE
-    # ),
-
-    #vax2_beforelastvaxdate = !is.na(vax2_date) & (vax2_date <= study_dates$lastvax2_date),
-    #vax3_afterstudystartdate = (vax3_date >= study_dates$studystart_date) | is.na(vax3_date),
-    #vax3_beforelastvaxdate = (vax3_date <= study_dates$lastvax3_date) & !is.na(vax3_date),
-    #vax12_homologous = vax1_type==vax2_type,
     has_max_4_vax = n_vax <= 4, # maximum of 4 recorded doses
     has_vaxgap12 = tbv1_2 >= 14 | is.na(vax2_date), # at least 14 days between dose 1 and dose 2 if dose 2 given
     has_vaxgap23 = tbv2_3 >= 14 | is.na(vax3_date), # at least 14 days between dose 2 and dose 3 if dose 3 given
@@ -68,27 +50,21 @@ data_criteria <- data_processed %>%
     #has_knownvax3 = vax3_type %in% c("pfizer", "az", "moderna"),
     #has_knownvax4 = vax4_type %in% c("pfizer", "az", "moderna"),
     
-    #jcvi_group_6orhigher = jcvi_group %in% as.character(1:6),
-
     include = (
       #jcvi_group_6orhigher & # temporary until more data available
-      has_ckd & has_age & 
+      has_ckd_any & has_age & 
+      has_ckd_strict & 
       has_sex & has_imd & has_ethnicity & has_region &
-      #vax_afterfirstvaxdate &
       has_max_4_vax & 
-      has_vaxgap12 & has_vaxgap23 & has_vaxgap34 #& 
-      #has_knownvax1 & has_knownvax2 & has_knownvax3 & has_knownvax4 & #vax12_homologous &
-      #isnot_hscworker &
-      #isnot_carehomeresident & isnot_endoflife &
-      #isnot_housebound
-    )
+      has_vaxgap12 & has_vaxgap23 & has_vaxgap34
+     )
   )
 
 data_cohort <- data_criteria %>%
   filter(include) %>%
   select(patient_id) %>%
   left_join(data_processed, by="patient_id") %>%
-  select(-ckd_inclusion) %>%
+  select(-c(ckd_inclusion_any, ckd_inclusion_strict)) %>%
   droplevels()
 
 write_rds(data_cohort, here("output", "data", "data_cohort.rds"), compress="gz")
@@ -96,18 +72,11 @@ write_csv(data_cohort, here::here("output", "data", "data_cohort.csv"))
 
 data_flowchart <- data_criteria %>%
   transmute(
-    c0 = has_age & has_ckd,
-    c1 = c0 & (has_sex & has_imd & has_ethnicity & has_region),
-    c2 = c1 & (has_max_4_vax),
-    c3 = c2 & (has_vaxgap12 & has_vaxgap23 & has_vaxgap34)
-    
-    #c0 = vax1_afterfirstvaxdate & vax2_beforelastvaxdate & vax3_afterstudystartdate & jcvi_group_6orhigher,
-    #c1_1yearfup = c0_all & (has_follow_up_previous_year),
-    #c1 = c0 & (has_age & has_sex & has_imd & has_ethnicity & has_region),
-    #c2 = c1 & (has_vaxgap12 & has_vaxgap23 & has_knownvax1 & has_knownvax2 & vax12_homologous),
-    #c3 = c2 & (isnot_hscworker ),
-    #c4 = c3 & (isnot_carehomeresident & isnot_endoflife & isnot_housebound),
-    #c5 = c4 & vax3_beforelastvaxdate & has_expectedvax3type
+    c0 = has_age & has_ckd_any,
+    c1 = c0 & has_ckd_strict,
+    c2 = c1 & (has_sex & has_imd & has_ethnicity & has_region),
+    c3 = c2 & (has_max_4_vax),
+    c4 = c3 & (has_vaxgap12 & has_vaxgap23 & has_vaxgap34)
   ) %>%
   summarise(
     across(.fns=sum)
@@ -124,10 +93,11 @@ data_flowchart <- data_criteria %>%
     pct_step = n / lag(n),
     crit = str_extract(criteria, "^c\\d+"),
     criteria = fct_case_when(
-      crit == "c0" ~ "Aged 16+ with eGFR<60 in 2 years before 01 Dec 2020 or any prior dialysis/end-stage renal disease flag", # paste0("Aged 18+\n with 2 doses on or before ", format(study_dates$lastvax2_date, "%d %b %Y")),
-      crit == "c1" ~ "  with no missing demographic information",
-      crit == "c2" ~ "  with maximum of 4 doses recorded",
-      crit == "c3" ~ "  with no vaccines administered at an interval of <14 days",
+      crit == "c0" ~ "Aged 16+ with eGFR<60 in 2 years before 01 Dec 2020 or dialysis code, kidney transplant code, CKD diagnostic code, or CKD3-5 code", # paste0("Aged 18+\n with 2 doses on or before ", format(study_dates$lastvax2_date, "%d %b %Y")),
+      crit == "c1" ~ "  with eGFR<60 or dialysis/kidney transplant code",
+      crit == "c2" ~ "  with no missing demographic information",
+      crit == "c3" ~ "  with maximum of 4 doses recorded",
+      crit == "c4" ~ "  with no vaccines administered at an interval of <14 days",
       TRUE ~ NA_character_
     )
   )

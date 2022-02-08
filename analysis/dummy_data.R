@@ -47,8 +47,8 @@ for (i in 1:nsamples) {
 # maximum theoretical dates by dose are
 # dose 1: 2021-03-02 (2020-12-08 + 84)
 # dose 2: 2021-07-20 (2021-03-02 + 140)
-# dose 3: 2021-12-07 (2021-07-20  + 140)
-# dose 4: 2022-04-26 (2021-12-07  + 140)
+# dose 3: 2021-12-07 (2021-07-20 + 140)
+# dose 4: 2022-04-26 (2021-12-07 + 140)
 
 # set any dates above end date to NA
 data_processed$covid_vax_date_4[data_processed$covid_vax_date_4>end_date] = NA

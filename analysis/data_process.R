@@ -58,14 +58,23 @@ data_extract <- read_csv(
     moderna_date_3 = col_date(format="%Y-%m-%d"),
     moderna_date_4 = col_date(format="%Y-%m-%d"),
     
-    # CKD groups
-    #chronic_kidney_disease_diagnostic = col_date(format="%Y-%m-%d"),
+    # Dates for other variables
     creatinine_date = col_date(format="%Y-%m-%d"),
-    chronic_kidney_disease_diagnostic = col_date(format="%Y-%m-%d"),
-    chronic_kidney_disease_all_stages = col_date(format="%Y-%m-%d"),
-    chronic_kidney_disease_all_stages_3_5 = col_date(format="%Y-%m-%d"),
+    bp_sys_date_measured = col_date(format="%Y-%m-%d"),
+    bp_dias_date_measured = col_date(format="%Y-%m-%d"),
+    immunosuppression_diagnosis_date = col_date(format="%Y-%m-%d"),
+    immunosuppression_medication_date = col_date(format="%Y-%m-%d"),
+    sev_mental_ill = col_date(format="%Y-%m-%d"),
+    prior_positive_test_date = col_date(format="%Y-%m-%d"),
+    prior_primary_care_covid_case_date = col_date(format="%Y-%m-%d"),
+    prior_covidadmitted_date = col_date(format="%Y-%m-%d"),
+    
+    # CKD groups
     creatinine = col_double(), 
     dialysis = col_logical(), 
+    kidney_transplant = col_logical(), 
+    chronic_kidney_disease_diagnostic = col_logical(), # formerly col_date(format="%Y-%m-%d"),
+    chronic_kidney_disease_stages_3_5 = col_logical(), # formerly col_date(format="%Y-%m-%d"),
     
     # Priority groups
     care_home = col_logical(),
@@ -83,9 +92,7 @@ data_extract <- read_csv(
     region = col_character(),
     asthma = col_logical(),
     asplenia = col_logical(),
-    bp_sys_date_measured = col_date(format="%Y-%m-%d"),
     bp_sys = col_double(),
-    bp_dias_date_measured = col_date(format="%Y-%m-%d"),
     bp_dias = col_double(),
     cancer = col_logical(),
     haem_cancer = col_logical(),
@@ -94,16 +101,11 @@ data_extract <- read_csv(
     chronic_resp_dis = col_logical(),
     cld = col_logical(),
     diabetes = col_logical(),
-    immunosuppression_diagnosis_date = col_date(format="%Y-%m-%d"),
-    immunosuppression_medication_date = col_date(format="%Y-%m-%d"),
     learning_disability = col_logical(),
-    sev_mental_ill = col_date(format="%Y-%m-%d"),
     organ_transplant = col_logical(),
+    non_kidney_transplant = col_logical(),
     
     # Other
-    prior_positive_test_date = col_date(format="%Y-%m-%d"),
-    prior_primary_care_covid_case_date = col_date(format="%Y-%m-%d"),
-    prior_covidadmitted_date = col_date(format="%Y-%m-%d"),
     tests_conducted_any = col_double(),
     tests_conducted_positive = col_double()
   ),
@@ -127,30 +129,51 @@ data_extract <- data_extract %>%
 # https://github.com/opensafely/risk-factors-research/
 
 # Set implausible creatinine values to missing (Note: zero changed to missing)
-data_extract$creatinine[data_extract$creatinine<=20 | data_extract$creatinine>=3000] = NA # stata code: replace creatinine = . if !inrange(creatinine, 20, 3000) 
+data_extract$creatinine[data_extract$creatinine<=20 | data_extract$creatinine>=3000] = NA  
 
 # Divide by 88.4 (to convert umol/l to mg/dl)
-data_extract$SCr_adj = data_extract$creatinine/88.4 # stata code: gen SCr_adj = creatinine/88.4
+data_extract$SCr_adj = data_extract$creatinine/88.4 
 
 # Set min for eGFR calculations
-data_extract$min = NA # stata code: gen min=.
-data_extract$min[data_extract$sex == "F"] = data_extract$SCr_adj[data_extract$sex == "F"]/0.7 # stata code: replace min = SCr_adj/0.7 if male==0
-data_extract$min[data_extract$sex == "M"] = data_extract$SCr_adj[data_extract$sex == "M"]/0.9 # stata code: replace min = SCr_adj/0.7 if male==0
-data_extract$min[data_extract$sex == "F"] = data_extract$min[data_extract$sex == "F"]^(-0.329) # stata code: replace min = min^-0.329  if male==0
-data_extract$min[data_extract$sex == "M"] = data_extract$min[data_extract$sex == "M"]^(-0.411) # stata code: replace min = min^-0.411  if male==1
-data_extract$min[data_extract$min<1] = 1 # stata code: replace min = 1 if min<1
+data_extract$min = NA 
+data_extract$min[data_extract$sex == "F"] = (data_extract$SCr_adj[data_extract$sex == "F"]/0.7)^(-0.329) 
+data_extract$min[data_extract$sex == "M"] = (data_extract$SCr_adj[data_extract$sex == "M"]/0.9)^(-0.411) 
+data_extract$min[data_extract$min<1] = 1 
 
 # Set max for eGFR calculations
 data_extract$max = NA # stata code: gen max=.
-data_extract$max[data_extract$sex == "F"] = data_extract$SCr_adj[data_extract$sex == "F"]/0.7 # stata code: replace max=SCr_adj/0.7 if male==0
-data_extract$max[data_extract$sex == "M"] = data_extract$SCr_adj[data_extract$sex == "M"]/0.9 # stata code: replace max=SCr_adj/0.9 if male==1
-data_extract$max = data_extract$max^(-1.209) # stata code: replace max=max^-1.209
-data_extract$max[data_extract$max>1] = 1 # stata code: replace max=1 if max>1
+data_extract$max[data_extract$sex == "F"] = (data_extract$SCr_adj[data_extract$sex == "F"]/0.7)^(-1.209) 
+data_extract$max[data_extract$sex == "M"] = (data_extract$SCr_adj[data_extract$sex == "M"]/0.9)^(-1.209) 
+data_extract$max[data_extract$max>1] = 1 
 
 # Calculate eGFR
-data_extract$egfr = data_extract$min*data_extract$max*141 # stata code: gen egfr=min*max*141
-data_extract$egfr = data_extract$egfr*(0.993^data_extract$age) # stata code: replace egfr=egfr*(0.993^age)
-data_extract$egfr[data_extract$sex == "F"] = data_extract$egfr[data_extract$sex == "F"]*1.018 # stata code: replace egfr=egfr*1.018 if male==0
+data_extract$egfr = data_extract$min*data_extract$max*141 
+data_extract$egfr = data_extract$egfr*(0.993^data_extract$age) 
+data_extract$egfr[data_extract$sex == "F"] = data_extract$egfr[data_extract$sex == "F"]*1.018 
+
+# Group into CKD categories
+data_extract <- data_extract %>% 
+  mutate(
+    egfr_cat5 = cut(
+      egfr,
+      breaks = c(0, 15, 30, 45, 60, 5000),
+      labels = c("stage 5", "stage 4", "stage 3b", "stage 3a", "No CKD"),
+      right = FALSE
+    ),
+    egfr_cat3 = cut(
+      egfr,
+      breaks = c(0, 30, 60, 5000),
+      labels = c("Stage 4/5 eGFR<30", "Stage 3a/3b eGFR 30-60", "No CKD"),
+      right = FALSE
+    ),
+  )
+
+# Replace NAs with 'No CKD' in new categores
+data_extract$egfr_cat5[is.na(data_extract$egfr_cat5)] = "No CKD"
+data_extract$egfr_cat3[is.na(data_extract$egfr_cat3)] = "No CKD"
+
+# Set NA egfr readings to arbitrary value of 300 to enable inclusion criteria to be applied
+data_extract$egfr[is.na(data_extract$egfr)] = 300
 
 # Drop extra variables
 data_extract <- data_extract %>% select(-c(min, max, SCr_adj))
@@ -158,6 +181,10 @@ data_extract <- data_extract %>% select(-c(min, max, SCr_adj))
 ## Format columns (i.e, set factor levels)
 data_processed <- data_extract %>%
   mutate(
+    # CKD inclusion criteria
+    ckd_inclusion_any = ifelse(egfr < 60 | dialysis==TRUE | kidney_transplant==TRUE | chronic_kidney_disease_diagnostic==TRUE | chronic_kidney_disease_stages_3_5==TRUE, 1, 0),
+    ckd_inclusion_strict = ifelse(egfr < 60 | dialysis==TRUE | kidney_transplant==TRUE, 1, 0),
+    
     # Care home (65+)
     care_home_65plus = ifelse(care_home == 1 & age >=65, 1, 0),
     
@@ -235,9 +262,9 @@ data_processed <- data_extract %>%
       TRUE ~ NA_character_),
     
     ## Blood pressure
-    bpcat = ifelse(bp_sys < 120 &  bp_dias < 80, 1, NA),
+    bpcat = ifelse(bp_sys < 120 & bp_dias < 80, 1, NA),
     bpcat = ifelse(bp_sys >= 120 & bp_sys < 130 & bp_dias < 80, 2, bpcat),
-    bpcat = ifelse(bp_sys >= 130 &  bp_dias >= 90, 3, bpcat),
+    bpcat = ifelse(bp_sys >= 130 & bp_dias >= 90, 3, bpcat),
     bpcat = ifelse(is.na(bpcat), 4, bpcat),
     
     bpcat = fct_case_when(
@@ -248,10 +275,6 @@ data_processed <- data_extract %>%
       TRUE ~ NA_character_
     ),
     
-    # CKD
-    ckd_inclusion_any = ifelse(egfr < 60 | dialysis==TRUE | !is.na(chronic_kidney_disease_diagnostic) | !is.na(chronic_kidney_disease_all_stages_3_5), 1, 0),
-    ckd_inclusion_strict = ifelse(egfr < 60 | dialysis==TRUE, 1, 0),
-
     # Immunosuppression
     immunosuppression_diagnosis_date = !is.na(immunosuppression_diagnosis_date),
     immunosuppression_medication_date = !is.na(immunosuppression_medication_date),
@@ -343,8 +366,8 @@ data_vax_wide = data_vax %>%
   )
 
 # pick out vaccine count for each individual, then merge
-data_vax_reduced = data_vax[!duplicated(data_vax$patient_id),c("patient_id", "n_vax")]
-data_vax_wide = data_vax_wide %>% left_join(data_vax_reduced, by ="patient_id")
+data_vax_count = data_vax[!duplicated(data_vax$patient_id),c("patient_id", "n_vax")]
+data_vax_wide = data_vax_wide %>% left_join(data_vax_count, by ="patient_id")
 
 # merge with full data-set
 data_processed_updated <- data_processed %>%
