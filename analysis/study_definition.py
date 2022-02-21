@@ -285,6 +285,23 @@ study = StudyDefinition(
   ),
 
 ###############################################################################
+# CENSORING VARIABLES
+###############################################################################
+
+  ## Death
+  death_date = patients.died_from_any_cause(
+    on_or_after = "index_date",
+    returning = "date_of_death",
+    date_format = "YYYY-MM-DD",
+  ),
+  
+  ## De-registration
+  dereg_date = patients.date_deregistered_from_all_supported_practices(
+    on_or_after = "index_date",
+    date_format = "YYYY-MM-DD",
+  ),
+  
+###############################################################################
 # PRIORITY GROUPS
 ###############################################################################
 
@@ -641,9 +658,9 @@ study = StudyDefinition(
     find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
     return_expectations = {
-      "date": {"earliest": "2020-02-01"},
+      "date": {"earliest": "2020-02-01", "latest": "index_date - 1 day"}, # need both earliest/latest to obtain expected incidence
       "rate": "exponential_increase",
-      "incidence": 0.01
+      "incidence": 0.02,
     },
   ),
   
@@ -659,9 +676,9 @@ study = StudyDefinition(
     on_or_before = "index_date - 1 day",
     find_first_match_in_period=True,
     return_expectations = {
-      "date": {"earliest": "2020-02-01"},
+      "date": {"earliest": "2020-02-01", "latest": "index_date - 1 day"}, # need both earliest/latest to obtain expected incidence
       "rate": "exponential_increase",
-      "incidence": 0.01
+      "incidence": 0.02,
     },
   ),
   
@@ -673,9 +690,9 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2020-02-01"},
+      "date": {"earliest": "2020-02-01", "latest": "index_date - 1 day"}, # need both earliest/latest to obtain expected incidence
       "rate": "exponential_increase",
-      "incidence": 0.01,
+      "incidence": 0.005,
     },
   ),
   

@@ -59,6 +59,8 @@ data_extract <- read_csv(
     moderna_date_4 = col_date(format="%Y-%m-%d"),
     
     # Dates for other variables
+    death_date = col_date(format="%Y-%m-%d"),
+    dereg_date = col_date(format="%Y-%m-%d"),
     creatinine_date = col_date(format="%Y-%m-%d"),
     bp_sys_date_measured = col_date(format="%Y-%m-%d"),
     bp_dias_date_measured = col_date(format="%Y-%m-%d"),
@@ -203,8 +205,8 @@ data_processed <- data_extract %>%
     
     ageband2 = cut(
       age,
-      breaks = c(16, 80, 85, 90, 95, Inf),
-      labels = c("16-79", "80-84", "85-89", "90-94", "95+"),
+      breaks = c(16, 60, 80, 90, Inf),
+      labels = c("16-69", "70-79", "80-89", "90+"),
       right = FALSE
     ),
     
@@ -215,8 +217,8 @@ data_processed <- data_extract %>%
       TRUE ~ NA_character_
     ),
     
-    # BMI
-    bmi = ifelse(bmi == "Not obese","Not obese", "Obese"),
+    # obesity
+    obesity = ifelse(bmi == "Not obese",0,1),
     
     # Smoking status
     smoking_status = ifelse(smoking_status == "E" | smoking_status == "S","S&E", smoking_status),
@@ -299,6 +301,10 @@ data_processed <- data_extract %>%
   ) 
 
 # apply dummy data script if not running in the server
+#Sys.getenv()
+#Sys.getenv("USER")
+#Sys.getenv("OPENSAFELY_BACKEND")
+
 if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")){
   source(here::here("analysis", "dummy_data.R"))
   # add binary flag to signal whether dummy data processing steps have been applied

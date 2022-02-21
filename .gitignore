@@ -1,4 +1,7 @@
 analysis/archive/
+analysis/session.Rmd
 output/*
 metadata/*
 analysis/*.html
+.Rhistory
+analysis/.Rhistory

@@ -15,6 +15,7 @@ library('here')
 library('glue')
 library('gt')
 library('gtsummary')
+library('plyr')
 library('reshape2')
 
 ## Import custom user functions
@@ -24,10 +25,10 @@ library('reshape2')
 fs::dir_create(here::here("output", "tables"))
 
 ## Import data
-data_processed <- read_rds(here::here("output", "data", "data_cohort.rds"))
+data_cohort <- read_rds(here::here("output", "data", "data_cohort.rds"))
 
 ## Format data
-data_processed <- data_processed %>%
+data_cohort <- data_cohort %>%
   mutate(group = ifelse(care_home_65plus == 1, 1, NA),
          group = ifelse(is.na(group) & ageband == 3, 2, group),
          group = ifelse(is.na(group) & hscworker == 1, 3, group),
@@ -35,88 +36,128 @@ data_processed <- data_processed %>%
          group = ifelse(is.na(group) & shielded == 1, 5, group),
          group = ifelse(is.na(group) & age >=50 & age <70, 6, group),
          group = ifelse(is.na(group), 7, group),
-         group = factor(group),
-         ageband3 = cut(
-           age,
-           breaks = c(16, 50, 60, 70, 80, Inf),
-           labels = c("16-50", "50-59", "60-69", "70-79", "80+"),
-           right = FALSE)) %>%
+         group = factor(group)
+         ) %>%
   group_by(patient_id) %>%
-  ungroup()
-
-## Counts
-counts0 <- data_processed %>%
-  mutate(time_between_vaccinations1_2 = cut(tbv1_2,
+  ungroup() %>%
+  mutate(time_between_vaccinations1_2 = as.character(cut(tbv1_2,
                                          breaks = c(0, 42, 84, Inf),
                                          labels = c("6 weeks or less", "6-12 weeks", "12 weeks or more"),
-                                         right = FALSE),
-         time_between_vaccinations2_3 = cut(tbv2_3,
+                                         right = FALSE)),
+         time_between_vaccinations2_3 = as.character(cut(tbv2_3,
                                             breaks = c(0, 84, 168, Inf),
                                             labels = c("12 weeks or less", "12-24 weeks", "24 weeks or more"),
-                                            right = FALSE),
-         
-         smoking_status = ifelse(is.na(smoking_status), "N&M", smoking_status)) %>%
-  select(ageband3, 
+                                            right = FALSE)),
+         smoking_status = ifelse(is.na(smoking_status), "N&M", smoking_status),
+         bpcat = ifelse(bpcat=="High" | bpcat=="Elevated", 1, 0),
+  ) %>%
+  mutate(smoking_status = ifelse(smoking_status=="S&E", 1, 0),
+        time_between_vaccinations1_2 = ifelse(is.na(vax2_date), "Not applicable (no dose given)", time_between_vaccinations1_2),
+        time_between_vaccinations2_3 = ifelse(is.na(vax3_date), "Not applicable (no dose given)", time_between_vaccinations2_3)
+  )
+
+counts0 <- data_cohort %>% 
+  select(ageband2, 
          sex,
-         bmi,
-         smoking_status,
          ethnicity,
          imd,
          region,
-         asthma,
-         asplenia,
-         bpcat,
-         cancer,
-         diabetes,
-         chd,
-         haem_cancer,
-         immunosuppression,
-         dialysis,
-         kidney_transplant,
          chronic_kidney_disease_diagnostic,
-         chronic_kidney_disease_stages_3_5,
-         learning_disability,
-         cld,
-         chronic_neuro_dis_inc_sig_learn_dis,
-         chronic_resp_dis,
          dialysis, 
+         kidney_transplant, 
+         chronic_kidney_disease_stages_3_5, 
+         care_home,
+         smoking_status,
+         asthma,
+         bpcat,
+         shielded,
+         immunosuppression, 
+         chronic_resp_dis, 
+         diabetes, 
+         cld, 
+         chd, 
+         asplenia, 
+         cancer, 
+         haem_cancer,
+         obesity, 
+         chronic_neuro_dis_inc_sig_learn_dis, 
          sev_mental_ill, 
-         organ_transplant,
          non_kidney_transplant,
+         prior_covid_cat,
          time_between_vaccinations1_2,
          time_between_vaccinations2_3,
-         prior_covid_cat) %>%
+         ) %>%
   tbl_summary()
-
 counts0$inputs$data <- NULL
 
 table1 <- counts0$table_body %>%
   select(group = variable, variable = label, count = stat_0) %>%
   separate(count, c("count","perc"), sep = "([(])") %>%
-  mutate(count = gsub(" ", "", count),
-         count = as.numeric(gsub(",", "", count))) %>%
+  mutate(count = gsub(" ", "", count)) %>%
+  mutate(count = as.numeric(gsub(",", "", count))) %>%
   filter(!(is.na(count))) %>%
-  select(-perc) %>%
-  filter(!(group == "prior_covid_cat" & variable == "Unknown"))
+  select(-perc)
 
-
-table1$percent = round(table1$count/nrow(data_processed)*100,1)
+table1$percent = round(table1$count/nrow(data_cohort)*100,1)
 colnames(table1) = c("Group", "Variable", "Count", "Percent")
 
+## Relabel variables for plotting
+table1$Variable[table1$Variable=="care_home"] = "Care home resident"
+table1$Variable[table1$Variable=="chronic_kidney_disease_diagnostic"] = "CKD diagnostic code"
+table1$Variable[table1$Variable=="dialysis"] = "Dialysis"
+table1$Variable[table1$Variable=="kidney_transplant"] = "Kidney transplant"
+table1$Variable[table1$Variable=="chronic_kidney_disease_stages_3_5"] = "CKD stage 3-5 code"
+table1$Variable[table1$Variable=="smoking_status"] = "Current or former smoker"
+table1$Variable[table1$Variable=="asthma"] = "Asthma"
+table1$Variable[table1$Variable=="bpcat"] = "High or elevated blood pressure"
+table1$Variable[table1$Variable=="shielded"] = "Shielding"
+table1$Variable[table1$Variable=="immunosuppression"] = "Immunosuppression"
+table1$Variable[table1$Variable=="chronic_resp_dis"] = "Chronic respiratory disease"
+table1$Variable[table1$Variable=="diabetes"] = "Diabetes"
+table1$Variable[table1$Variable=="cld"] = "Chronic liver disease"
+table1$Variable[table1$Variable=="chd"] = "Chronic heart disease"
+table1$Variable[table1$Variable=="asplenia"] = "Asplenia"
+table1$Variable[table1$Variable=="cancer"] = "Cancer"
+table1$Variable[table1$Variable=="haem_cancer"] = "Haematologic cancer"
+table1$Variable[table1$Variable=="obesity"] = "Obesity"
+table1$Variable[table1$Variable=="chronic_neuro_dis_inc_sig_learn_dis"] = "Chronic neurological disease (including learning disability)"
+table1$Variable[table1$Variable=="sev_mental_ill"] = "Severe mental illness"
+table1$Variable[table1$Variable=="non_kidney_transplant"] = "Organ transplant (non-kidney)"
+table1$Variable[table1$Variable=="prior_covid_cat"] = "Prior COVID"
+
+# Relabel groups for plotting
+# Demography
+table1$Group[table1$Group=="ageband2"] = "Age"
+table1$Group[table1$Group=="sex"] = "Sex"
+table1$Group[table1$Group=="ethnicity"] = "Ethnicity"
+table1$Group[table1$Group=="imd"] = "IMD"
+table1$Group[table1$Group=="region"] = "Region"
+
+# Other
+table1$Group[table1$Variable %in% c("CKD diagnostic code", "Dialysis", "Kidney transplant", "CKD stage 3-5 code")] = "Clinical (CKD-related)"
+table1$Group[table1$Variable %in% c("Care home resident", "Current or former smoker", "Asthma", "High or elevated blood pressure", "Shielding", "Immunosuppression", "Chronic respiratory disease",
+                                    "Diabetes", "Chronic liver disease", "Chronic heart disease", "Asplenia", "Cancer","Haematologic cancer",
+                                    "Obesity", "Chronic neurological disease (including learning disability)", "Severe mental illness", 
+                                    "Organ transplant (any)", "Organ transplant (non-kidney)", "Prior COVID")] = "Other"
+table1$Group[table1$Group=="time_between_vaccinations1_2"] = "Time between doses 1 and 2"
+table1$Group[table1$Group=="time_between_vaccinations2_3"] = "Time between doses 2 and 3"
+
+
 # Redaction ----
+rounded_n = plyr::round_any(nrow(data_cohort),5)
 
-## Redact values < 8
-threshold = 8
-
-table1_redacted <- table1 %>%
-  mutate(Count = ifelse(Count < threshold, NA, as.numeric(Count)),
-         Percent = ifelse(is.na(Count), NA, Percent))
-         
 ## Round to nearest 5
-table1_redacted <- table1_redacted %>%
+table1_redacted <- table1 %>%
   mutate(Count = plyr::round_any(Count, 5))
-table1_redacted$Percent = round(table1_redacted$Count/nrow(data_processed)*100,1)
+table1_redacted$Percent = round(table1_redacted$Count/rounded_n*100,1)
+table1_redacted$Non_Count = rounded_n - table1_redacted$Count
+
+## Redact any rows with rounded cell counts <=10 or within 10 of total population size
+table1_redacted$Count[table1_redacted$Count<=10 | table1_redacted$Non_Count<=10] = "[Redacted]"
+table1_redacted$Percent[table1_redacted$Count<=10 | table1_redacted$Non_Count<=10] = "[Redacted]"
+table1_redacted <- table1_redacted %>% select(-Non_Count)
 
 # Save as html ----
 gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_redacted.html"))
+write_rds(table1_redacted, here::here("output", "tables", "table1_redacted.rds"), compress = "gz")
 

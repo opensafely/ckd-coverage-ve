@@ -67,7 +67,7 @@ data_cohort <- data_criteria %>%
   select(-c(ckd_inclusion_any, ckd_inclusion_strict)) %>%
   droplevels()
 
-write_rds(data_cohort, here("output", "data", "data_cohort.rds"), compress="gz")
+write_rds(data_cohort, here::here("output", "data", "data_cohort.rds"), compress="gz")
 write_csv(data_cohort, here::here("output", "data", "data_cohort.csv"))
 
 data_flowchart <- data_criteria %>%

@@ -49,15 +49,46 @@ actions:
     run: r:latest analysis/table_1.R
     needs: [data_selection]
     outputs:
+      highly_sensitive:
+        data: output/tables/table1_redacted.rds
       moderately_sensitive:
         table: output/tables/table1_redacted.html
+        
+  # Cox models - dose-2 coverage ----
+  cox_model:
+    run: r:latest analysis/cox_model.R
+    needs: [data_selection]
+    outputs:
+      highly_sensitive:
+        data1: output/data/data_cox.rds
+        data2: output/model/mod_strat_coxph_redacted.rds
+        csv: output/data/data_cox.csv
+      moderately_sensitive:
+        csv: output/model/mod_strat_coxph_redacted.csv
+        
+  # Logistic models - dose-2 coverage ----
+  logistic_model:
+    run: r:latest analysis/logistic_model.R
+    needs: [cox_model]
+    outputs:
+      highly_sensitive:
+        data: output/model/mod_strat_logistic_redacted.rds
+      moderately_sensitive:
+        csv: output/model/mod_strat_logistic_redacted.csv
 
   # Coverage summaries ----
   vaccine_coverage:
     run: r:latest -e 'rmarkdown::render("analysis/vaccine_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [data_selection]
+    needs: [data_selection, table_1, cox_model, logistic_model]
     outputs:
       moderately_sensitive:
         html: output/markdown/vaccine_coverage.html
         csv: output/tables/coverage_over_time_rounded.csv
 
+  # Check session info for set of packages ----
+  #session:
+  #  run: r:latest -e 'rmarkdown::render("analysis/session.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
+  #  needs: [data_selection]
+  #  outputs:
+  #    moderately_sensitive:
+  #      html: output/markdown/session.html
