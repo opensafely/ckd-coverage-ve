@@ -34,7 +34,7 @@ actions:
         data: output/data/data_cohort.rds
         csv: output/data/data_cohort.csv
       moderately_sensitive:
-        csv: output/data/flowchart.csv
+        csv: output/tables/flowchart.csv
 
  # Data properties ----      
   data_properties:

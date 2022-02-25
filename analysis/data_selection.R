@@ -17,6 +17,9 @@ library('glue')
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
 
+## Create output directory
+fs::dir_create(here::here("output", "tables"))
+
 ## Import processed data ----
 data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))
 
@@ -101,4 +104,4 @@ data_flowchart <- data_criteria %>%
       TRUE ~ NA_character_
     )
   )
-write_csv(data_flowchart, here::here("output", "data", "flowchart.csv"))
+write_csv(data_flowchart, here::here("output", "tables", "flowchart.csv"))
