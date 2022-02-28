@@ -85,6 +85,14 @@ actions:
         html: output/markdown/vaccine_coverage.html
         csv: output/tables/coverage_over_time_rounded.csv
 
+  # Coverage summaries ----
+  cox_model_check:
+    run: r:latest -e 'rmarkdown::render("analysis/cox_model_check.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
+    needs: [data_selection, cox_model]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/cox_model_check.html
+
   # Check session info for set of packages ----
   #session:
   #  run: r:latest -e 'rmarkdown::render("analysis/session.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
