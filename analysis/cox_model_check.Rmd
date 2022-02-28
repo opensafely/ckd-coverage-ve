@@ -106,9 +106,9 @@ test.ph
 
 #### Test Schoenfeld residuals
 ```{r}
-#ggcoxzph(test.ph)
+ggcoxzph(test.ph, point.col=NA)
 ```
-Excluded to avoid plotting individual data.
+Points excluded to avoid disclosing individual data.
 
 ### IMD
 
@@ -173,8 +173,35 @@ test.ph
 
 #### Test Schoenfeld residuals
 ```{r}
-#ggcoxzph(test.ph)
+ggcoxzph(test.ph, point.col=NA)
 ```
-Excluded to avoid plotting individual data.
+Points excluded to avoid disclosing individual data.
+
+
+### Fully adjusted
+
+#### Summary of fully adjusted model without stratification
+```{r}
+var_list <- c("ageband2", "sex", "ethnicity", "imd", "chronic_kidney_disease_diagnostic",
+              "dialysis", "kidney_transplant", "chronic_kidney_disease_stages_3_5", "prior_covid_cat",
+              "care_home", "shielded", "immunosuppression", "chronic_resp_dis", "diabetes", "cld",
+              "chd", "asplenia", "cancer", "obesity", "chronic_neuro_dis_inc_sig_learn_dis", "sev_mental_ill") 
+# fit multivariate model
+adj_model <- coxph(as.formula(paste0("Surv(follow_up_time, covid_vax) ~", paste(var_list, collapse="+"),"+ strata(region)")),
+                             data = data_cox)
+summary(adj_model)
+```
+
+#### Test proportional hazards
+```{r}
+test.ph <- cox.zph(adj_model)
+test.ph
+```
+
+#### Test Schoenfeld residuals
+```{r, fig.width=20, fig.height=20}
+ggcoxzph(test.ph, point.col=NA)
+```
+Points excluded to avoid disclosing individual data.
 
 
