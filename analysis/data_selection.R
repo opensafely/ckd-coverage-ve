@@ -53,6 +53,9 @@ data_criteria <- data_processed %>%
     #has_knownvax3 = vax3_type %in% c("pfizer", "az", "moderna"),
     #has_knownvax4 = vax4_type %in% c("pfizer", "az", "moderna"),
     
+    alive_throughout = is.na(dereg_date),
+    registered_throughout = is.na(death_date),
+    
     include = (
       #jcvi_group_6orhigher & # temporary until more data available
       has_ckd_any & has_age & 
@@ -79,7 +82,9 @@ data_flowchart <- data_criteria %>%
     c1 = c0 & has_ckd_strict,
     c2 = c1 & (has_sex & has_imd & has_ethnicity & has_region),
     c3 = c2 & (has_max_4_vax),
-    c4 = c3 & (has_vaxgap12 & has_vaxgap23 & has_vaxgap34)
+    c4 = c3 & (has_vaxgap12 & has_vaxgap23 & has_vaxgap34),
+    c5 = c4 & alive_throughout,
+    c6 = c5 & registered_throughout
   ) %>%
   summarise(
     across(.fns=sum)
@@ -101,6 +106,8 @@ data_flowchart <- data_criteria %>%
       crit == "c2" ~ "  with no missing demographic information",
       crit == "c3" ~ "  with maximum of 4 doses recorded",
       crit == "c4" ~ "  with no vaccines administered at an interval of <14 days",
+      crit == "c5" ~ "  alive throughout follow-up period",
+      crit == "c6" ~ "  registered throughout follow-up period",
       TRUE ~ NA_character_
     )
   )

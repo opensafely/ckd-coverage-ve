@@ -40,9 +40,7 @@ data_cox <- data_cohort %>%
     end_date = as.Date("2021-07-01", format = "%Y-%m-%d"),
     
     # Censoring
-    censor_date = pmin(death_date, 
-                       dereg_date, 
-                       as.Date("2021-07-01", format = "%Y-%m-%d"), 
+    censor_date = pmin(as.Date("2021-07-01", format = "%Y-%m-%d"), 
                        na.rm=TRUE),
     
     # Follow-up time
@@ -65,6 +63,7 @@ var_list <- c("ageband2", "sex", "ethnicity", "imd", "chronic_kidney_disease_dia
 data_cox <- data_cox %>% select(all_of(var_list), follow_up_time, covid_vax, region)
 data_cox[,var_list] <- lapply(data_cox[,var_list], factor)
 data_cox <- data_cox[complete.cases(data_cox),]
+
 
 ## Save cox model input data
 write_rds(data_cox, here::here("output", "data", "data_cox.rds"), compress="gz")
