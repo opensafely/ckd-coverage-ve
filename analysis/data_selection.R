@@ -62,7 +62,8 @@ data_criteria <- data_processed %>%
       has_ckd_strict & 
       has_sex & has_imd & has_ethnicity & has_region &
       has_max_4_vax & 
-      has_vaxgap12 & has_vaxgap23 & has_vaxgap34
+      has_vaxgap12 & has_vaxgap23 & has_vaxgap34 &
+      alive_throughout & registered_throughout
      )
   )
 
