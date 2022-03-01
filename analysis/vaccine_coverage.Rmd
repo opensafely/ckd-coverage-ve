@@ -296,7 +296,7 @@ tbl_reduced %>%
 $$\\[0.05in]$$    
 
 #### Plot of multivariate model outputs
-```{r, fig.width=10, fig.height=10}
+```{r, fig.width=9, fig.height=10}
 ## Remove redacted components from plot
 tbl_reduced$`HR (adj)`[tbl_reduced$`HR (adj)`=="[Redacted]"] = NA
 tbl_reduced$`lower CI (adj)`[tbl_reduced$`HR (adj)`=="[Redacted]"] = NA
@@ -319,8 +319,8 @@ if(max(tbl_reduced$`upper CI (adj)`, na.rm=T) > plot_max) { plot_max = max(tbl_r
 tbl_reduced$redaction = NA
 tbl_reduced$redaction[tbl_reduced$`n (total)`=="[Redacted]"] = "[R]"
 
-## Generate plot
-ggplot(tbl_reduced, aes(y = `HR (adj)`, x = level, colour = var_group)) + 
+## Generate plot of HRs
+g1 = ggplot(tbl_reduced, aes(y = `HR (adj)`, x = level, colour = var_group)) + 
   geom_point(size = 2, alpha=0.8) +
   geom_text(aes(y = plot_min+0.02, label = redaction)) +
   geom_errorbar(aes(ymin=as.numeric(`lower CI (adj)`), ymax=as.numeric(`upper CI (adj)`), colour = var_group), width=0) + 
@@ -330,8 +330,23 @@ ggplot(tbl_reduced, aes(y = `HR (adj)`, x = level, colour = var_group)) +
   ylab("Hazard ratio") + xlab("") +
   scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
   scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2)) +
-  theme(axis.title = element_text(size=12), axis.text = element_text(size=12), strip.text = element_text(size=12), 
-        legend.title = element_text(size = 12), legend.text = element_text(size = 12))
+  theme(axis.title = element_text(size=12), axis.text = element_text(size=12), strip.text = element_blank(), 
+        legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = c(-1.2,0.5))
+
+tbl_reduced$group_prev <- as.numeric(tbl_reduced$`n (events)`)/as.numeric(tbl_reduced$`n (total)`)
+tbl_reduced$perc_unvac <- 100-tbl_reduced$group_prev*100
+plot_max = max(tbl_reduced$perc_unvac, na.rm=T)+5
+
+g2 = ggplot(tbl_reduced, aes(y = perc_unvac, x = level)) + 
+  geom_point(size = 2, alpha=0.8, colour = "#990000") +
+  geom_segment(aes(xend=level), yend=0, colour = "#990000") +
+  ylim(0,plot_max) + coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
+  theme_bw() + theme(strip.background = element_blank()) + 
+  ylab("% Unvaccinated") + xlab("") +
+  theme(axis.title = element_text(size=12), axis.text.x = element_text(size=12), axis.text.y = element_blank(), strip.text = element_text(size=12), 
+        legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = "none")
+
+plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"), rel_widths = c(3,0.8))
 ```
 $$\\[0.05in]$$    
 
@@ -391,7 +406,7 @@ tbl_reduced %>%
 $$\\[0.1in]$$    
 
 #### Plot of multivariate model outputs
-```{r, fig.width=10, fig.height=10}
+```{r, fig.width=9, fig.height=10}
 ## Remove redacted components from plot
 tbl_reduced$`OR (adj)`[tbl_reduced$`OR (adj)`=="[Redacted]"] = NA
 tbl_reduced$`lower CI (adj)`[tbl_reduced$`OR (adj)`=="[Redacted]"] = NA
@@ -415,7 +430,7 @@ tbl_reduced$redaction = NA
 tbl_reduced$redaction[tbl_reduced$`n (total)`=="[Redacted]"] = "[R]"
 
 ## Generate plot
-ggplot(tbl_reduced, aes(y = `OR (adj)`, x = level, colour = var_group)) + 
+g1 = ggplot(tbl_reduced, aes(y = `OR (adj)`, x = level, colour = var_group)) + 
   geom_point(size = 2, alpha=0.8) +
   geom_text(aes(y = plot_min+0.02, label = redaction)) +
   geom_errorbar(aes(ymin=as.numeric(`lower CI (adj)`), ymax=as.numeric(`upper CI (adj)`), colour = var_group), width=0) + 
@@ -425,8 +440,23 @@ ggplot(tbl_reduced, aes(y = `OR (adj)`, x = level, colour = var_group)) +
   ylab("Odds ratio") + xlab("") +
   scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
   scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2)) +
-  theme(axis.title = element_text(size=12), axis.text = element_text(size=12), strip.text = element_text(size=12), 
-        legend.title = element_text(size = 12), legend.text = element_text(size = 12))
+  theme(axis.title = element_text(size=12), axis.text = element_text(size=12), strip.text = element_blank(), 
+        legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = c(-1.2,0.5))
+
+tbl_reduced$group_prev <- as.numeric(tbl_reduced$`n (events)`)/as.numeric(tbl_reduced$`n (total)`)
+tbl_reduced$perc_unvac <- 100-tbl_reduced$group_prev*100
+plot_max = max(tbl_reduced$perc_unvac, na.rm=T)+5
+
+g2 = ggplot(tbl_reduced, aes(y = perc_unvac, x = level)) + 
+  geom_point(size = 2, alpha=0.8, colour = "#990000") +
+  geom_segment(aes(xend=level), yend=0, colour = "#990000") +
+  ylim(0,plot_max) + coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
+  theme_bw() + theme(strip.background = element_blank()) + 
+  ylab("% Unvaccinated") + xlab("") +
+  theme(axis.title = element_text(size=12), axis.text.x = element_text(size=12), axis.text.y = element_blank(), strip.text = element_text(size=12), 
+        legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = "none")
+
+plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"), rel_widths = c(3,0.8))
 ```
 
 ##### Session info
