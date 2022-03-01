@@ -1,9 +1,9 @@
 ---
-title: "Univariate cox PH model check - care home + IMD"
+title: "Univariate cox PH model check - dialysis + IMD"
 output: html_document
 ---
 
-### Care home status 
+### Dialysis 
 
 #### Summary of univariate model without stratification
 ```{r, include=FALSE}
@@ -33,7 +33,7 @@ data_cox <- read_rds(here::here("output", "data", "data_cox.rds"))
 
 ```{r}
 # fit univariate model
-uni_model = coxph(Surv(follow_up_time, covid_vax) ~ care_home, data = data_cox)
+uni_model = coxph(Surv(follow_up_time, covid_vax) ~ dialysis, data = data_cox)
 summary(uni_model)
 ```
 
@@ -52,7 +52,7 @@ summary(uni_model)
 # )
 
 threshold=7
-surv_data_rounded <- survfit(Surv(follow_up_time, covid_vax) ~ care_home, 
+surv_data_rounded <- survfit(Surv(follow_up_time, covid_vax) ~ dialysis, 
                             data = data_cox) %>% 
   broom::tidy() %>% 
   filter(estimate > 0) %>%
@@ -66,22 +66,22 @@ surv_data_rounded <- survfit(Surv(follow_up_time, covid_vax) ~ care_home,
   )
 
 surv_data_risk_table <- ggsurvplot(
-  survfit(Surv(follow_up_time, covid_vax) ~ care_home, data = data_cox), risk.table = TRUE)$data.survtable %>%
-  select(care_home, time, n.risk) %>%
+  survfit(Surv(follow_up_time, covid_vax) ~ dialysis, data = data_cox), risk.table = TRUE)$data.survtable %>%
+  select(dialysis, time, n.risk) %>%
   mutate(`n.risk` = ifelse(`n.risk` < 8, "<8", `n.risk`))
 
 g1 = surv_data_rounded %>%
   ggplot(aes(x = time, y = 1-cum.in, colour = strata)) + geom_step(size = 0.5) +
   scale_x_continuous(breaks = seq(0, max(surv_data_rounded$time),50)) +
-  scale_y_continuous(expand = expansion(mult=c(0,0.01))) + 
+  scale_y_continuous(expand = expansion(mult=c(0,0.01)), limits=c(0,1)) + 
   labs(
     x = "Days since index date",
     y = "1 - cumulative incidence",
-    colour = "Care home status",
+    colour = "dialysis status",
     title = "") +
     theme_minimal(base_size = 12)
 
-g2 = ggplot(surv_data_risk_table, aes(time, care_home)) + 
+g2 = ggplot(surv_data_risk_table, aes(time, dialysis)) + 
   geom_text(aes(label = n.risk), size = 4) +
   theme_minimal(base_size = 12) +
   theme(panel.grid.major = element_blank(),
@@ -92,7 +92,7 @@ g2 = ggplot(surv_data_risk_table, aes(time, care_home)) +
         strip.text = element_text(color = "black")) +
   scale_y_discrete(limits = c("0", "1")) +
   xlab("") + 
-  ylab("Care home") +
+  ylab("dialysis") +
   ggtitle("Number at Risk")
 
 plot_grid(g1, g2, ncol=1,align="v", axis = c("lr"), rel_heights=c(3,1.5))
@@ -106,7 +106,7 @@ test.ph
 
 #### Test Schoenfeld residuals
 ```{r}
-ggcoxzph(test.ph, point.col=NA)
+plot(test.ph, col=c("red","blue"), resid=FALSE)
 ```
 Points excluded to avoid disclosing individual data.
 
@@ -141,11 +141,11 @@ surv_data_risk_table <- ggsurvplot(
 g1 = surv_data_rounded %>%
   ggplot(aes(x = time, y = 1-cum.in, colour = strata)) + geom_step(size = 0.5) +
   scale_x_continuous(breaks = seq(0, max(surv_data_rounded$time),50)) +
-  scale_y_continuous(expand = expansion(mult=c(0,0.01))) + 
+  scale_y_continuous(expand = expansion(mult=c(0,0.01)), limits=c(0,1)) + 
   labs(
     x = "Days since index date",
     y = "1 - cumulative incidence",
-    colour = "Care home status",
+    colour = "IMD",
     title = "") +
     theme_minimal(base_size = 12)
 
@@ -173,10 +173,9 @@ test.ph
 
 #### Test Schoenfeld residuals
 ```{r}
-ggcoxzph(test.ph, point.col=NA)
+plot(test.ph, col=c("red","blue"), resid=FALSE)
 ```
 Points excluded to avoid disclosing individual data.
-
 
 ### Fully adjusted
 
@@ -199,8 +198,8 @@ test.ph
 ```
 
 #### Test Schoenfeld residuals
-```{r, fig.width=20, fig.height=20}
-ggcoxzph(test.ph, point.col=NA)
+```{r}
+plot(test.ph, col=c("red","blue"), resid=FALSE)
 ```
 Points excluded to avoid disclosing individual data.
 
