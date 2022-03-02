@@ -25,24 +25,13 @@ library('reshape2')
 fs::dir_create(here::here("output", "tables"))
 
 ## Import data
-data_cohort <- read_rds(here::here("output", "data", "data_cohort.rds"))
+data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
 
 ## Format data
 data_cohort <- data_cohort %>%
-  mutate(group = ifelse(care_home_65plus == 1, 1, NA),
-         group = ifelse(is.na(group) & ageband == 3, 2, group),
-         group = ifelse(is.na(group) & hscworker == 1, 3, group),
-         group = ifelse(is.na(group) & ageband == 2, 4, group),
-         group = ifelse(is.na(group) & shielded == 1, 5, group),
-         group = ifelse(is.na(group) & age >=50 & age <70, 6, group),
-         group = ifelse(is.na(group), 7, group),
-         group = factor(group)
-         ) %>%
-  group_by(patient_id) %>%
-  ungroup() %>%
   mutate(time_between_vaccinations1_2 = as.character(cut(tbv1_2,
-                                         breaks = c(0, 42, 84, Inf),
-                                         labels = c("6 weeks or less", "6-12 weeks", "12 weeks or more"),
+                                         breaks = c(0, 42, 70, 98, Inf),
+                                         labels = c("6 weeks or less", "6-10 weeks", "10-14 weeks", "14 weeks or more"),
                                          right = FALSE)),
          time_between_vaccinations2_3 = as.character(cut(tbv2_3,
                                             breaks = c(0, 84, 168, Inf),
@@ -62,15 +51,20 @@ counts0 <- data_cohort %>%
          ethnicity,
          imd,
          region,
+         jcvi_group,
+         rural_urban_group,
          chronic_kidney_disease_diagnostic,
          dialysis, 
          kidney_transplant, 
-         chronic_kidney_disease_stages_3_5, 
+         chronic_kidney_disease_stages_3_5,
+         cev,
          care_home,
+         hscworker,
+         endoflife,
+         housebound,
          smoking_status,
          asthma,
          bpcat,
-         shielded,
          immunosuppression, 
          chronic_resp_dis, 
          diabetes, 
@@ -102,7 +96,11 @@ table1$percent = round(table1$count/nrow(data_cohort)*100,1)
 colnames(table1) = c("Group", "Variable", "Count", "Percent")
 
 ## Relabel variables for plotting
+table1$Variable[table1$Variable=="cev"] = "Clinically extremely vulnerable"
 table1$Variable[table1$Variable=="care_home"] = "Care home resident"
+table1$Variable[table1$Variable=="hscworker"] = "Health and social care worker"
+table1$Variable[table1$Variable=="endoflife"] = "End of life care"
+table1$Variable[table1$Variable=="housebound"] = "Housebound"
 table1$Variable[table1$Variable=="chronic_kidney_disease_diagnostic"] = "CKD diagnostic code"
 table1$Variable[table1$Variable=="dialysis"] = "Dialysis"
 table1$Variable[table1$Variable=="kidney_transplant"] = "Kidney transplant"
@@ -110,7 +108,6 @@ table1$Variable[table1$Variable=="chronic_kidney_disease_stages_3_5"] = "CKD sta
 table1$Variable[table1$Variable=="smoking_status"] = "Current or former smoker"
 table1$Variable[table1$Variable=="asthma"] = "Asthma"
 table1$Variable[table1$Variable=="bpcat"] = "High or elevated blood pressure"
-table1$Variable[table1$Variable=="shielded"] = "Shielding"
 table1$Variable[table1$Variable=="immunosuppression"] = "Immunosuppression"
 table1$Variable[table1$Variable=="chronic_resp_dis"] = "Chronic respiratory disease"
 table1$Variable[table1$Variable=="diabetes"] = "Diabetes"
@@ -132,16 +129,18 @@ table1$Group[table1$Group=="sex"] = "Sex"
 table1$Group[table1$Group=="ethnicity"] = "Ethnicity"
 table1$Group[table1$Group=="imd"] = "IMD"
 table1$Group[table1$Group=="region"] = "Region"
+table1$Group[table1$Group=="jcvi_group"] = "JCVI group"
+table1$Group[table1$Group=="rural_urban_group"] = "Setting"
 
 # Other
 table1$Group[table1$Variable %in% c("CKD diagnostic code", "Dialysis", "Kidney transplant", "CKD stage 3-5 code")] = "Clinical (CKD-related)"
-table1$Group[table1$Variable %in% c("Care home resident", "Current or former smoker", "Asthma", "High or elevated blood pressure", "Shielding", "Immunosuppression", "Chronic respiratory disease",
-                                    "Diabetes", "Chronic liver disease", "Chronic heart disease", "Asplenia", "Cancer","Haematologic cancer",
-                                    "Obesity", "Chronic neurological disease (including learning disability)", "Severe mental illness", 
+table1$Group[table1$Variable %in% c("Clinically extremely vulnerable", "Care home resident", "Healthcare worker", "End of life care", "Housebound", 
+                                    "Current or former smoker", "Asthma", "High or elevated blood pressure", "Shielding", "Immunosuppression", 
+                                    "Chronic respiratory disease", "Diabetes", "Chronic liver disease", "Chronic heart disease", "Asplenia", "Cancer",
+                                    "Haematologic cancer", "Obesity", "Chronic neurological disease (including learning disability)", "Severe mental illness", 
                                     "Organ transplant (any)", "Organ transplant (non-kidney)", "Prior COVID")] = "Other"
 table1$Group[table1$Group=="time_between_vaccinations1_2"] = "Time between doses 1 and 2"
 table1$Group[table1$Group=="time_between_vaccinations2_3"] = "Time between doses 2 and 3"
-
 
 # Redaction ----
 rounded_n = plyr::round_any(nrow(data_cohort),5)
@@ -158,6 +157,6 @@ table1_redacted$Percent[table1_redacted$Count<=10 | table1_redacted$Non_Count<=1
 table1_redacted <- table1_redacted %>% select(-Non_Count)
 
 # Save as html ----
-gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_redacted.html"))
-write_rds(table1_redacted, here::here("output", "tables", "table1_redacted.rds"), compress = "gz")
+gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_coverage_redacted.html"))
+write_rds(table1_redacted, here::here("output", "tables", "table1_coverage_redacted.rds"), compress = "gz")
 

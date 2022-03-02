@@ -26,38 +26,38 @@ actions:
         csv: output/data/data_processed.csv
         
 # Select cohort ----
-  data_selection:
-    run: r:latest analysis/data_selection.R
+  data_selection_coverage:
+    run: r:latest analysis/data_selection_coverage.R
     needs: [data_process]
     outputs:
       highly_sensitive:
-        data: output/data/data_cohort.rds
-        csv: output/data/data_cohort.csv
+        data: output/data/data_cohort_coverage.rds
+        csv: output/data/data_cohort_coverage.csv
       moderately_sensitive:
-        csv: output/tables/flowchart.csv
+        csv: output/tables/flowchart_coverage.csv
 
  # Data properties ----      
   data_properties:
-    run: r:latest analysis/data_properties.R output/data/data_cohort.rds output/data_properties
-    needs: [data_selection]
+    run: r:latest analysis/data_properties.R output/data/data_cohort_coverage.rds output/data_properties
+    needs: [data_selection_coverage]
     outputs:
       moderately_sensitive:
         cohort: output/data_properties/data_cohort*.txt
         
   # Table 1 ----
-  table_1:
-    run: r:latest analysis/table_1.R
-    needs: [data_selection]
+  table_1_coverage:
+    run: r:latest analysis/table_1_coverage.R
+    needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
-        data: output/tables/table1_redacted.rds
+        data: output/tables/table1_coverage_redacted.rds
       moderately_sensitive:
-        table: output/tables/table1_redacted.html
+        table: output/tables/table1_coverage_redacted.html
         
   # Cox models - dose-2 coverage ----
   cox_model:
     run: r:latest analysis/cox_model.R
-    needs: [data_selection]
+    needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
         data1: output/data/data_cox.rds
@@ -79,7 +79,7 @@ actions:
   # Coverage summaries ----
   vaccine_coverage:
     run: r:latest -e 'rmarkdown::render("analysis/vaccine_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [data_selection, table_1, cox_model, logistic_model]
+    needs: [data_selection_coverage, table_1_coverage, cox_model, logistic_model]
     outputs:
       moderately_sensitive:
         html: output/markdown/vaccine_coverage.html
@@ -88,7 +88,7 @@ actions:
   # Coverage summaries ----
   cox_model_check:
     run: r:latest -e 'rmarkdown::render("analysis/cox_model_check.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [data_selection, cox_model]
+    needs: [data_selection_coverage, cox_model]
     outputs:
       moderately_sensitive:
         html: output/markdown/cox_model_check.html

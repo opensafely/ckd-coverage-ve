@@ -58,33 +58,50 @@ data_extract <- read_csv(
     moderna_date_3 = col_date(format="%Y-%m-%d"),
     moderna_date_4 = col_date(format="%Y-%m-%d"),
     
-    # Dates for other variables
+    # Dates for clinical variables
+    creatinine_date = col_date(format="%Y-%m-%d"),
     death_date = col_date(format="%Y-%m-%d"),
     dereg_date = col_date(format="%Y-%m-%d"),
-    creatinine_date = col_date(format="%Y-%m-%d"),
     bp_sys_date_measured = col_date(format="%Y-%m-%d"),
     bp_dias_date_measured = col_date(format="%Y-%m-%d"),
     immunosuppression_diagnosis_date = col_date(format="%Y-%m-%d"),
     immunosuppression_medication_date = col_date(format="%Y-%m-%d"),
-    sev_mental_ill = col_date(format="%Y-%m-%d"),
+    
+    # Dates for Covid-related variables
     prior_positive_test_date = col_date(format="%Y-%m-%d"),
     prior_primary_care_covid_case_date = col_date(format="%Y-%m-%d"),
-    prior_covidadmitted_date = col_date(format="%Y-%m-%d"),
+    prior_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
+    prevax_positive_test_date	= col_date(format="%Y-%m-%d"),
+    prevax_primary_care_covid_case_date	= col_date(format="%Y-%m-%d"),
+    prevax_covid_hospitalisation_date	= col_date(format="%Y-%m-%d"),
+    postvax_positive_test_date = col_date(format="%Y-%m-%d"),
+    postvax_covid_emergency_date = col_date(format="%Y-%m-%d"),
+    postvax_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
+    postvax_covid_death_date = col_date(format="%Y-%m-%d"),
+    postvax_any_test_date	= col_date(format="%Y-%m-%d"),
+    postvax_any_emergency_date = col_date(format="%Y-%m-%d"),
+    postvax_any_hospitalisation_date = col_date(format="%Y-%m-%d"),
+    postvax_any_death_date = col_date(format="%Y-%m-%d"),
     
     # CKD groups
     creatinine = col_double(), 
     dialysis = col_logical(), 
     kidney_transplant = col_logical(), 
-    chronic_kidney_disease_diagnostic = col_logical(), # formerly col_date(format="%Y-%m-%d"),
-    chronic_kidney_disease_stages_3_5 = col_logical(), # formerly col_date(format="%Y-%m-%d"),
+    chronic_kidney_disease_diagnostic = col_logical(), 
+    chronic_kidney_disease_stages_3_5 = col_logical(), 
     
     # Priority groups
-    care_home = col_logical(),
-    shielded = col_logical(),
+    care_home_type =  col_character(),
+    care_home_tpp = col_logical(),
+    care_home_code = col_logical(),
+    cev = col_logical(),
     hscworker = col_logical(),
+    endoflife = col_logical(),
+    housebound = col_logical(),
     
     # Clinical/demographic variables
-    age = col_integer(),
+    age = col_integer(),    
+    age_index = col_integer(),
     sex = col_character(),
     bmi = col_character(),
     smoking_status =  col_character(),
@@ -92,6 +109,7 @@ data_extract <- read_csv(
     ethnicity_6_sus = col_character(),
     imd = col_character(),
     region = col_character(),
+    rural_urban = col_integer(),
     asthma = col_logical(),
     asplenia = col_logical(),
     bp_sys = col_double(),
@@ -104,12 +122,12 @@ data_extract <- read_csv(
     cld = col_logical(),
     diabetes = col_logical(),
     learning_disability = col_logical(),
+    sev_mental_ill = col_logical(),
     organ_transplant = col_logical(),
     non_kidney_transplant = col_logical(),
     
     # Other
-    tests_conducted_any = col_double(),
-    tests_conducted_positive = col_double()
+    prevax_tests_conducted_any = col_double()
   ),
   na = character() # more stable to convert to missing later
 )
@@ -120,78 +138,69 @@ data_extract <- data_extract %>%
     .cols = where(is.character),
     .fns = ~na_if(.x, "")
   )) %>%
+  # convert numerics and integers but not id variables to NAs if 0
   mutate(across(
-    .cols = c(where(is.numeric), -ends_with("_id")), #convert numeric+integer but not id variables
+    .cols = c(where(is.numeric), -ends_with("_id")), 
     .fns = ~na_if(.x, 0)
   )) %>%
+  # converts TRUE/FALSE to 1/0
+  mutate(across(
+      where(is.logical),
+      ~.x*1L 
+    )) %>%
   arrange(patient_id) 
 
 
 ### eGFR calculations: adapted from cr_create_analysis_dataset.do in risk factor analysis repo
 # https://github.com/opensafely/risk-factors-research/
 
-# Set implausible creatinine values to missing (Note: zero changed to missing)
-data_extract$creatinine[data_extract$creatinine<=20 | data_extract$creatinine>=3000] = NA  
-
-# Divide by 88.4 (to convert umol/l to mg/dl)
-data_extract$SCr_adj = data_extract$creatinine/88.4 
-
-# Set min for eGFR calculations
-data_extract$min = NA 
-data_extract$min[data_extract$sex == "F"] = (data_extract$SCr_adj[data_extract$sex == "F"]/0.7)^(-0.329) 
-data_extract$min[data_extract$sex == "M"] = (data_extract$SCr_adj[data_extract$sex == "M"]/0.9)^(-0.411) 
-data_extract$min[data_extract$min<1] = 1 
-
-# Set max for eGFR calculations
-data_extract$max = NA # stata code: gen max=.
-data_extract$max[data_extract$sex == "F"] = (data_extract$SCr_adj[data_extract$sex == "F"]/0.7)^(-1.209) 
-data_extract$max[data_extract$sex == "M"] = (data_extract$SCr_adj[data_extract$sex == "M"]/0.9)^(-1.209) 
-data_extract$max[data_extract$max>1] = 1 
-
-# Calculate eGFR
-data_extract$egfr = data_extract$min*data_extract$max*141 
-data_extract$egfr = data_extract$egfr*(0.993^data_extract$age) 
-data_extract$egfr[data_extract$sex == "F"] = data_extract$egfr[data_extract$sex == "F"]*1.018 
-
-# Group into CKD categories
-data_extract <- data_extract %>% 
+data_extract <- data_extract %>%
   mutate(
+    ## define variables needed for calculation
+    creatinine = replace(creatinine, creatinine <20 | creatinine >3000, NA), # set implausible creatinine values to missing
+    SCR_adj = creatinine/88.4 # divide by 88.4 (to convert umol/l to mg/dl)
+  ) %>%
+  rowwise() %>%
+  mutate(
+    min = case_when(sex == "M" ~ min((SCR_adj/0.9), 1, na.rm = F)^-0.411, 
+                    sex == "F" ~ min(SCR_adj/0.7, 1, na.rm = F)^-0.329),
+    max = case_when(sex == "M" ~ max(SCR_adj/0.9, 1, na.rm = F)^-1.209, 
+                    sex == "F" ~ max(SCR_adj/0.7, 1, na.rm = F)^-1.209)) %>%
+  ungroup() %>%
+  mutate(
+    egfr = (min*max*141)*(0.993^age),
+    egfr = case_when(sex == "F" ~ egfr*1.018, TRUE ~ egfr),
+    
     egfr_cat5 = cut(
       egfr,
       breaks = c(0, 15, 30, 45, 60, 5000),
       labels = c("stage 5", "stage 4", "stage 3b", "stage 3a", "No CKD"),
       right = FALSE
     ),
+    
     egfr_cat3 = cut(
       egfr,
       breaks = c(0, 30, 60, 5000),
       labels = c("Stage 4/5 eGFR<30", "Stage 3a/3b eGFR 30-60", "No CKD"),
       right = FALSE
-    ),
-  )
+    ) 
+  ) %>%
+  # Drop extra variables
+  select(-c(min, max, SCR_adj))
 
-# Replace NAs with 'No CKD' in new categores
+# Replace NAs with 'No CKD' in new categories
 data_extract$egfr_cat5[is.na(data_extract$egfr_cat5)] = "No CKD"
 data_extract$egfr_cat3[is.na(data_extract$egfr_cat3)] = "No CKD"
 
 # Set NA egfr readings to arbitrary value of 300 to enable inclusion criteria to be applied
 data_extract$egfr[is.na(data_extract$egfr)] = 300
 
-# Drop extra variables
-data_extract <- data_extract %>% select(-c(min, max, SCr_adj))
-
 ## Format columns (i.e, set factor levels)
 data_processed <- data_extract %>%
   mutate(
     # CKD inclusion criteria
-    ckd_inclusion_any = ifelse(egfr < 60 | dialysis==TRUE | kidney_transplant==TRUE | chronic_kidney_disease_diagnostic==TRUE | chronic_kidney_disease_stages_3_5==TRUE, 1, 0),
-    ckd_inclusion_strict = ifelse(egfr < 60 | dialysis==TRUE | kidney_transplant==TRUE, 1, 0),
-    
-    # Care home (65+)
-    care_home_65plus = ifelse(care_home == 1 & age >=65, 1, 0),
-    
-    # Shielding
-    shielded = ifelse(shielded == 1 & (age >=16 & age < 70), 1, 0),
+    ckd_inclusion_any = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_diagnostic==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
+    ckd_inclusion_strict = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1, 1, 0),
     
     # Age
     ageband = cut(
@@ -201,13 +210,24 @@ data_processed <- data_extract %>%
       right = FALSE
     ),
     
-    ageband = ifelse(care_home == 1, NA, ageband),
-    
     ageband2 = cut(
       age,
       breaks = c(16, 60, 80, 90, Inf),
       labels = c("16-69", "70-79", "80-89", "90+"),
       right = FALSE
+    ),
+    
+    # any care home flag
+    care_home = ifelse(care_home_tpp==1 | care_home_code==1,1,0), 
+    
+    # https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1007737/Greenbook_chapter_14a_30July2021.pdf#page=12
+    jcvi_group = fct_case_when(
+      care_home==1 ~ "1 (care home residents/staff)",
+      age>=80 | hscworker==1 ~ "2 (80+ or health/social care worker)",
+      age>=75 ~ "3 (75+)",
+      age>=70 | (cev==1 & (age>=16)) ~ "4 (70+ or clinically extremely vulnerable)",
+      age>=65 ~ "5 (65+)",
+      TRUE ~ "6 (16-65 and clinically vulnerable)" # Since CKD patients would be classified as clinically vulnerable, 6 is maximum JCVI group for this population
     ),
     
     # Sex
@@ -263,6 +283,14 @@ data_processed <- data_extract %>%
       region == "Yorkshire and The Humber" ~ "Yorkshire and the Humber",
       TRUE ~ NA_character_),
     
+    # Rurality
+    rural_urban_group = fct_case_when(
+      rural_urban %in% c(1,2) ~ "Urban conurbation",
+      rural_urban %in% c(3,4) ~ "Urban city or town",
+      rural_urban %in% c(5,6,7,8) ~ "Rural town or village",
+      TRUE ~ NA_character_
+    ),
+    
     ## Blood pressure
     bpcat = ifelse(bp_sys < 120 & bp_dias < 80, 1, NA),
     bpcat = ifelse(bp_sys >= 120 & bp_sys < 130 & bp_dias < 80, 2, bpcat),
@@ -278,27 +306,20 @@ data_processed <- data_extract %>%
     ),
     
     # Immunosuppression
-    immunosuppression_diagnosis_date = !is.na(immunosuppression_diagnosis_date),
-    immunosuppression_medication_date = !is.na(immunosuppression_medication_date),
-    immunosuppression = immunosuppression_diagnosis_date | immunosuppression_medication_date,
+    immunosuppression = pmax(immunosuppression_diagnosis_date, immunosuppression_medication_date, na.rm = T),
+    immunosuppression = ifelse(!is.na(immunosuppression), 1, 0),
     
-    # Mental illness
-    sev_mental_ill = !is.na(sev_mental_ill),
-
     # Prior covid
-    prior_covid_cat = !is.na(pmin(prior_positive_test_date,
-                           prior_primary_care_covid_case_date, 
-                           prior_covidadmitted_date,
-                           na.rm=TRUE))
+    prior_covid_cat = !is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_hospitalisation_date, na.rm=TRUE)),
+    
+    # Number of tests in pre-vaccination period
+    prevax_tests_conducted_any = ifelse(is.na(prevax_tests_conducted_any), 0, prevax_tests_conducted_any),
+    prevax_tests_cat = cut(prevax_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
   ) %>%
-  droplevels() %>%
-  mutate(
-    # converts TRUE/FALSE to 1/0
-    across(
-      where(is.logical),
-      ~.x*1L
-    )
-  ) 
+  # Drop superseded variables
+  select(-c(care_home_code, care_home_tpp, ethnicity_6, ethnicity_filled, 
+            immunosuppression_diagnosis_date, immunosuppression_medication_date)) %>%
+  droplevels() 
 
 # apply dummy data script if not running in the server
 #Sys.getenv()
@@ -426,7 +447,7 @@ data_processed_updated <- data_processed %>%
   ) %>%
   # Remove unneccessary variables including overall and product-specific dates (now replaced by vax{N}_date)
   select(
-    -starts_with(c("covid_vax_", "pfizer_date_", "az_date_", "moderna_date_", "immunosuppression_"))
+    -starts_with(c("covid_vax_", "pfizer_date_", "az_date_", "moderna_date_"))
   )
 
 # remove type combinations if latter vaccine not administered

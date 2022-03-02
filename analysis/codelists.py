@@ -12,22 +12,7 @@
 ## Import code building blocks from cohort extractor package
 from cohortextractor import (codelist, codelist_from_csv, combine_codelists)
 
-
 # --- CODELISTS ---
-
-## First COVID vaccination administration in EMIS
-#covid_vaccine_EMIS_codes = codelist_from_csv(
-#  "codelists/primis-covid19-vacc-uptake-covadm1.csv",
-#  system = "snomed",
-#  column = "code",
-#)
-
-## History of covid
-#covid_codes = codelist_from_csv(
-#  "codelists/opensafely-covid-identification.csv",
-#  system = "icd10",
-#  column = "icd10_code",
-#)
 
 ## Patients in long-stay nursing and residential care
 carehome_primis_codes = codelist_from_csv(
@@ -43,6 +28,34 @@ high_risk_codes = codelist(
 ## Lower Risk from COVID-19 codes
 not_high_risk_codes = codelist(
   ['1300591000000101', '1300571000000100'], system="snomed")
+
+## Midazolam
+midazolam = codelist_from_csv(
+    "codelists/opensafely-midazolam-end-of-life.csv",
+    system="snomed",
+    column="dmd_id",
+)
+
+## End of life care
+eol = codelist_from_csv(
+    "codelists/nhsd-primary-care-domain-refsets-palcare_cod.csv",
+    system="snomed",
+    column="code",
+)
+
+## Housebound
+housebound = codelist_from_csv(
+    "codelists/opensafely-housebound.csv",
+    system="snomed",
+    column="code"
+)
+
+## No longer housebound
+no_longer_housebound = codelist_from_csv(
+    "codelists/opensafely-no-longer-housebound.csv",
+    system="snomed",
+    column="code"
+)
 
 ## Ethnicity
 ethnicity_6_codes = codelist_from_csv(
@@ -218,7 +231,7 @@ non_kidney_transplant_codes = codelist_from_csv(
     column = "CTV3ID",
 )
 
-## Prior covid
+## Covid-related codes
 covid_icd10 = codelist_from_csv(
     "codelists/opensafely-covid-identification.csv",
     system = "icd10",
@@ -243,10 +256,7 @@ covid_primary_care_sequalae = codelist_from_csv(
     column = "CTV3ID",
 )
 
-# Patients in long-stay nursing and residential care
-carehome = codelist_from_csv(
-    "codelists/primis-covid19-vacc-uptake-longres.csv",
+covid_emergency = codelist(
+    ["1240751000000100"],
     system="snomed",
-    column="code",
 )
-

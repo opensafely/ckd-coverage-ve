@@ -25,3 +25,7 @@ opensafely/covid-identification/2020-06-03
 opensafely/covid-identification-in-primary-care-probable-covid-clinical-code/2020-07-16
 opensafely/covid-identification-in-primary-care-probable-covid-positive-test/2020-07-16
 opensafely/covid-identification-in-primary-care-probable-covid-sequelae/2020-07-16
+opensafely/midazolam-end-of-life/4c1b3c89
+nhsd-primary-care-domain-refsets/palcare_cod/5fce98cf
+opensafely/housebound/5bc77310
+opensafely/no-longer-housebound/29a88ca6

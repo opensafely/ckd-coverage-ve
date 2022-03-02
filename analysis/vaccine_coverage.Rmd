@@ -24,7 +24,7 @@ library('fs')
 source(here::here("analysis", "functions.R"))
 
 ## Import data
-data_cohort <- read_rds(here::here("output", "data", "data_cohort.rds"))
+data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
 rounded_n = plyr::round_any(nrow(data_cohort), 5)
 
 if (data_cohort$mock_data_flag[1]==1) { flag = "present" } else { flag = "absent" }
@@ -46,12 +46,12 @@ Vaccine recommendations for CKD patients in the UK have evolved over time (see [
 * No vaccines administered at an interval of <14 days
 
 A total of **`r formatC(rounded_n, big.mark=",")`** (rounded to the nearest 5) met the inclusion criteria (see *output/data/flowchart.csv* for additional details).    
-**`r if(flag=="present") { paste0("NB: Dummy data processing flag detected!") }`**
+`r if(flag=="present") { paste0("NB: Dummy data processing flag detected!") }`    
 $$\\[0.05in]$$    
 
 #### Table 1: Summary of population
 ```{r}
-table_1 <- read_rds(here::here("output", "tables", "table1_redacted.rds"))
+table_1 <- read_rds(here::here("output", "tables", "table1_coverage_redacted.rds"))
 
 subset(table_1, Group!="Time between doses 1 and 2" & Group!="Time between doses 2 and 3") %>% 
    gt(groupname_col = "Group") %>%
@@ -62,7 +62,7 @@ subset(table_1, Group!="Time between doses 1 and 2" & Group!="Time between doses
      ) %>%
    tab_options(table.font.size = pct(95)) %>% #table.width = pct(80) 
    tab_footnote(
-     footnote = "All counts rounded to nearest 5; any rounded counts ≤10 or within ≤10 of population total redacted.",
+     footnote = "All counts rounded to nearest 5; any rounded counts <=10 or within <=10 of population total redacted.",
      locations = cells_column_labels(columns = "Count")
    )
 ```
@@ -184,7 +184,7 @@ rbind(t_dose_dose1, t_dose_dose2, t_dose_dose3, t_dose_dose4) %>%
   tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
   tab_options(table.font.size = pct(95)) %>% #table.width = pct(80) 
   tab_footnote(
-    footnote = "Any counts of ≤100 grouped as 'other'; all counts rounded to nearest 5; any rounded counts ≤10 redacted.",
+    footnote = "Any counts of <=100 grouped as 'other'; all counts rounded to nearest 5; any rounded counts <=10 redacted.",
     locations = cells_column_labels(columns = "Frequency")
   )
 ```
@@ -208,7 +208,7 @@ rbind(t_dose_dose12, t_dose_dose123) %>%
   tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
   tab_options(table.font.size = pct(95)) %>% #table.width = pct(80) 
   tab_footnote(
-    footnote = "Any counts of ≤100 grouped as 'other'; all counts rounded to nearest 5; any rounded counts ≤10 redacted.",
+    footnote = "Any counts of <=100 grouped as 'other'; all counts rounded to nearest 5; any rounded counts <=10 redacted.",
     locations = cells_column_labels(columns = "Frequency")
   )
 ```
@@ -225,7 +225,7 @@ subset(table_1, Group=="Time between doses 1 and 2" | Group=="Time between doses
     ) %>%
   tab_options(table.font.size = pct(95)) %>% #table.width = pct(80) 
   tab_footnote(
-    footnote = "All counts rounded to nearest 5; any rounded counts ≤10 or within ≤10 of population total redacted.",
+    footnote = "All counts rounded to nearest 5; any rounded counts <=10 or within <=10 of population total redacted.",
     locations = cells_column_labels(columns = "Count")
   )
 ```
@@ -288,7 +288,7 @@ tbl_reduced %>%
    ) %>%
   tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
   tab_footnote(
-    footnote = "All counts rounded to nearest 5; data redacted for any rows with rounded values of ≤10 for n (total), 
+    footnote = "All counts rounded to nearest 5; data redacted for any rows with rounded values of <=10 for n (total), 
             n (events), or n (non-events), where n (non-events) is the difference between n (total) and n (events) after rounding.",
     locations = cells_column_labels(columns = "n (events)")
   )
@@ -398,7 +398,7 @@ tbl_reduced %>%
    ) %>%
   tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
   tab_footnote(
-    footnote = "All counts rounded to nearest 5; data redacted for any rows with rounded values of ≤10 for n (total), 
+    footnote = "All counts rounded to nearest 5; data redacted for any rows with rounded values of <=10 for n (total), 
             n (events), or n (non-events), where n (non-events) is the difference between n (total) and n (events) after rounding.",
     locations = cells_column_labels(columns = "n (events)")
   )

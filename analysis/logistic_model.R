@@ -30,9 +30,10 @@ data <- read_rds(here::here("output", "data", "data_cox.rds"))
 source(here::here("analysis", "functions.R"))
 
 ## Set variable list
-var_list <- c("ageband2", "sex", "ethnicity", "imd", "chronic_kidney_disease_diagnostic",
-              "dialysis", "kidney_transplant", "chronic_kidney_disease_stages_3_5", "prior_covid_cat",
-              "care_home", "shielded", "immunosuppression", "chronic_resp_dis", "diabetes", "cld",
+var_list <- c("ageband2", "sex", "ethnicity", "imd", "rural_urban_group",
+              "chronic_kidney_disease_diagnostic", "dialysis", "kidney_transplant", "chronic_kidney_disease_stages_3_5", "prior_covid_cat",
+              "cev", "care_home", "hscworker", "endoflife", "housebound", 
+              "immunosuppression", "chronic_resp_dis", "diabetes", "cld",
               "chd", "asplenia", "cancer", "obesity", "chronic_neuro_dis_inc_sig_learn_dis", "sev_mental_ill") 
 
 
@@ -80,8 +81,8 @@ tbl_summary <- tbl_regression(
   x = adj_model,
   exponentiate= TRUE,
   label = list(ageband2 = "Age", sex = "Sex", ethnicity = "Ethnicity", 
-               imd = "IMD")
-  ) %>%
+               imd = "IMD", rural_urban_group = "Setting")
+) %>%
   as_gt() %>%
   .$`_data` %>%
   filter(
@@ -112,8 +113,11 @@ tbl_summary$label[tbl_summary$var_label=="dialysis"] = "Dialysis"
 tbl_summary$label[tbl_summary$var_label=="kidney_transplant"] = "Kidney transplant"
 tbl_summary$label[tbl_summary$var_label=="chronic_kidney_disease_stages_3_5"] = "CKD stage 3-5 code"
 tbl_summary$label[tbl_summary$var_label=="prior_covid_cat"] = "Prior COVID"
+tbl_summary$label[tbl_summary$var_label=="cev"] = "Clinically extremely vulnerable"
 tbl_summary$label[tbl_summary$var_label=="care_home"] = "Care home resident"
-tbl_summary$label[tbl_summary$var_label=="shielded"] = "Shielding"
+tbl_summary$label[tbl_summary$var_label=="hscworker"] = "Health/social care worker"
+tbl_summary$label[tbl_summary$var_label=="endoflife"] = "End of life care"
+tbl_summary$label[tbl_summary$var_label=="housebound"] = "Housebound"
 tbl_summary$label[tbl_summary$var_label=="immunosuppression"] = "Immunosuppression"
 tbl_summary$label[tbl_summary$var_label=="chronic_resp_dis"] = "Chronic respiratory disease"
 tbl_summary$label[tbl_summary$var_label=="diabetes"] = "Diabetes"
@@ -128,7 +132,8 @@ tbl_summary$label[tbl_summary$var_label=="sev_mental_ill"] = "Severe mental illn
 ## Group variables for plotting
 # var_label
 tbl_summary$var_label[tbl_summary$label %in% c("CKD diagnostic code", "Dialysis", "Kidney transplant", "CKD stage 3-5 code")] = "CKD"
-tbl_summary$var_label[tbl_summary$label %in% c("Prior COVID", "Care home resident", "Shielding", "Immunosuppression", "Chronic respiratory disease",
+tbl_summary$var_label[tbl_summary$label %in% c("Prior COVID", "Clinically extremely vulnerable", "Care home resident", "Health/social care worker", 
+                                               "End of life care", "Housebound", "Immunosuppression", "Chronic respiratory disease",
                                                "Diabetes", "Chronic liver disease", "Chronic heart disease", "Asplenia", "Cancer", "Obesity", 
                                                "Chronic neurological disease (including learning disability)", "Severe mental illness")] = "Other"
 # var_group

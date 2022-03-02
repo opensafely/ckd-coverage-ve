@@ -47,12 +47,12 @@ study = StudyDefinition(
         (creatinine>0 OR dialysis OR kidney_transplant OR chronic_kidney_disease_diagnostic OR chronic_kidney_disease_stages_3_5)
         """,
         # registered before vaccine campaign commenced
-        registered=patients.registered_as_of(
+        registered = patients.registered_as_of(
             "index_date - 3 months",
         ),
-        has_died=patients.died_from_any_cause(
-            on_or_before="index_date - 1 day",
-            returning="binary_flag",
+        has_died = patients.died_from_any_cause(
+            on_or_before = "index_date - 1 day",
+            returning = "binary_flag",
         ),
     ),
 
@@ -268,13 +268,13 @@ study = StudyDefinition(
   ),
   
   ## CKD codes - all stages
- # chronic_kidney_disease_all_stages = patients.with_these_clinical_events(
- #   chronic_kidney_disease_all_stages_codes,
- #   returning = "date",
- #   find_last_match_in_period = True,
- #   on_or_before = "index_date - 1 day",
- #   date_format = "YYYY-MM-DD",
- # ),
+  # chronic_kidney_disease_all_stages = patients.with_these_clinical_events(
+  #   chronic_kidney_disease_all_stages_codes,
+  #   returning = "date",
+  #   find_last_match_in_period = True,
+  #   on_or_before = "index_date - 1 day",
+  #   date_format = "YYYY-MM-DD",
+  # ),
   
   ## CKD codes - stages 3 - 5
   chronic_kidney_disease_stages_3_5 = patients.with_these_clinical_events(
@@ -305,15 +305,44 @@ study = StudyDefinition(
 # PRIORITY GROUPS
 ###############################################################################
 
+  ## Care home status
+  care_home_type=patients.care_home_status_as_of(
+      "index_date - 1 day",
+      categorised_as={
+          "Carehome": """
+            IsPotentialCareHome
+            AND LocationDoesNotRequireNursing='Y'
+            AND LocationRequiresNursing='N'
+          """,
+          "Nursinghome": """
+            IsPotentialCareHome
+            AND LocationDoesNotRequireNursing='N'
+            AND LocationRequiresNursing='Y'
+          """,
+          "Mixed": "IsPotentialCareHome",
+          "": "DEFAULT",  # use empty string
+      },
+      return_expectations={
+          "category": {"ratios": {"Carehome": 0.05, "Nursinghome": 0.05, "Mixed": 0.05, "": 0.85, }, },
+          "incidence": 1,
+      },
+  ),
+  
+  ## Simple care home flag
+  care_home_tpp=patients.satisfying(
+      """care_home_type""",
+      return_expectations={"incidence": 0.01},
+  ),
+  
   ## Care home
-  care_home =  patients.with_these_clinical_events(
+  care_home_code = patients.with_these_clinical_events(
     carehome_primis_codes,
     on_or_before = "index_date - 1 day",
     returning="binary_flag",
   ),
   
-  ## PRIMIS overall flag for shielded group
-  shielded = patients.satisfying(
+  ## PRIMIS overall flag for clinically extremely vulnerable group
+  cev = patients.satisfying(
     """
       severely_clinically_vulnerable
       AND
@@ -325,7 +354,9 @@ study = StudyDefinition(
     
     ### SHIELDED GROUP - first flag all patients with "high risk" codes
     severely_clinically_vulnerable = patients.with_these_clinical_events(
-      high_risk_codes, # note no date limits set
+      high_risk_codes,
+      returning="binary_flag",
+      on_or_before = "index_date - 1 day",
       find_last_match_in_period = True,
       return_expectations = {"incidence": 0.02,},
     ),
@@ -339,7 +370,7 @@ study = StudyDefinition(
     ### NOT SHIELDED GROUP (medium and low risk) - only flag if later than 'shielded'
     less_vulnerable = patients.with_these_clinical_events(
       not_high_risk_codes,
-      on_or_after = "date_severely_clinically_vulnerable",
+      between=["date_severely_clinically_vulnerable + 1 day", "index_date - 1 day",],
       return_expectations = {"incidence": 0.01,},
     ),
   ),
@@ -347,13 +378,70 @@ study = StudyDefinition(
   ## HCW
   hscworker = patients.with_healthcare_worker_flag_on_covid_vaccine_record(returning = "binary_flag"),
   
+  ## End of life care
+  endoflife = patients.satisfying(
+    """
+    midazolam OR
+    endoflife_coding
+    """,
+  
+    midazolam = patients.with_these_medications(
+      midazolam,
+      returning="binary_flag",
+      on_or_before = "index_date - 1 day",
+    ),
+    
+    endoflife_coding = patients.with_these_clinical_events(
+      eol,
+      returning="binary_flag",
+      on_or_before = "index_date - 1 day",
+      find_last_match_in_period = True,
+    ),
+        
+  ),
+  
+  ## Housebound
+  housebound = patients.satisfying(
+    """housebound_date
+    AND NOT no_longer_housebound
+    AND NOT moved_into_care_home
+    """,
+        
+    housebound_date=patients.with_these_clinical_events(
+      housebound,
+      on_or_before="index_date - 1 day",
+      find_last_match_in_period = True,
+      returning = "date",
+      date_format = "YYYY-MM-DD",
+    ),
+    
+    no_longer_housebound=patients.with_these_clinical_events(
+      no_longer_housebound,
+      between = ["housebound_date","index_date - 1 day"]
+    ),
+    
+    moved_into_care_home=patients.with_these_clinical_events(
+      carehome_primis_codes,
+      between = ["housebound_date","index_date - 1 day"]
+    ),
+  ),
+  
 ###############################################################################
 # CLINICAL/DEMOGRAPHIC COVARIATES
 ###############################################################################
   
-  ## Age
+  ## Age for JCVI group definition
   age = patients.age_as_of(
-    "index_date - 1 day",  # differs from 2021-08-31, which is PHE defined date as used for https://github.com/opensafely/covid19-vaccine-coverage-tpp-emis
+    "2021-03-31", # Age defined on 31 March 2021 as per coverage paper (https://bjgp.org/content/72/714/e51)
+     return_expectations = {
+      "rate": "universal",
+      "int": {"distribution": "population_ages"},
+    },
+  ),
+  
+  ## Age at index
+  age_index = patients.age_as_of(
+    "index_date - 1 day",
     return_expectations = {
       "rate": "universal",
       "int": {"distribution": "population_ages"},
@@ -492,6 +580,16 @@ study = StudyDefinition(
     },
   ),
   
+  ## Rurality
+  rural_urban = patients.address_as_of(
+    "index_date - 1 days",
+    returning="rural_urban_classification",
+    return_expectations={
+      "rate": "universal",
+      "category": {"ratios": {1: 0.125, 2: 0.125, 3: 0.125, 4: 0.125, 5: 0.125, 6: 0.125, 7: 0.125, 8: 0.125}},
+    },
+  ),
+  
 ###############################################################################
 # COMORBIDITIES
 ###############################################################################
@@ -626,7 +724,7 @@ study = StudyDefinition(
   ### Severe mental illness
   sev_mental_ill = patients.with_these_clinical_events(
     sev_mental_ill_codes,
-    returning = "date",
+    returning = "binary_flag",
     find_last_match_in_period = True,
     on_or_before = "index_date - 1 day",
     date_format = "YYYY-MM-DD",
@@ -647,6 +745,10 @@ study = StudyDefinition(
     find_last_match_in_period = True,
     on_or_before = "index_date - 1 day"
   ),
+  
+  ################################################
+  ############ pre-index COVID events ############
+  ################################################
   
   ## Positive test prior to study period
   prior_positive_test_date = patients.with_test_result_in_sgss(
@@ -681,9 +783,9 @@ study = StudyDefinition(
       "incidence": 0.02,
     },
   ),
-  
+
   ## Positive covid admission prior to study period
-  prior_covidadmitted_date = patients.admitted_to_hospital(
+  prior_covid_hospitalisation_date = patients.admitted_to_hospital(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
     on_or_before = "index_date - 1 day",
@@ -697,29 +799,217 @@ study = StudyDefinition(
   ),
   
   ## Count of tests (any) in study period
-  tests_conducted_any = patients.with_test_result_in_sgss(
+#    tests_conducted_any = patients.with_test_result_in_sgss(
+#    pathogen = "SARS-CoV-2",
+#    test_result = "any",
+#    returning = "number_of_matches_in_period",
+#    between = ["index_date", end_date],
+#    restrict_to_earliest_specimen_date = False,
+#    return_expectations={
+#      "int": {"distribution": "normal", "mean": 4, "stddev": 1},
+#      "incidence": 0.05,
+#    },
+#  ),
+  
+  ## Count of tests (positive) in study period
+#  tests_conducted_positive = patients.with_test_result_in_sgss(
+#    pathogen = "SARS-CoV-2",
+#    test_result = "positive",
+#    returning = "number_of_matches_in_period",
+#    between = ["index_date", end_date],
+#    restrict_to_earliest_specimen_date = False,
+#    return_expectations={
+#      "int": {"distribution": "normal", "mean": 2, "stddev": 0.1},
+#      "incidence": 0.01,
+#    },
+#  ),
+
+###############################################################################
+# ADDITIONAL VARIABLES FOR COMPARATIVE VE
+###############################################################################
+
+  ################################################
+  ############ pre-vaccine events ################
+  ################################################
+  
+  ## Positive test in pre-vaccination period
+  prevax_positive_test_date = patients.with_test_result_in_sgss(
+    pathogen = "SARS-CoV-2",
+    test_result = "positive",
+    returning = "date",
+    date_format = "YYYY-MM-DD",
+    between=["covid_vax_date_1 - 90 days","covid_vax_date_2 - 1 day"],
+    find_first_match_in_period = True,
+    restrict_to_earliest_specimen_date = False,
+    return_expectations = {
+      "date": {"earliest": "2020-09-01", "latest": "2021-12-31"}, # need both earliest/latest to obtain expected incidence
+      "rate": "exponential_increase",
+      "incidence": 0.02,
+    },
+  ),
+  
+  ## Positive case identification in pre-vaccination period
+  prevax_primary_care_covid_case_date = patients.with_these_clinical_events(
+    combine_codelists(
+      covid_primary_care_code,
+      covid_primary_care_positive_test,
+      covid_primary_care_sequalae,
+    ),
+    returning = "date",
+    date_format = "YYYY-MM-DD",
+    between=["covid_vax_date_1 - 90 days","covid_vax_date_2 - 1 day"],
+    find_first_match_in_period=True,
+    return_expectations = {
+      "date": {"earliest": "2020-09-01", "latest": "2021-12-31"}, # need both earliest/latest to obtain expected incidence
+      "rate": "exponential_increase",
+      "incidence": 0.02,
+    },
+  ),
+  
+  ## Positive covid admission in pre-vaccination period
+  prevax_covid_hospitalisation_date = patients.admitted_to_hospital(
+    returning = "date_admitted",
+    with_these_diagnoses = covid_icd10,
+    between=["covid_vax_date_1 - 90 days","covid_vax_date_2 - 1 day"],
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2020-09-01", "latest": "2021-12-31"}, # need both earliest/latest to obtain expected incidence
+      "rate": "exponential_increase",
+      "incidence": 0.005,
+    },
+  ),
+  
+  ## Count of tests (any) in pre-vaccination period
+  prevax_tests_conducted_any = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "any",
     returning = "number_of_matches_in_period",
-    between = ["index_date", end_date],
+    between=["covid_vax_date_1 - 90 days","2021-01-01"],
     restrict_to_earliest_specimen_date = False,
     return_expectations={
       "int": {"distribution": "normal", "mean": 4, "stddev": 1},
       "incidence": 0.05,
     },
   ),
+
+  ################################################
+  ############ events during study period ########
+  ################################################
   
-  ## Count of tests (positive) in study period
-  tests_conducted_positive = patients.with_test_result_in_sgss(
+  ## Covid-related positive test after second dose
+  postvax_positive_test_date = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "positive",
-    returning = "number_of_matches_in_period",
-    between = ["index_date", end_date],
+    on_or_after = "covid_vax_date_2",
+    find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
-    return_expectations={
-      "int": {"distribution": "normal", "mean": 2, "stddev": 0.1},
-      "incidence": 0.01,
+    returning = "date",
+    date_format = "YYYY-MM-DD",
+    return_expectations = {
+      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "rate": "exponential_increase",
     },
   ),
+  
+  ## Covid-related emergency admission after second dose
+  postvax_covid_emergency_date = patients.attended_emergency_care(
+    returning = "date_arrived",
+    with_these_diagnoses = covid_emergency,
+    on_or_after = "covid_vax_date_2",
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "rate": "uniform",
+      "incidence": 0.05,
+    },
+  ),
+    
+  ## Covid-related unplanned admission after second dose
+  postvax_covid_hospitalisation_date = patients.admitted_to_hospital(
+    returning = "date_admitted",
+    with_these_diagnoses = covid_icd10,
+    with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
+    on_or_after = "covid_vax_date_2",
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "rate": "uniform",
+      "incidence": 0.05,
+    },
+  ),
+  
+  # Covid-related death after second dose
+  postvax_covid_death_date = patients.with_these_codes_on_death_certificate(
+    covid_icd10,
+    returning = "date_of_death",
+    on_or_after = "covid_vax_date_2",
+    date_format = "YYYY-MM-DD",
+    return_expectations = {
+      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "rate": "uniform",
+      "incidence": 0.02
+    },
+  ),
+  
+  ################################################
+  ############ Alternative endpoints #############
+  ################################################
 
+  ## Any test after second dose
+  postvax_any_test_date = patients.with_test_result_in_sgss(
+    pathogen = "SARS-CoV-2",
+    test_result = "any",
+    on_or_after = "covid_vax_date_2",
+    find_first_match_in_period = True,
+    restrict_to_earliest_specimen_date = False,
+    returning = "date",
+    date_format = "YYYY-MM-DD",
+    return_expectations = {
+      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "rate": "exponential_increase",
+    },
+  ),
+  
+  ## Any emergency admission after second dose
+  postvax_any_emergency_date = patients.attended_emergency_care(
+    returning = "date_arrived",
+    on_or_after = "covid_vax_date_2",
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "rate": "uniform",
+      "incidence": 0.05,
+    },
+  ),
+  
+  ## Any unplanned admission after second dose
+  postvax_any_hospitalisation_date = patients.admitted_to_hospital(
+    returning = "date_admitted",
+    with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
+    on_or_after = "covid_vax_date_2",
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "rate": "uniform",
+      "incidence": 0.05,
+    },
+  ),
+  
+  # Any death after second dose
+  postvax_any_death_date = patients.died_from_any_cause(
+    returning="date_of_death",
+    on_or_after = "covid_vax_date_2",
+    date_format="YYYY-MM-DD",
+    return_expectations = {
+      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "rate": "uniform",
+      "incidence": 0.02
+    },
+  ),
+  
 )
