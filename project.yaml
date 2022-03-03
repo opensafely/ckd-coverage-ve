@@ -93,6 +93,27 @@ actions:
       moderately_sensitive:
         html: output/markdown/cox_model_check.html
 
+# Select cohort (VE) ----
+  data_selection_VE:
+    run: r:latest analysis/data_selection_VE.R
+    needs: [data_process]
+    outputs:
+      highly_sensitive:
+        data: output/data/data_cohort_VE.rds
+        csv: output/data/data_cohort_VE.csv
+      moderately_sensitive:
+        csv: output/tables/flowchart_VE.csv
+
+  # Table 1 (VE) ----
+  table_1_VE:
+    run: r:latest analysis/table_1_VE.R
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table1_VE_redacted.rds
+      moderately_sensitive:
+        table: output/tables/table1_VE_redacted.html
+
   # Check session info for set of packages ----
   #session:
   #  run: r:latest -e 'rmarkdown::render("analysis/session.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
