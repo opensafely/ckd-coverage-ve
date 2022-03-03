@@ -114,6 +114,15 @@ actions:
       moderately_sensitive:
         table: output/tables/table1_VE_redacted.html
 
+  # Table IRR
+  table_irr:
+    run: r:latest analysis/table_irr.R
+    needs: [data_selection_VE]
+    outputs:
+      moderately_sensitive:
+        html: output/tables/table_irr_simple.html
+        csv: output/tables/table_irr.csv
+        
   # Check session info for set of packages ----
   #session:
   #  run: r:latest -e 'rmarkdown::render("analysis/session.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'

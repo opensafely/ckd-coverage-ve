@@ -1,6 +1,11 @@
-# # # # # # # # # # # # # # # # # # # # #
-# This script creates a table 1 of baseline characteristics by vaccine type
-# # # # # # # # # # # # # # # # # # # # #
+######################################
+
+# This script 
+# - produces a table with the number of CKD patients in study population in relation to 
+#   selected clinical and demographic groups, stratified by primary vaccine series
+# - saves table as html
+
+######################################
 
 # Preliminaries ----
 
@@ -29,16 +34,11 @@ data_cohort <- data_cohort %>%
                                                          breaks = c(0, 42, 70, 98, Inf),
                                                          labels = c("6 weeks or less", "6-10 weeks", "10-14 weeks", "14 weeks or more"),
                                                          right = FALSE)),
-         time_between_vaccinations2_3 = as.character(cut(tbv2_3,
-                                                         breaks = c(0, 84, 168, Inf),
-                                                         labels = c("12 weeks or less", "12-24 weeks", "24 weeks or more"),
-                                                         right = FALSE)),
          smoking_status = ifelse(is.na(smoking_status), "N&M", smoking_status),
          bpcat = ifelse(bpcat=="High" | bpcat=="Elevated", 1, 0)
   ) %>%
   mutate(smoking_status = ifelse(smoking_status=="S&E", 1, 0),
-         time_between_vaccinations1_2 = ifelse(is.na(vax2_date), "Not applicable (no dose given)", time_between_vaccinations1_2),
-         time_between_vaccinations2_3 = ifelse(is.na(vax3_date), "Not applicable (no dose given)", time_between_vaccinations2_3)
+         time_between_vaccinations1_2 = ifelse(is.na(vax2_date), "Not applicable (no dose given)", time_between_vaccinations1_2)
   )
 
 ## baseline variables
@@ -77,9 +77,8 @@ counts0 <- data_cohort %>%
          sev_mental_ill, 
          non_kidney_transplant,
          prior_covid_cat,
-         time_between_vaccinations1_2,
-         time_between_vaccinations2_3
-  ) %>%
+         time_between_vaccinations1_2 
+         ) %>%
   tbl_summary(by = vax12_type) 
 counts0$inputs$data <- NULL
 
@@ -144,8 +143,6 @@ table1$Group[table1$Variable %in% c("Clinically extremely vulnerable", "Care hom
                                     "Haematologic cancer", "Obesity", "Chronic neurological disease (including learning disability)", "Severe mental illness", 
                                     "Organ transplant (any)", "Organ transplant (non-kidney)", "Prior COVID")] = "Other"
 table1$Group[table1$Group=="time_between_vaccinations1_2"] = "Time between doses 1 and 2"
-table1$Group[table1$Group=="time_between_vaccinations2_3"] = "Time between doses 2 and 3"
-
 
 # Redaction ----
 rounded_n_az = plyr::round_any(sum(data_cohort$vax12_type=="az-az"),5)

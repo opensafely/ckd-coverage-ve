@@ -28,13 +28,6 @@ first_pfizer = as_date("2020-12-08")
 first_az = as_date("2021-01-04")
 first_moderna = as_date("2021-04-13")
 
-data_criteria <- data_processed %>%
-  transmute(
-    patient_id,
-    
-    has_age = !is.na(age) & age >=16 & age<120
-  )
-
 # Define selection criteria ----
 data_criteria <- data_processed %>%
   transmute(
@@ -62,15 +55,11 @@ data_criteria <- data_processed %>%
     isnot_endoflife = !endoflife,
     isnot_housebound = !housebound,
     
-    # Other
-    registered_throughout = is.na(dereg_date),
-    
     include = (
       has_age & has_ckd_any & has_ckd_strict & 
       has_sex & has_imd & has_ethnicity & has_region &
       vax_pfi_az & vax_date & vax_interval &
-      isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound &
-      registered_throughout
+      isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound
      )
   )
 
@@ -92,8 +81,7 @@ data_flowchart <- data_criteria %>%
     c3 = c2 & (vax_pfi_az),
     c4 = c3 & (vax_date),
     c5 = c4 & (vax_interval),
-    c6 = c5 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound),
-    c7 = c6 & registered_throughout
+    c6 = c5 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound)
   ) %>%
   summarise(
     across(.fns=sum)
@@ -117,7 +105,6 @@ data_flowchart <- data_criteria %>%
       crit == "c4" ~ "  received first dose after 04 January 2021",
       crit == "c5" ~ "  dose interval of 8-16 weeks",
       crit == "c6" ~ "  not healthcare worker, care home resident, receiving end-of-life care, or housebound",
-      crit == "c7" ~ "  registered throughout follow-up period",
       TRUE ~ NA_character_
     )
   )

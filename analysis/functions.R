@@ -18,6 +18,50 @@ tte <- function(origin_date, event_date, censor_date, na.censor=FALSE){
   as.numeric(time)
 }
 
+censor_indicator <- function(event_date, censor_date){
+  # returns 0 if event_date is censored by censor_date, or if event_date is NA. Otherwise 1
+  dplyr::if_else((event_date>censor_date) | is.na(event_date), FALSE, TRUE)
+}
+
+timesince_cut_end <- function(time_since, breaks, prefix=""){
+  
+  # this function defines post-vaccination time-periods at `time_since`,
+  # delimited by `breaks`
+  
+  # note, intervals are open on the left and closed on the right
+  # so at the exact time point the vaccination occurred, it will be classed as "pre-dose".
+  
+  stopifnot("time_since should be strictly non-negative" = time_since>=0)
+  time_since <- as.numeric(time_since)
+  time_since <- if_else(!is.na(time_since), time_since, Inf)
+  
+  lab_left <- breaks[-length(breaks)]+1
+  lab_right <- breaks[-1]
+  label <- paste0(lab_left, "-", lab_right)
+  labels <- paste0(prefix, label)
+  
+  #labels0 <- cut(c(breaks, Inf), breaks_aug)
+  #labels <- paste0(prefix, c(prelabel, as.character(labels0[-1])))
+  period <- cut(time_since, breaks=breaks, labels=labels, include.lowest=FALSE)
+  
+  period
+}
+
+rrCI_exact <- function(n, pt, ref_n, ref_pt, accuracy=0.001){
+  
+  # use exact methods if incidence is very low for immediate post-vaccine outcomes
+  
+  rate <- n/pt
+  ref_rate <- ref_n/ref_pt
+  rr <- rate/ref_rate
+  
+  ll = ref_pt/pt * (n/(ref_n+1)) * 1/qf(2*(ref_n+1), 2*n, p = 0.05/2, lower.tail = FALSE)
+  ul = ref_pt/pt * ((n+1)/ref_n) * qf(2*(n+1), 2*ref_n, p = 0.05/2, lower.tail = FALSE)
+  
+  paste0("(", scales::number_format(accuracy=accuracy)(ll), "-", scales::number_format(accuracy=accuracy)(ul), ")")
+  
+}
+
 ## Tidy cox model outputs
 tidy_coxph <- function(x, conf.int = TRUE, conf.level = .95, exponentiate = TRUE, ...) {
   
@@ -74,4 +118,52 @@ extract_model = function(model_output) {
 ## Rounding function
 round_any = function(x, accuracy, f=round) {
   f(x/accuracy) * accuracy
+}
+
+
+
+
+redactor2 <- function(n, threshold=5, x=NULL){
+  
+  # given a vector of frequencies (n), this returns a redacted vector (if x is NULL) or
+  # reaction of a secondary vector based on frequencies in the first (if x is not nULL).
+  # using the following rules:
+  # a) the frequency is <= the redaction threshold and
+  # b) if the sum of redacted frequencies in a) is still <= the threshold, then the
+  # next largest frequency is also redacted
+  
+  
+  stopifnot("n must be non-missing" = any(!is.na(n)))
+  stopifnot("n must non-negative" = any(n>=0))
+  stopifnot("n must non-negative" = any(n>=0))
+  
+  if(is.null(x)){
+    x <- n
+  }
+  
+  if(!is.null(x)){
+    stopifnot("x must be same length as n" = length(n) == length(x))
+  }
+  
+  
+  
+  n <- as.integer(n)
+  leq_threshold <- dplyr::between(n, 1, threshold)
+  n_sum <- sum(n)
+  
+  # redact if n is less than or equal to redaction threshold
+  redact <- leq_threshold
+  
+  # also redact next smallest n if sum of redacted n is still less than or equal to threshold
+  if((sum(n*leq_threshold) <= threshold) & any(leq_threshold)){
+    redact[which.min(dplyr::if_else(leq_threshold, n_sum+1L, n))] = TRUE
+  }
+  
+  
+  typedNA <- NA
+  mode(typedNA) <- typeof(x)
+  
+  redacted <- dplyr::if_else(redact, typedNA, x)
+  
+  redacted
 }
