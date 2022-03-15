@@ -115,13 +115,20 @@ actions:
         table: output/tables/table1_VE_redacted.html
 
   # Table IRR
-  table_irr_adapted:
-    run: r:latest analysis/VE/table_irr_adapted.R
+  table_irr:
+    run: r:latest analysis/VE/table_irr.R
     needs: [data_selection_VE]
     outputs:
       moderately_sensitive:
-        html: output/tables/table_irr_simple.html
-        csv: output/tables/table_irr.csv
+        csv: output/tables/table_irr_redacted.csv
+        
+  # Table IRR - verification (adapted from prior scripts)
+  table_irr_verification:
+    run: r:latest analysis/VE/table_irr_verification.R
+    needs: [data_selection_VE]
+    outputs:
+      moderately_sensitive:
+        csv: output/tables/table_irr_redacted_verification.csv
         
   # Check session info for set of packages ----
   #session:
