@@ -288,7 +288,7 @@ data_processed <- data_extract %>%
       rural_urban %in% c(1,2) ~ "Urban conurbation",
       rural_urban %in% c(3,4) ~ "Urban city or town",
       rural_urban %in% c(5,6,7,8) ~ "Rural town or village",
-      TRUE ~ NA_character_
+      TRUE ~ "Unknown", #NA_character_#
     ),
     
     ## Blood pressure

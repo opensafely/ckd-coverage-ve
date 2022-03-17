@@ -23,6 +23,7 @@ library('glue')
 library('fs')
 library('splines')
 
+sessionInfo()
 
 ## Import data
 data_tte <- read_rds(here("output", "data", "data_cohort_VE.rds"))
@@ -101,9 +102,9 @@ formula2_full <- formula1_full %>% update(. ~ . + poly(age, degree = 2, raw = TR
 #number = 0
 
 cox_model_VE <- function(number, formula_cox, stratified=TRUE) {
-  if (number==0) { model_type = "unadjusted"} 
-  if (number==1) { model_type = "region/date adjusted"} 
-  if (number==2) { model_type = "fully adjusted"} 
+  if (number==0) { model_type = "unadjusted" } 
+  if (number==1) { model_type = "region/date adjusted" } 
+  if (number==2) { model_type = "fully adjusted" } 
   
   if (stratified) {
     # if stratified = FALSE, fit cox model stratified by follow-up window
@@ -119,7 +120,7 @@ cox_model_VE <- function(number, formula_cox, stratified=TRUE) {
     # if stratified = FALSE, fit model on full dataset
     coxmod <- coxph(
       formula_cox, 
-      data = data_tte
+      data = data_tte,
       )
   }
   # print warnings
@@ -128,9 +129,14 @@ cox_model_VE <- function(number, formula_cox, stratified=TRUE) {
   # print output status to log file
   logoutput(
     glue("model{number} data size = ", coxmod$n),
-    glue("model{number} memory usage = ", format(object.size(coxmod), units="GB", standard="SI", digits=3L)),
-    glue("convergence status: ", coxmod$info[["convergence"]])
+    glue("model{number} memory usage = ", format(object.size(coxmod), units="GB", standard="SI", digits=3L))
   )
+  
+  if (stratified) {
+    logoutput(
+      glue("convergence status: ", coxmod$info[["convergence"]])
+    )
+  }
   
   # return model summary
   tidy <- broom.helpers::tidy_plus_plus(coxmod, exponentiate = FALSE) %>%
@@ -142,15 +148,16 @@ cox_model_VE <- function(number, formula_cox, stratified=TRUE) {
     add_column(
       model_name = model_type,
       model = number,
-      convergence = coxmod$info[["convergence"]],
       ram = format(object.size(coxmod), units="GB", standard="SI", digits=3L),
       .before = 1
     )
   
   if (stratified) {
     tidy$level = glance$level = "stratified"
+    glance$convergence = coxmod$info[["convergence"]]
   } else {
     tidy$level = glance$level = "full"
+    glance$convergence = NA
   }
   
   # model outputs
@@ -209,7 +216,7 @@ for (i in 1:length(outcome_list)) {
   )
   
   # run unadjusted and adjusted models, stratified and unstratified
-  # assign("last.warning", NULL, envir = baseenv()) # clear warnings
+  #assign("last.warning", NULL, envir = baseenv()) # clear warnings
   summary0 <- cox_model_VE(0, formula0)
   summary1 <- cox_model_VE(1, formula1)
   summary2 <- cox_model_VE(2, formula2)
@@ -240,7 +247,7 @@ for (i in 1:length(outcome_list)) {
                           summary2$tidy, summary2_full$tidy) %>%
     mutate(outcome = selected_outcome, 
            outcome_clean = selected_outcome_clean)
-  #write_csv(model_tidy, here::here("output", "model", "VE", glue(paste0("modelcox_tidy_",selected_outcome,".csv"))))
+  write_csv(model_tidy, here::here("output", "model", "VE", glue(paste0("modelcox_tidy_full_",selected_outcome,".csv"))))
   
   # combine and save model summary (full - simplified)
   model_tidy_reduced <- data.frame(model_tidy) %>%

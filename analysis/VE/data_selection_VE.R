@@ -136,7 +136,7 @@ data_flowchart <- data_criteria %>%
     c5 = c4 & (vax_interval),
     c6 = c5 & (positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check),
     c7 = c6 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound),
-    c8 = c6 & isnot_censored_early
+    c8 = c7 & isnot_censored_early
   ) %>%
   summarise(
     across(.fns=sum)
