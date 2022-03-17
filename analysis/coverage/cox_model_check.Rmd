@@ -39,6 +39,10 @@ summary(uni_model)
 
 #### Survival curve (rounded/redacted)
 ```{r}
+outcome_list = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death")
+selected_outcome = outcome_list[1]
+model_tidy_reduced = read_rds(here::here("output", "model", "VE", paste0("modelcox_tidy_reduced_",selected_outcome,".rds")))
+
 #### Survival curve - unredacted
 # fit <- survfit(Surv(follow_up_time, covid_vax) ~ imd, data = data_cox)
 # ggsurvplot(fit, data = data_cox, 

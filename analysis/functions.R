@@ -12,39 +12,15 @@ fct_case_when <- function(...) {
 tte <- function(origin_date, event_date, censor_date, na.censor=FALSE){
   # returns time-to-event date or time to censor date, which is earlier
   if (na.censor)
-    time <- event_date-origin_date
+    time <- date(event_date)-date(origin_date)
   else
-    time <- pmin(event_date-origin_date, censor_date-origin_date, na.rm=TRUE)
+    time <- pmin(date(event_date)-date(origin_date), date(censor_date)-date(origin_date), na.rm=TRUE)
   as.numeric(time)
 }
 
 censor_indicator <- function(event_date, censor_date){
   # returns 0 if event_date is censored by censor_date, or if event_date is NA. Otherwise 1
   dplyr::if_else((event_date>censor_date) | is.na(event_date), FALSE, TRUE)
-}
-
-timesince_cut_end <- function(time_since, breaks, prefix=""){
-  
-  # this function defines post-vaccination time-periods at `time_since`,
-  # delimited by `breaks`
-  
-  # note, intervals are open on the left and closed on the right
-  # so at the exact time point the vaccination occurred, it will be classed as "pre-dose".
-  
-  stopifnot("time_since should be strictly non-negative" = time_since>=0)
-  time_since <- as.numeric(time_since)
-  time_since <- if_else(!is.na(time_since), time_since, Inf)
-  
-  lab_left <- breaks[-length(breaks)]+1
-  lab_right <- breaks[-1]
-  label <- paste0(lab_left, "-", lab_right)
-  labels <- paste0(prefix, label)
-  
-  #labels0 <- cut(c(breaks, Inf), breaks_aug)
-  #labels <- paste0(prefix, c(prelabel, as.character(labels0[-1])))
-  period <- cut(time_since, breaks=breaks, labels=labels, include.lowest=FALSE)
-  
-  period
 }
 
 rrCI_exact <- function(n, pt, ref_n, ref_pt, accuracy=0.001){
@@ -121,7 +97,52 @@ round_any = function(x, accuracy, f=round) {
 }
 
 
+timesince_cut <- function(time_since, breaks, prelabel="pre", prefix=""){
+  
+  # this function defines post-vaccination time-periods at `time_since`,
+  # delimited by `breaks`
+  
+  # note, intervals are open on the left and closed on the right
+  # so at the exact time point the vaccination occurred, it will be classed as "pre-dose".
+  
+  time_since <- as.numeric(time_since)
+  time_since <- if_else(!is.na(time_since), time_since, Inf)
+  
+  breaks_aug <- unique(c(-Inf, breaks, Inf))
+  
+  lab_left <- breaks+1 
+  lab_right <- lead(breaks) 
+  label <- paste0(lab_left, "-", lab_right)
+  label <- str_replace(label,"-NA", "+")
+  labels <- paste0(prefix, c(prelabel, label))
+  
+  period <- cut(time_since, breaks=breaks_aug, labels=labels, include.lowest=TRUE)
+  period
+}
 
+timesince_cut_end <- function(time_since, breaks, prefix=""){
+
+  # this function defines post-vaccination time-periods at `time_since`,
+  # delimited by `breaks`
+
+  # note, intervals are open on the left and closed on the right
+  # so at the exact time point the vaccination occurred, it will be classed as "pre-dose".
+
+  stopifnot("time_since should be strictly non-negative" = time_since>=0)
+  time_since <- as.numeric(time_since)
+  time_since <- if_else(!is.na(time_since), time_since, Inf)
+
+  lab_left <- breaks[-length(breaks)]+1
+  lab_right <- breaks[-1]
+  label <- paste0(lab_left, "-", lab_right)
+  labels <- paste0(prefix, label)
+
+  #labels0 <- cut(c(breaks, Inf), breaks_aug)
+  #labels <- paste0(prefix, c(prelabel, as.character(labels0[-1])))
+  period <- cut(time_since, breaks=breaks, labels=labels, include.lowest=FALSE)
+
+  period
+}
 
 redactor2 <- function(n, threshold=5, x=NULL){
   
@@ -167,3 +188,8 @@ redactor2 <- function(n, threshold=5, x=NULL){
   
   redacted
 }
+
+
+
+
+

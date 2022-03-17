@@ -3,5 +3,8 @@ analysis/session.Rmd
 output/*
 metadata/*
 analysis/*.html
-.Rhistory
-analysis/.Rhistory
+extras/*
+*Rhistory
+*DS_Store
+analysis/*Rhistory
+analysis/*DS_Store

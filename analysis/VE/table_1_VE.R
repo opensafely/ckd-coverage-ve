@@ -141,7 +141,7 @@ table1$Group[table1$Variable %in% c("Clinically extremely vulnerable", "Care hom
                                     "Current or former smoker", "Asthma", "High or elevated blood pressure", "Shielding", "Immunosuppression", 
                                     "Chronic respiratory disease", "Diabetes", "Chronic liver disease", "Chronic heart disease", "Asplenia", "Cancer",
                                     "Haematologic cancer", "Obesity", "Chronic neurological disease (including learning disability)", "Severe mental illness", 
-                                    "Organ transplant (any)", "Organ transplant (non-kidney)", "Prior COVID")] = "Other"
+                                    "Organ transplant (any)", "Organ transplant (non-kidney)", "Prior COVID", "Health and social care worker")] = "Other"
 table1$Group[table1$Group=="time_between_vaccinations1_2"] = "Time between doses 1 and 2"
 
 # Redaction ----

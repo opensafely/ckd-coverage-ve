@@ -32,7 +32,7 @@ source(here::here("analysis", "functions.R"))
 # 
 # list_formula <- read_rds(here("output", "data", "metadata_formulas.rds"))
 # list2env(list_formula, globalenv())
-postvaxcuts_8week <- c(0,56*1:5)
+postvaxcuts_8week <- c(56*0:5)
 lastfupday <- max(postvaxcuts_8week)
 
 #metadata_outcomes <- read_rds(here("output", "data", "metadata_outcomes.rds"))
@@ -43,10 +43,6 @@ lastfupday <- max(postvaxcuts_8week)
 ## Import processed data ----
 data_cohort <- read_rds(here("output", "data", "data_cohort_VE.rds"))
 #data_comp <- read_rds(here("output", "data", "data_cohort_comp.rds"))
-
-
-# vaccine initiation dates
-data_cohort$end_date = as_date("2021-11-30")
 
 # create pt data ----
 
@@ -59,36 +55,17 @@ data_tte <- data_cohort %>%
     postvax_covid_hospitalisation_date,
     postvax_covid_death_date,
     end_date,
-    
-    censor_date = pmin(vax2_date + lastfupday, end_date, vax3_date, dereg_date, death_date, na.rm=TRUE),
-    
-    # time to last follow up day
-    # tte function format: origin date, event date, censor date
-    tte_enddate = tte(vax2_date, end_date, end_date),
-    
-    # time to last follow up day or death or deregistration
-    tte_censor = tte(vax2_date, censor_date, censor_date),
-    
-    # time to positive test
-    tte_covid_postest = tte(vax2_date, postvax_positive_test_date, censor_date, na.censor=TRUE),
-    ind_covid_postest = censor_indicator(postvax_positive_test_date, censor_date),
-    
-    # time to COVID-19 A&E attendance
-    tte_covid_emergency = tte(vax2_date, postvax_covid_emergency_date, censor_date, na.censor=TRUE),
-    ind_covid_emergency = censor_indicator(postvax_covid_emergency_date, censor_date),
-    
-    # time to COVID-19 hospitalisation
-    tte_covid_hosp = tte(vax2_date, postvax_covid_hospitalisation_date, censor_date, na.censor=TRUE),
-    ind_covid_hosp = censor_indicator(postvax_covid_hospitalisation_date, censor_date),
-    
-    # time to COVID-19 death
-    tte_covid_death = tte(vax2_date, postvax_covid_death_date, censor_date, na.censor=TRUE),
-    ind_covid_death = censor_indicator(postvax_covid_death_date, censor_date)
-  ) %>%
-   filter(
-     # TDOD remove once study def rerun with new dereg date
-     tte_censor>0 | is.na(tte_censor)
-   )
+    censor_date,
+    tte_enddate,
+    tte_censor,
+    tte_covid_postest, 
+    ind_covid_postest, 
+    tte_covid_emergency, 
+    ind_covid_emergency, 
+    tte_covid_hosp, 
+    ind_covid_hosp,
+    tte_covid_death,
+    ind_covid_death) 
 
 # one row per patient per post-vaccination week
 postvax_time <- data_tte %>%
@@ -128,7 +105,6 @@ data_cox_split <- tmerge(
   )
 
 ## create person-time table ----
-
 format_ratio = function(numer,denom, width=7){
   paste0(
     replace_na(scales::comma_format(accuracy=1)(numer), "--"),
@@ -136,8 +112,6 @@ format_ratio = function(numer,denom, width=7){
     str_pad(replace_na(scales::comma_format(accuracy=1)(denom),"--"), width=width, pad=" ")
   )
 }
-
-
 
 pt_summary <- function(data, event){
 
