@@ -39,6 +39,14 @@ caliper_variables <- c(
   NULL
 )
 
+# Convert caliper variables to numerics
+data_processed <- data_processed %>% 
+  mutate(
+    age = as.numeric(age),
+    vax1_day = as.numeric(vax1_day),
+    vax2_day = as.numeric(vax2_day)
+  )
+
 ## Define full list of matching variabbles
 matching_variables <- c(exact_variables, names(caliper_variables))
 
