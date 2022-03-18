@@ -97,7 +97,7 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
     postvax_irr$BNT_n[i] = sum(data_cohort_BNT$tte_exclusion>=postvax_irr$period_start[i])
     postvax_irr$BNT_events[i] = sum(data_cohort_BNT$valid_outcome==TRUE & data_cohort_BNT[,tte_endpoint]>=postvax_irr$period_start[i] & data_cohort_BNT[,tte_endpoint]<=postvax_irr$period_end[i], na.rm = T)
     postvax_irr$BNT_personyears[i] = round(sum(data_cohort_BNT[,paste0("persondays_window",i)])/365.25,2)
-    postvax_irr$BNT_rate[i] = round(postvax_irr$BNT_events[i]/postvax_irr$BNT_personyears[i],2)
+    postvax_irr$BNT_rate[i] = round(postvax_irr$BNT_events[i]/postvax_irr$BNT_personyears[i]*1000,2)
 
     postvax_irr$AZ_n[i] = sum(data_cohort_AZ$tte_exclusion>=postvax_irr$period_start[i])
     postvax_irr$AZ_events[i] = sum(data_cohort_AZ$valid_outcome==TRUE & data_cohort_AZ[,tte_endpoint]>=postvax_irr$period_start[i] & data_cohort_AZ[,tte_endpoint]<=postvax_irr$period_end[i], na.rm = T)
