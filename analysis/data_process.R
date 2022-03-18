@@ -212,8 +212,8 @@ data_processed <- data_extract %>%
     
     ageband2 = cut(
       age,
-      breaks = c(16, 60, 80, 90, Inf),
-      labels = c("16-69", "70-79", "80-89", "90+"),
+      breaks = c(16, 60, 70, 80, 90, Inf),
+      labels = c("16-59", "60-69", "70-79", "80-89", "90+"),
       right = FALSE
     ),
     
@@ -226,7 +226,7 @@ data_processed <- data_extract %>%
       age>=80 | hscworker==1 ~ "2 (80+ or health/social care worker)",
       age>=75 ~ "3 (75+)",
       age>=70 | (cev==1 & (age>=16)) ~ "4 (70+ or clinically extremely vulnerable)",
-      age>=65 ~ "5 (65+)",
+      age>=65 & cev==0 ~ "5 (65+)",
       TRUE ~ "6 (16-65 and clinically vulnerable)" # Since CKD patients would be classified as clinically vulnerable, 6 is maximum JCVI group for this population
     ),
     
@@ -254,8 +254,7 @@ data_processed <- data_extract %>%
       ethnicity == "3" ~ "Asian or Asian British",
       ethnicity == "4" ~ "Black or Black British",
       ethnicity == "5" ~ "Other ethnic groups",
-      ethnicity == "6" ~ "Unknown",
-      #TRUE ~ "Unknown"
+      #ethnicity == "6" ~ "Unknown",
       TRUE ~ NA_character_),
     
     # IMD
@@ -266,7 +265,6 @@ data_processed <- data_extract %>%
       imd == 3 ~ "3",
       imd == 4 ~ "4",
       imd == 5 ~ "5 least deprived",
-      #TRUE ~ "Unknown",
       TRUE ~ NA_character_
     ),
     
@@ -288,7 +286,7 @@ data_processed <- data_extract %>%
       rural_urban %in% c(1,2) ~ "Urban conurbation",
       rural_urban %in% c(3,4) ~ "Urban city or town",
       rural_urban %in% c(5,6,7,8) ~ "Rural town or village",
-      TRUE ~ "Unknown", #NA_character_#
+      TRUE ~ "Unknown" #NA_character_#
     ),
     
     ## Blood pressure
@@ -309,12 +307,22 @@ data_processed <- data_extract %>%
     immunosuppression = pmax(immunosuppression_diagnosis_date, immunosuppression_medication_date, na.rm = T),
     immunosuppression = ifelse(!is.na(immunosuppression), 1, 0),
     
+    # Multiple morbidities (non-CKD) - 0, 1, or 2+
+    multimorb =
+      (obesity) +
+      (chd) +
+      (diabetes) +
+      (cld)+
+      (chronic_resp_dis | asthma)+
+      (chronic_neuro_dis_inc_sig_learn_dis),
+    multimorb = cut(multimorb, breaks = c(0, 1, 2, Inf), labels=c("0", "1", "2+"), right=FALSE),
+    
     # Prior covid
     prior_covid_cat = !is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_hospitalisation_date, na.rm=TRUE)),
     
     # Number of tests in pre-vaccination period
     prevax_tests_conducted_any = ifelse(is.na(prevax_tests_conducted_any), 0, prevax_tests_conducted_any),
-    prevax_tests_cat = cut(prevax_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
+    prevax_tests_cat = cut(prevax_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE)
   ) %>%
   # Drop superseded variables
   select(-c(care_home_code, care_home_tpp, ethnicity_6, ethnicity_filled, 

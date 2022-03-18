@@ -119,7 +119,15 @@ data_cohort <- data_criteria %>%
   select(patient_id) %>%
   left_join(data_processed, by="patient_id") %>%
   select(-c(ckd_inclusion_any, ckd_inclusion_strict)) %>%
-  droplevels()
+  droplevels() %>%
+  # additional vaccine/time covariates
+  mutate(
+    vax1_day = as.integer(date(vax1_date) - min(date(vax1_date), na.rm=TRUE) + 1), # day 1 is the day first dose 1 given
+    vax2_day = as.integer(date(vax2_date) - min(date(vax2_date), na.rm=TRUE) + 1), # day 1 is the day first dose 2 given
+    vax2_week = as.integer(((date(vax2_date) - min(date(vax2_date)))/7)+1), # week 1 is week first dose 2 given
+    week_region = paste0(vax2_week, "__", region),
+    vax2_az = (vax2_type=="az")*1
+  )
 
 ## Save data
 write_rds(data_cohort, here::here("output", "data", "data_cohort_VE.rds"), compress="gz")

@@ -77,9 +77,10 @@ counts0 <- data_cohort %>%
          chronic_neuro_dis_inc_sig_learn_dis, 
          sev_mental_ill, 
          non_kidney_transplant,
+         multimorb,
          prior_covid_cat,
          time_between_vaccinations1_2,
-         time_between_vaccinations2_3,
+         time_between_vaccinations2_3
          ) %>%
   tbl_summary()
 counts0$inputs$data <- NULL
@@ -120,6 +121,7 @@ table1$Variable[table1$Variable=="obesity"] = "Obesity"
 table1$Variable[table1$Variable=="chronic_neuro_dis_inc_sig_learn_dis"] = "Chronic neurological disease (including learning disability)"
 table1$Variable[table1$Variable=="sev_mental_ill"] = "Severe mental illness"
 table1$Variable[table1$Variable=="non_kidney_transplant"] = "Organ transplant (non-kidney)"
+table1$Variable[table1$Variable=="multimorb"] = "Comorbidity count (non-CKD)"
 table1$Variable[table1$Variable=="prior_covid_cat"] = "Prior COVID"
 
 # Relabel groups for plotting
@@ -138,7 +140,7 @@ table1$Group[table1$Variable %in% c("Clinically extremely vulnerable", "Care hom
                                     "Current or former smoker", "Asthma", "High or elevated blood pressure", "Shielding", "Immunosuppression", 
                                     "Chronic respiratory disease", "Diabetes", "Chronic liver disease", "Chronic heart disease", "Asplenia", "Cancer",
                                     "Haematologic cancer", "Obesity", "Chronic neurological disease (including learning disability)", "Severe mental illness", 
-                                    "Organ transplant (any)", "Organ transplant (non-kidney)", "Prior COVID")] = "Other"
+                                    "Organ transplant (any)", "Organ transplant (non-kidney)", "Comorbidity count (non-CKD)", "Prior COVID")] = "Other"
 table1$Group[table1$Group=="time_between_vaccinations1_2"] = "Time between doses 1 and 2"
 table1$Group[table1$Group=="time_between_vaccinations2_3"] = "Time between doses 2 and 3"
 

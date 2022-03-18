@@ -48,15 +48,6 @@ logoutput <- function(...){
   cat("\n", file = here("output", "model", "VE", glue("modelcox_log.txt")), sep = "\n  ", append = TRUE)
 }
 
-## Add vaccination week/region variables
-data_tte <- data_tte %>%
-  mutate(
-    vax2_day = as.integer(date(vax2_date) - min(date(vax2_date)) + 1), # day 1 is the day first dose 2 given
-    vax2_week = as.integer(((date(vax2_date) - min(date(vax2_date)))/7)+1), # week 1 is week first dose 2 given
-    week_region = paste0(vax2_week, "__", region),
-    vax2_az = (vax2_type=="az")*1
-  )
-
 ### print dataset size ----
 logoutput(
   glue("data_tte data size = ", nrow(data_tte)),
@@ -120,7 +111,7 @@ cox_model_VE <- function(number, formula_cox, stratified=TRUE) {
     # if stratified = FALSE, fit model on full dataset
     coxmod <- coxph(
       formula_cox, 
-      data = data_tte,
+      data = data_tte
       )
   }
   # print warnings
