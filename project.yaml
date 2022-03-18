@@ -149,7 +149,7 @@ actions:
     needs: [data_selection_VE, table_1_VE, table_irr, cox_model_VE]
     outputs:
       moderately_sensitive:
-        html: output/markdown/cox_VE.html
+        html: output/markdown/cox_VE_summary.html
         
         
   # Check session info for set of packages ----
