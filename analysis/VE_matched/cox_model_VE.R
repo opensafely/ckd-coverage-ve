@@ -25,7 +25,7 @@ library('splines')
 sessionInfo()
 
 ## Set whether or not to import matched data - ONLY UPDATE THIS LINE BETWEEN MATCHED/UNMATCHED OUTPUTS
-matched=FALSE
+matched=TRUE
 
 ## Define input and output file names
 if (matched) {

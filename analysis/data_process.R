@@ -312,8 +312,8 @@ data_processed <- data_extract %>%
       (obesity) +
       (chd) +
       (diabetes) +
-      (cld)+
-      (chronic_resp_dis | asthma)+
+      (cld) +
+      (chronic_resp_dis | asthma) +
       (chronic_neuro_dis_inc_sig_learn_dis),
     multimorb = cut(multimorb, breaks = c(0, 1, 2, Inf), labels=c("0", "1", "2+"), right=FALSE),
     

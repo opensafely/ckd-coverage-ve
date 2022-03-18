@@ -23,13 +23,12 @@ data_processed <- read_rds(here::here("output", "data", "data_cohort_VE.rds"))
 ## Specify exact matching variables
 exact_variables <- c(
   "jcvi_group",
-  #"cev", # could add cev_cv categories as per recent booster work
-  #"vax2_type",
-  #"region",
-  #"prior_covid_cat",
-  #"dialysis",
-  #"egfr_cat3",
-  NULL
+  "region",
+  "kidney_transplant",
+  "dialysis",
+  "egfr_cat3",
+  "prior_covid_cat",
+  NULL #"cev",
 )
 
 ## Specify caliper variables
@@ -49,7 +48,7 @@ matching <-
   safely_matchit(
     formula = vax2_az ~ 1,
     data = data_processed,
-    method = "nearest", distance = "glm", # these two options don't really do anything because we only want exact + caliper matching
+    method = "nearest", distance = "glm", # two options redundant since we are using exact + caliper matching
     replace = FALSE,
     estimand = "ATT",
     exact = exact_variables,

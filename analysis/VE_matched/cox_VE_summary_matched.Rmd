@@ -5,7 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 ## Set whether or not to import matched data - ONLY UPDATE THIS LINE BETWEEN MATCHED/UNMATCHED OUTPUTS
-matched = FALSE
+matched = TRUE
 
 ## Set reference database for model outputs
 if (matched) { db = "VE_matched" } else { db = "VE"}
