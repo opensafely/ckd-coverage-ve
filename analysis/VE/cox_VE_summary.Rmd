@@ -1,5 +1,5 @@
 ---
-title: "Comparative effectiveness of BNT162b2 vs ChAdOx1-S in CKDq patients"
+title: "Comparative effectiveness of BNT162b2 vs ChAdOx1-S in CKD patients"
 output: html_document
 ---
 
@@ -19,6 +19,8 @@ library('reshape2')
 library('kableExtra')
 library('cowplot')
 library('fs')
+library('survival')
+library('survminer')
 
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
@@ -36,7 +38,7 @@ Chronic kidney disease (CKD) is a significant risk factor for COVID-19-related m
 Vaccine recommendations for CKD patients in the UK have evolved over time (see [protocol](https://docs.google.com/document/d/1w48W-bCMfn0RdkfxlU6fbRkPv3MnIYd3/edit#heading=h.1fob9te). Relative uptake of different vaccines in this population remains uncertain, as does the relative vaccine effectiveness (VE) of different regimens, including homologous versus heterologous vaccine usage. This project seeks to address these key evidence gaps.
 
 Most CKD patients received a 2-dose homologous primary series of either BNT162b2 or ChAdOx1-S between January and June 2021 (see outputs of vaccine coverage analyses).
-$~$
+<br/><br/>
 
 #### Inclusion criteria
 * Registered for at least 3m before index date (01-Dec-2020)    
@@ -52,7 +54,7 @@ $~$
 
 A total of **`r formatC(rounded_n, big.mark=",")`** (rounded to the nearest 5) met the inclusion criteria (see *output/data/flowchart.csv* for additional details).    
 `r if(flag=="present") { paste0("NB: Dummy data processing flag detected!") }`    
-$~$
+<br/><br/>
 
 #### Table 1: Summary of population
 ```{r}
@@ -65,53 +67,90 @@ subset(table_1) %>%
      style = cell_text(indent = pct(5)),
      locations = cells_body(columns = "Variable")
      ) %>%
-   tab_options(table.font.size = pct(95)) %>% #table.width = pct(80) 
+   tab_options(table.font.size = pct(85)) %>% #table.width = pct(80) 
    tab_footnote(
      footnote = "All counts rounded to nearest 5; any rounded counts <=10 or within <=10 of population total redacted.",
      locations = cells_column_labels(columns = c("ChAdOx1-S", "BNT162b2"))
    ) %>%
     cols_width(
-    starts_with("Variable") ~ px(400)
+    starts_with("Variable") ~ px(350)
     )
 ```
-$~$
+<br/><br/>
 
-#### Crude incidence rate ratios in two groups
-```{r}
-table_irr <- read_rds(here::here("output", "tables", "table_irr_redacted.rds")) %>%
-  select(c(period, BNT_n, BNT_events, BNT_personyears, BNT_rate, AZ_n, AZ_events, AZ_personyears, AZ_rate, rr, outcome_clean))
-names(table_irr) <- c("Period (days)", "n, BNT (total)", "n, BNT (events)", "person-years, BNT", "rate, BNT", 
-                      "n, AZ (total)", "n, AZ (events)", "person-years, AZ", "rate, AZ", 
-                      "IRR", "outcome_clean")
-
-table_irr %>%
-  gt(groupname_col = "outcome_clean") %>%
-  tab_spanner(
-    label = "BNT162b2",
-    columns = c("n, BNT (total)", "n, BNT (events)", "person-years, BNT", "rate, BNT")
-  ) %>%
-  tab_spanner(
-    label = "ChAdOx1-S",
-    columns = c("n, AZ (total)", "n, AZ (events)", "person-years, AZ", "rate, AZ")
-  ) %>%
-   tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
-   tab_options(table.font.size = pct(95)) %>% #table.width = pct(80) 
-   tab_footnote(
-     footnote = "IRR = incidence rate ratio. Data redacted for any rounded counts of >0 and <=5",
-     locations = cells_column_labels(columns = c("IRR"))
-   ) %>%
-   cols_width(
-    starts_with("Period") ~ px(100),
-    starts_with("IRR") ~ px(150) 
-    )
-```
-$~$
-
-#### Hazard ratios over time (figure)
-```{r, fig.width=15, fig.height=4.5}
+#### Cumulative incidence plots and hazard ratios over time (figure)
+```{r, fig.width=21, fig.height=10}
+## Set list of outcomes and date variable names
 outcome_list = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death")
 clean_list = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death")
+date_list = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date")
 
+## Read in data for cumulative incidence curves
+data_tte <- read_rds(here("output", "data", "data_cohort_VE.rds")) %>%
+  mutate(
+    vax2_type_descr = recode(vax2_type_descr, "BNT162b2" = "BNT", "ChAdOx1" = "AZ")
+  )
+
+## Set rounding factor for estimates and confidence intervals
+threshold = 5
+
+## Function to extract cumulative incidence data for outcome of interest
+surv_table <- function(outcome_number) {
+  survfit(Surv(tte(vax2_date - 1, get(date_list[outcome_number]), censor_date), get(paste0("ind_",outcome_list[outcome_number]))) ~ vax2_type_descr, data = data_tte) %>% 
+  broom::tidy() %>% 
+  filter(estimate > 0) %>%
+  mutate(
+    outcome_clean = clean_list[outcome_number],
+    strata = str_replace(strata, pattern=fixed("vax2_type_descr="), ""),
+    estimate = pmin(1,plyr::round_any(estimate, threshold/max(n.risk)), na.rm=TRUE),
+    conf.low = pmin(1, plyr::round_any(conf.low, threshold/max(n.risk)), na.rm=TRUE),
+    conf.high = pmin(1, plyr::round_any(conf.high, threshold/max(n.risk)), na.rm=TRUE),
+    cum.in = 1 - estimate,
+    lci = 1- conf.high,
+    uci = 1 - conf.low
+  )
+}
+
+# collate across outcomes 1:4 (positive test, A&E, hosp, death)
+surv_collated = rbind(surv_table(1), surv_table(2), surv_table(3), surv_table(4))
+surv_collated$outcome_clean = factor(surv_collated$outcome_clean, levels = clean_list)
+
+## Generate KM plot across 4 outcomes
+g1 = surv_collated %>%
+  ggplot(aes(x = time, y = cum.in, colour = strata)) + geom_step(size = 0.8) +
+  geom_ribbon(aes(ymin = lci, ymax = uci, fill = strata), alpha = 0.1, colour=NA) +
+  scale_x_continuous(breaks=56*0:5, limits=c(0, 56*6), expand = c(0, 0)) +
+  scale_y_continuous(expand = expansion(mult=c(0,0.01))) +
+  facet_wrap(.~outcome_clean, nrow=1) +
+  labs(
+    x = "",
+    y = "cumulative incidence",
+    colour = "",
+    title = "") +
+  theme_bw() +
+  guides(fill="none") +
+  scale_colour_manual(values = c("#CC79A7", "#0072B2")) +
+  theme(
+    strip.text = element_text(size=20),
+    axis.text = element_text(size=20),
+    axis.title = element_text(size=20),
+    legend.text = element_text(size=20),
+    panel.border = element_blank(),
+    axis.line.y = element_line(colour = "black"),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    strip.text.y.left = element_text(angle = 0),
+    panel.spacing = unit(0.8, "lines"),
+    plot.title = element_text(hjust = 0),
+    plot.title.position = "plot",
+    plot.caption.position = "plot",
+    plot.caption = element_text(hjust = 0, face= "italic"),
+    legend.position = "right"  
+    )
+
+### Generate plot of hazard ratios over time
 model = rbind(
   read_rds(here::here("output", "model", "VE", paste0("modelcox_tidy_reduced_",outcome_list[1],".rds"))),
   read_rds(here::here("output", "model", "VE", paste0("modelcox_tidy_reduced_",outcome_list[2],".rds"))),
@@ -138,33 +177,35 @@ model$redaction = NA
 model$redaction[model$p.value=="[Redacted]" & model$model==0] = "[R]"
 model$redaction[model$n_event=="0"] = "[N]"
 
-ggplot(data = model) +
+## Generate HR plot for 4 ouctomes
+g2 = ggplot(data = model) +
     geom_point(size = 2.5, aes(y=exp(estimate), x=term_midpoint, colour=model_name), position = position_dodge(width = 35)) +
     geom_linerange(aes(ymin=exp(conf.low), ymax=exp(conf.high), x=term_midpoint, colour=model_name), position = position_dodge(width = 35)) +
     geom_hline(aes(yintercept=1), colour='grey') +
     scale_y_log10(
       limits = c(0.25,4),
       breaks=c(0.25, 0.5, 0.67, 1, 1.5, 2, 4),
-      sec.axis = dup_axis(name="<--  favours Pfizer  /  favours AZ  -->", breaks = NULL)
+      sec.axis = dup_axis(name="<- favours BNT / favours AZ ->", breaks = NULL)
     ) +
   facet_wrap(.~outcome_clean, nrow=1) +
-  scale_x_continuous(breaks=unique(model$term_left), limits=c(min(model$term_left), max(model$term_right)+1), expand = c(0, 0)) +
+  scale_x_continuous(breaks=56*0:5, limits=c(0, 56*6), expand = c(0, 0)) +
   scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
   labs(
     y="hazard ratio (95% CI)",
-    x="time since first dose (days)",
+    x="time since second dose (days)",
     colour=NULL,
     title=NULL
   ) +
   theme_bw()+
   annotate("rect", xmin = 280, xmax = 336, ymin = 0.25, ymax = 4, alpha = .3, fill = "grey") +
-  annotate("text", x = 308, y = 3.3, label = "All", size=6) +
-  geom_text(aes(x = term_midpoint, y = 1, label = redaction), size=5) +
+  annotate("text", x = 308, y = 3.3, label = "All", size=7) +
+  geom_text(aes(x = term_midpoint, y = 1, label = redaction), size=6) +
   theme(
-    strip.text = element_text(size=16),
-    axis.text = element_text(size=16),
-    axis.title = element_text(size=16),
-    legend.text = element_text(size=16),
+    strip.text = element_text(size=20, colour="white"), # set as white to avoid repeating text in aligned plot
+    axis.text = element_text(size=20),
+    axis.title.y.right = element_text(size=18),
+    axis.title = element_text(size=20),
+    legend.text = element_text(size=20),
     panel.border = element_blank(),
     axis.line.y = element_line(colour = "black"),
     panel.grid.minor.x = element_blank(),
@@ -177,31 +218,63 @@ ggplot(data = model) +
     plot.title.position = "plot",
     plot.caption.position = "plot",
     plot.caption = element_text(hjust = 0, face= "italic"),
-    legend.position = "bottom"
+    legend.position = "right",
+    axis.line.y.right = element_line(size=0)
   )
-```
-[R] = redacted (between 1 and 5 events in either vaccine group); [N] = 0 events in both vaccine groups.
-$~$
 
-#### Hazard ratios over time (table)
+## Generate aligned plot
+plot_grid(g1, g2, ncol=1,  align="v", axis = c("lr"))
+```
+Cumulative incidence = 1 - Kaplan-Meier estimate for probability of survival in unadjusted models. [R] = redacted (between 1 and 5 events in either vaccine group); [N] = 0 events in both vaccine groups. 
+<br/><br/>
+
+####Crude incidence rate ratios and hazard ratios over time (table)
 ```{r}
-summary <- model %>% select(model_name, term, estimate, conf.low, conf.high, outcome_clean) %>%
+## Read in table of IRRs
+table_irr <- read_rds(here::here("output", "tables", "table_irr_redacted.rds")) %>%
+  select(c(period, BNT_n, BNT_events, BNT_personyears, BNT_rate, AZ_n, AZ_events, AZ_personyears, AZ_rate, rr, outcome_clean))
+names(table_irr) <- c("Period (days)", "n, BNT (total)", "n, BNT (events)", "person-years, BNT", "rate, BNT", 
+                      "n, AZ (total)", "n, AZ (events)", "person-years, AZ", "rate, AZ", 
+                      "IRR", "outcome_clean")
+
+## Generate table of HRs
+HR_summary <- model %>% select(model_name, term, estimate, conf.low, conf.high, outcome_clean) %>%
   mutate(
     `HR (95% CI)` = paste0(round(exp(estimate),2)," (",round(exp(conf.low),2),"-",round(exp(conf.high),2),")"),
-    `HR (95% CI)` = if_else(`HR (95% CI)`=="NA (NA-NA)", "--", `HR (95% CI)`)
+    `HR (95% CI)` = if_else(`HR (95% CI)`=="NA (NA-NA)", "--", `HR (95% CI)`),
+    term = recode(term, "vax2_az"="All")
   ) %>%
   select(-c(estimate, conf.low, conf.high)) %>%
   pivot_wider(
     names_from = model_name,
     values_from = `HR (95% CI)` 
-    )
+    ) %>%
+  rename(`Period (days)` = term)
 
-# Tidy summary information
-summary$term = as.character(summary$term)
-summary$term[summary$term=="vax2_az"] = "All"
-names(summary)[1] = "Period (days)"
-summary %>%
+## Merge tables
+left_join(table_irr, HR_summary, by = c("Period (days)", "outcome_clean")) %>%
   gt(groupname_col = "outcome_clean") %>%
+  tab_spanner(
+    label = "BNT162b2",
+    columns = c("n, BNT (total)", "n, BNT (events)", "person-years, BNT", "rate, BNT")
+  ) %>%
+  tab_spanner(
+    label = "ChAdOx1-S",
+    columns = c("n, AZ (total)", "n, AZ (events)", "person-years, AZ", "rate, AZ")
+  ) %>%
+  tab_spanner(
+    label = "Hazard ratios",
+    columns = c("unadjusted", "region/date adjusted", "fully adjusted")
+  ) %>%
    tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
-   tab_options(table.font.size = pct(95))
+   tab_options(table.font.size = pct(80)) %>% #table.width = pct(80) 
+   tab_footnote(
+     footnote = "IRR = incidence rate ratio. Data redacted for any rounded counts of >0 and <=5",
+     locations = cells_column_labels(columns = c("IRR"))
+   ) %>%
+   cols_width(
+    starts_with("Period") ~ px(100),
+    starts_with("IRR") ~ px(200),
+    ends_with("adjusted") ~ px(200)
+    )
 ```
