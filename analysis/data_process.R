@@ -174,7 +174,7 @@ data_extract <- data_extract %>%
     egfr_cat5 = cut(
       egfr,
       breaks = c(0, 15, 30, 45, 60, 5000),
-      labels = c("stage 5", "stage 4", "stage 3b", "stage 3a", "No CKD"),
+      labels = c("Stage 5", "Stage 4", "Stage 3b", "Stage 3a", "No CKD"),
       right = FALSE
     ),
     
@@ -201,6 +201,16 @@ data_processed <- data_extract %>%
     # CKD inclusion criteria
     ckd_inclusion_any = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_diagnostic==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
     ckd_inclusion_strict = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1, 1, 0),
+    
+    # CKD 7-levels
+    ckd_7cat = ifelse(egfr_cat5 == "Stage 3a" & dialysis == 0 & kidney_transplant== 0, "CKD3a (D-T-)", NA),
+    ckd_7cat = ifelse(egfr_cat5 == "Stage 3b" & dialysis == 0 & kidney_transplant== 0, "CKD3b (D-T-)", NA),
+    ckd_7cat = ifelse(egfr_cat5 == "Stage 4" & dialysis == 0 & kidney_transplant== 0, "CKD4 (D-T-)", NA),
+    ckd_7cat = ifelse(egfr_cat5 == "Stage 5" & dialysis == 0 & kidney_transplant== 0, "CKD5 (D-T-)", NA),
+    ckd_7cat = ifelse(dialysis == 1 & kidney_transplant == 0, "CKD (D+T-)", NA),
+    ckd_7cat = ifelse(dialysis == 0 & kidney_transplant == 1, "CKD (D-T+)", NA),
+    ckd_7cat = ifelse(dialysis == 1 & kidney_transplant == 1, "CKD (D+T+)", NA),
+    ckd_7cat = ifelse(is.na(ckd_7cat), "Unknown", ckd_7cat),
     
     # Age
     ageband = cut(
@@ -239,6 +249,7 @@ data_processed <- data_extract %>%
     
     # obesity
     obesity = ifelse(bmi == "Not obese",0,1),
+    sev_obesity = ifelse(bmi == "Obese III (40+)",1,0),
     
     # Smoking status
     smoking_status = ifelse(smoking_status == "E" | smoking_status == "S","S&E", smoking_status),
@@ -309,17 +320,22 @@ data_processed <- data_extract %>%
     
     # Multiple morbidities (non-CKD) - 0, 1, or 2+
     multimorb =
-      (obesity) +
-      (chd) +
       (diabetes) +
+      (sev_obesity) +
+      (chd) +
       (cld) +
-      (chronic_resp_dis | asthma) +
-      (chronic_neuro_dis_inc_sig_learn_dis),
+      (chronic_resp_dis | asthma),
     multimorb = cut(multimorb, breaks = c(0, 1, 2, Inf), labels=c("0", "1", "2+"), right=FALSE),
     
+    # Any cancer
+    any_cancer = ifelse(cancer==1 | haem_cancer==1,1,0), 
+
     # Prior covid
     prior_covid_cat = !is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_hospitalisation_date, na.rm=TRUE)),
     
+    # Covid in window spanning 90 days pre dose 1 up to dose 2
+    prevax_covid_cat = !is.na(pmin(prevax_positive_test_date, prevax_primary_care_covid_case_date, prevax_covid_hospitalisation_date, na.rm=TRUE)),
+
     # Number of tests in pre-vaccination period
     prevax_tests_conducted_any = ifelse(is.na(prevax_tests_conducted_any), 0, prevax_tests_conducted_any),
     prevax_tests_cat = cut(prevax_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE)
