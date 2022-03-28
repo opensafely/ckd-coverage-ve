@@ -31,8 +31,10 @@ actions:
     needs: [data_process]
     outputs:
       highly_sensitive:
-        data: output/data/data_cohort_coverage.rds
-        csv: output/data/data_cohort_coverage.csv
+        data1: output/data/data_cohort_coverage.rds
+        csv1: output/data/data_cohort_coverage.csv
+        data2: output/data/data_cohort_coverage_logistic.rds
+        csv2: output/data/data_cohort_coverage_logistic.csv
       moderately_sensitive:
         csv: output/tables/flowchart_coverage.csv
 

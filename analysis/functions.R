@@ -91,6 +91,21 @@ extract_model = function(model_output) {
   )
 }
 
+## Extract coefficients and p values from logistic model output (quick method)
+extract_model_logistic = function(variable_name, model_output) {
+  summary = data.frame(
+    term = paste0(as.character(unlist(model_output$xlevels))),
+    N = length(model_output$fitted.values), 
+    estimate = round(exp(model_output$coefficients),2), 
+    conf.low = round(exp(confint.default(model_output))[,1],2), 
+    conf.high = round(exp(confint.default(model_output))[,2],2), 
+    p.value = round(summary(model_output)$coefficients[,4],5)
+  )
+  # Set intercept values to NA
+  summary[1,3:6] = NA
+  return(summary)
+}
+
 ## Rounding function
 round_any = function(x, accuracy, f=round) {
   f(x/accuracy) * accuracy
@@ -190,6 +205,65 @@ redactor2 <- function(n, threshold=5, x=NULL){
 }
 
 
+## PLR function from HCW comparative effectiveness analysis
+sample_nonoutcomes_n <- function(had_outcome, id, n){
+  # TRUE if outcome occurs,
+  # TRUE with probability of `prop` if outcome does not occur
+  # FALSE with probability `prop` if outcome does occur
+  # based on `id` to ensure consistency of samples
+  
+  # `had_outcome` is a boolean indicating if the subject has experienced the outcome or not
+  # `id` is a identifier with the following properties:
+  # - a) consistent between cohort extracts
+  # - b) unique
+  # - c) completely randomly assigned (no correlation with practice ID, age, registration date, etc etc) which should be true as based on hash of true IDs
+  # - d) is an integer strictly greater than zero
+  # `proportion` is the proportion of nonoutcome patients to be sampled
+  
+  (dplyr::dense_rank(dplyr::if_else(had_outcome, 0L, id)) - 1L) <= n
+  
+}
 
+## PLR function from HCW comparative effectiveness analysis
+sample_weights <- function(had_outcome, sampled){
+  # `had_outcome` is a boolean indicating if the subject has experienced the outcome or not
+  # `sampled` is a boolean indicating if the patient is to be sampled or not
+  case_when(
+    had_outcome ~ 1,
+    !had_outcome & !sampled ~ 0,
+    !had_outcome & sampled ~ sum(!had_outcome)/sum((sampled) & !had_outcome),
+    TRUE ~ NA_real_
+  )
+}
 
+glance_plr <- function(model){
+  tibble(
+    AIC=model$aic,
+    df.null=model$df.null,
+    df.residual=model$df.residual,
+    deviance=model$deviance,
+    null.deviance=model$null.deviance,
+    nobs=length(model$y)
+  )
+}
 
+tidy_plr <- function(model, conf.int=TRUE, conf.level=0.95, exponentiate=FALSE, cluster){
+  
+  # create tidy dataframe for coefficients of pooled logistic regression
+  # using robust standard errors
+  robustSEs <- lmtest::coeftest(model, vcov. = sandwich::vcovCL(model, cluster = cluster, type = "HC0")) %>% broom::tidy(conf.int=FALSE, exponentiate=exponentiate)
+  robustCIs <- lmtest::coefci(model, vcov. = sandwich::vcovCL(model, cluster = cluster, type = "HC0"), level = conf.level) %>% tibble::as_tibble(rownames="term")
+  robust <- dplyr::inner_join(robustSEs, robustCIs, by="term")
+  
+  robust %>%
+    rename(
+      conf.low=`2.5 %`,
+      conf.high=`97.5 %`
+    ) %>%
+    mutate(
+      or = exp(estimate),
+      or.ll = exp(conf.low),
+      or.ul = exp(conf.high),
+    )
+  
+}
