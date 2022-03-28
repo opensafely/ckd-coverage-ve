@@ -204,12 +204,12 @@ data_processed <- data_extract %>%
     
     # CKD 7-levels
     ckd_7cat = ifelse(egfr_cat5 == "Stage 3a" & dialysis == 0 & kidney_transplant== 0, "CKD3a (D-T-)", NA),
-    ckd_7cat = ifelse(egfr_cat5 == "Stage 3b" & dialysis == 0 & kidney_transplant== 0, "CKD3b (D-T-)", NA),
-    ckd_7cat = ifelse(egfr_cat5 == "Stage 4" & dialysis == 0 & kidney_transplant== 0, "CKD4 (D-T-)", NA),
-    ckd_7cat = ifelse(egfr_cat5 == "Stage 5" & dialysis == 0 & kidney_transplant== 0, "CKD5 (D-T-)", NA),
-    ckd_7cat = ifelse(dialysis == 1 & kidney_transplant == 0, "CKD (D+T-)", NA),
-    ckd_7cat = ifelse(dialysis == 0 & kidney_transplant == 1, "CKD (D-T+)", NA),
-    ckd_7cat = ifelse(dialysis == 1 & kidney_transplant == 1, "CKD (D+T+)", NA),
+    ckd_7cat = ifelse(egfr_cat5 == "Stage 3b" & dialysis == 0 & kidney_transplant== 0, "CKD3b (D-T-)", ckd_7cat),
+    ckd_7cat = ifelse(egfr_cat5 == "Stage 4" & dialysis == 0 & kidney_transplant== 0, "CKD4 (D-T-)", ckd_7cat),
+    ckd_7cat = ifelse(egfr_cat5 == "Stage 5" & dialysis == 0 & kidney_transplant== 0, "CKD5 (D-T-)", ckd_7cat),
+    ckd_7cat = ifelse(dialysis == 1 & kidney_transplant == 0, "CKD (D+T-)", ckd_7cat),
+    ckd_7cat = ifelse(dialysis == 0 & kidney_transplant == 1, "CKD (D-T+)", ckd_7cat),
+    ckd_7cat = ifelse(dialysis == 1 & kidney_transplant == 1, "CKD (D+T+)", ckd_7cat),
     ckd_7cat = ifelse(is.na(ckd_7cat), "Unknown", ckd_7cat),
     
     # Age
@@ -228,15 +228,15 @@ data_processed <- data_extract %>%
     ),
     
     # any care home flag
-    care_home = ifelse(care_home_tpp==1 | care_home_code==1,1,0), 
+    care_home = ifelse(care_home_tpp==1 | care_home_code==1, 1, 0), 
     
     # https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1007737/Greenbook_chapter_14a_30July2021.pdf#page=12
     jcvi_group = fct_case_when(
       care_home==1 ~ "1 (care home residents/staff)",
-      age>=80 | hscworker==1 ~ "2 (80+ or health/social care worker)",
-      age>=75 ~ "3 (75+)",
-      age>=70 | (cev==1 & (age>=16)) ~ "4 (70+ or clinically extremely vulnerable)",
-      age>=65 & cev==0 ~ "5 (65+)",
+      care_home==0 & (age>=80 | hscworker==1) ~ "2 (80+ or health/social care worker)",
+      care_home==0 & (age>=75 & age<80) ~ "3 (75+)",
+      care_home==0 & ((age>=70 & age<75) | (cev==1 & age>=16 & age<70)) ~ "4 (70+ or clinically extremely vulnerable)",
+      care_home==0 & cev==0 & (age>=65 & age<70) ~ "5 (65+)",
       TRUE ~ "6 (16-65 and clinically vulnerable)" # Since CKD patients would be classified as clinically vulnerable, 6 is maximum JCVI group for this population
     ),
     
@@ -249,7 +249,7 @@ data_processed <- data_extract %>%
     
     # obesity
     obesity = ifelse(bmi == "Not obese",0,1),
-    sev_obesity = ifelse(bmi == "Obese III (40+)",1,0),
+    mod_sev_obesity = ifelse(bmi == "Obese II (35-39.9)" | bmi == "Obese III (40+)", 1, 0),
     
     # Smoking status
     smoking_status = ifelse(smoking_status == "E" | smoking_status == "S","S&E", smoking_status),
@@ -265,7 +265,6 @@ data_processed <- data_extract %>%
       ethnicity == "3" ~ "Asian or Asian British",
       ethnicity == "4" ~ "Black or Black British",
       ethnicity == "5" ~ "Other ethnic groups",
-      #ethnicity == "6" ~ "Unknown",
       TRUE ~ NA_character_),
     
     # IMD
@@ -297,7 +296,7 @@ data_processed <- data_extract %>%
       rural_urban %in% c(1,2) ~ "Urban conurbation",
       rural_urban %in% c(3,4) ~ "Urban city or town",
       rural_urban %in% c(5,6,7,8) ~ "Rural town or village",
-      TRUE ~ "Unknown" #NA_character_#
+      TRUE ~ "Unknown"
     ),
     
     ## Blood pressure
@@ -320,15 +319,16 @@ data_processed <- data_extract %>%
     
     # Multiple morbidities (non-CKD) - 0, 1, or 2+
     multimorb =
+      (mod_sev_obesity) +
       (diabetes) +
-      (sev_obesity) +
+      (chronic_resp_dis | asthma) +
       (chd) +
       (cld) +
-      (chronic_resp_dis | asthma),
+      (asplenia),
     multimorb = cut(multimorb, breaks = c(0, 1, 2, Inf), labels=c("0", "1", "2+"), right=FALSE),
     
     # Any cancer
-    any_cancer = ifelse(cancer==1 | haem_cancer==1,1,0), 
+    any_cancer = ifelse(cancer==1 | haem_cancer==1, 1, 0), 
 
     # Prior covid
     prior_covid_cat = !is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_hospitalisation_date, na.rm=TRUE)),

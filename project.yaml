@@ -93,20 +93,27 @@ actions:
 #      moderately_sensitive:
 #        html: output/markdown/cox_model_check.html
 
-# Select cohort (VE) ----
+#############################
+### VE - unmatched analyses
+#############################
+
+# Select cohort (single script used for both matched and unmatched analyses) ----
   data_selection_VE:
     run: r:latest analysis/VE/data_selection_VE.R
     needs: [data_process]
     outputs:
       highly_sensitive:
-        data: output/data/data_cohort_VE.rds
-        csv: output/data/data_cohort_VE.csv
+        data1: output/data/data_cohort_VE.rds
+        data2: output/data/data_cohort_VE_matched.rds
+        csv1: output/data/data_cohort_VE.csv
+        csv2: output/data/data_cohort_VE_matched.csv
       moderately_sensitive:
-        csv: output/tables/flowchart_VE.csv
+        csv1: output/tables/flowchart_VE.csv
+        csv2: output/tables/flowchart_VE_matched.csv
 
-  # Table 1 (VE) ----
+  # Table 1 (VE unmatched) ----
   table_1_VE:
-    run: r:latest analysis/VE/table_1_VE.R
+    run: r:latest analysis/VE/table_1_VE.R unmatched
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -114,9 +121,9 @@ actions:
       moderately_sensitive:
         table: output/tables/table1_VE_redacted.html
 
-  # Table IRR
+  # Table IRR (VE unmatched)
   table_irr:
-    run: r:latest analysis/VE/table_irr.R
+    run: r:latest analysis/VE/table_irr.R unmatched
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -132,9 +139,9 @@ actions:
       moderately_sensitive:
         csv: output/tables/table_irr_redacted_verification.csv
   
-  # Cox models - comparative VE ----
+  # Cox models - comparative VE unmatched ----
   cox_model_VE:
-    run: r:latest analysis/VE/cox_model_VE.R
+    run: r:latest analysis/VE/cox_model_VE.R unmatched
     needs: [data_selection_VE, table_irr]
     outputs:
       highly_sensitive:
@@ -143,49 +150,43 @@ actions:
         csv: output/model/VE/modelcox*.csv
         txt: output/model/VE/modelcox*.txt
    
-  # Cox VE summaries ----
+  # Cox VE summaries for unmatched analysis ----
   cox_VE_summary:
     run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
     needs: [data_selection_VE, table_1_VE, table_irr, cox_model_VE]
     outputs:
       moderately_sensitive:
         html: output/markdown/cox_VE_summary.html
-        
-# Select cohort (VE matched) ----
-  data_selection_VE_matched:
-    run: r:latest analysis/VE_matched/data_selection_VE_matched.R
-    needs: [data_selection_VE]
-    outputs:
-      highly_sensitive:
-        data: output/data/data_cohort_VE_matched.rds
-        csv: output/data/data_cohort_VE_matched.csv
-      moderately_sensitive:
-        csv: output/tables/flowchart_VE_matched.csv
 
-  # Table 1 (VE) ----
+#############################
+### VE - matched analyses
+#############################
+# Same scripts above but with matched argument in 'run'
+
+  # Table 1 (VE matched) ----
   table_1_VE_matched:
-    run: r:latest analysis/VE_matched/table_1_VE.R
-    needs: [data_selection_VE_matched]
+    run: r:latest analysis/VE/table_1_VE.R matched
+    needs: [data_selection_VE]
     outputs:
       highly_sensitive:
         data: output/tables/table1_VE_matched_redacted.rds
       moderately_sensitive:
         table: output/tables/table1_VE_matched_redacted.html
 
-  # Table IRR
+  # Table IRR (VE matched)
   table_irr_matched:
-    run: r:latest analysis/VE_matched/table_irr.R
-    needs: [data_selection_VE_matched]
+    run: r:latest analysis/VE/table_irr.R matched
+    needs: [data_selection_VE]
     outputs:
       highly_sensitive:
         data: output/tables/table_irr_matched_redacted.rds
       moderately_sensitive:
         csv: output/tables/table_irr_matched_redacted.csv
 
-  # Cox models - comparative VE ----
+  # Cox models - comparative VE matched ----
   cox_model_VE_matched:
-    run: r:latest analysis/VE_matched/cox_model_VE.R
-    needs: [data_selection_VE_matched, table_irr_matched]
+    run: r:latest analysis/VE/cox_model_VE.R matched
+    needs: [data_selection_VE, table_irr_matched]
     outputs:
       highly_sensitive:
         data: output/model/VE_matched/modelcox*.rds
@@ -193,10 +194,10 @@ actions:
         csv: output/model/VE_matched/modelcox*.csv
         txt: output/model/VE_matched/modelcox*.txt
    
-  # Cox VE summaries ----
+  # Cox VE summaries for matched analysis ----
   cox_VE_summary_matched:
-    run: r:latest -e 'rmarkdown::render("analysis/VE_matched/cox_VE_summary_matched.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [data_selection_VE_matched, table_1_VE_matched, table_irr_matched, cox_model_VE_matched]
+    run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary_matched.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
+    needs: [data_selection_VE, table_1_VE_matched, table_irr_matched, cox_model_VE_matched]
     outputs:
       moderately_sensitive:
         html: output/markdown/cox_VE_summary_matched.html

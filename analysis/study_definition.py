@@ -22,7 +22,7 @@ from codelists import *
 
 ### Set initial date parameters
 start_date = "2020-12-01"
-end_date = "2021-12-31"
+end_date = "2022-02-16"
 
 study = StudyDefinition(
     # Configure the expectations framework
