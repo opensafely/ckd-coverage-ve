@@ -222,8 +222,8 @@ data_processed <- data_extract %>%
     
     ageband2 = cut(
       age,
-      breaks = c(16, 60, 70, 80, 90, Inf),
-      labels = c("16-59", "60-69", "70-79", "80-89", "90+"),
+      breaks = c(16, 65, 70, 75, 80, Inf),
+      labels = c("16-64", "65-69", "70-74", "75-79", "80+"),
       right = FALSE
     ),
     
@@ -314,8 +314,7 @@ data_processed <- data_extract %>%
     ),
     
     # Immunosuppression
-    immunosuppression = pmax(immunosuppression_diagnosis_date, immunosuppression_medication_date, na.rm = T),
-    immunosuppression = ifelse(!is.na(immunosuppression), 1, 0),
+    immunosuppression = ifelse(!is.na(immunosuppression_diagnosis_date) | !is.na(immunosuppression_medication_date), 1, 0),
     
     # Multiple morbidities (non-CKD) - 0, 1, or 2+
     multimorb =
@@ -327,9 +326,17 @@ data_processed <- data_extract %>%
       (asplenia),
     multimorb = cut(multimorb, breaks = c(0, 1, 2, Inf), labels=c("0", "1", "2+"), right=FALSE),
     
+    # Any respiratory disease
+    any_resp_dis= ifelse(chronic_resp_dis==1 | asthma==1, 1, 0), 
+    
     # Any cancer
     any_cancer = ifelse(cancer==1 | haem_cancer==1, 1, 0), 
 
+    # CEV other
+    any_comorb = pmax(dialysis, kidney_transplant, immunosuppression, mod_sev_obesity, diabetes, chronic_resp_dis,
+                      chd, cld, asplenia, cancer, haem_cancer, non_kidney_transplant, chronic_neuro_dis_inc_sig_learn_dis, sev_mental_ill),
+    cev_other = ifelse(cev==1 & any_comorb==0, 1, 0),
+    
     # Prior covid
     prior_covid_cat = !is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_hospitalisation_date, na.rm=TRUE)),
     

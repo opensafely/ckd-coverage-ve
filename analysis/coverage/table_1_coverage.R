@@ -29,9 +29,12 @@ data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds")
 
 ## Format data
 data_cohort <- data_cohort %>%
+  mutate(
+    any_ckd_flag = ifelse(chronic_kidney_disease_diagnostic==1 | chronic_kidney_disease_stages_3_5==1, 1, 0)
+  ) %>%
   mutate(time_between_vaccinations1_2 = as.character(cut(tbv1_2,
-                                         breaks = c(0, 42, 70, 98, Inf),
-                                         labels = c("6 weeks or less", "6-10 weeks", "10-14 weeks", "14 weeks or more"),
+                                         breaks = c(0, 42, 56, 70, 84, 98, Inf),
+                                         labels = c("6 weeks or less", "6-8 weeks", "8-10 weeks", "10-12 weeks", "12-14 weeks", "14 weeks or more"),
                                          right = FALSE)),
          time_between_vaccinations2_3 = as.character(cut(tbv2_3,
                                             breaks = c(0, 84, 168, Inf),
@@ -46,39 +49,45 @@ data_cohort <- data_cohort %>%
   )
 
 counts0 <- data_cohort %>% 
-  select(ageband2, 
+  select(
+         ## Factors associated with attitudes/confidence
+         ageband2,
+         care_home,
+         hscworker,
+         housebound,
+         endoflife,
+         rural_urban_group,
+         
+         ## Factors associated with attitudes/confidence
          sex,
          ethnicity,
          imd,
+         prior_covid_cat,
+         
+         ## Clinical risk group (CKD-related)
+         ckd_7cat,
+         #removed: dialysis, kidney_transplant, chronic_kidney_disease_stages_3_5,
+         
+         ## Clinical risk group (non-CKD-related)
+         immunosuppression, 
+         mod_sev_obesity,
+         diabetes,
+         any_resp_dis,
+         chd, 
+         cld,
+         asplenia,
+         cancer,
+         haem_cancer,
+         non_kidney_transplant,
+         chronic_neuro_dis_inc_sig_learn_dis,
+         sev_mental_ill,
+         cev_other,
+         #removed: smoking_status, asthma, bpcat,
+         
+         ## Other descriptors of interest
          region,
          jcvi_group,
-         rural_urban_group,
-         chronic_kidney_disease_diagnostic,
-         dialysis, 
-         kidney_transplant, 
-         chronic_kidney_disease_stages_3_5,
-         cev,
-         care_home,
-         hscworker,
-         endoflife,
-         housebound,
-         smoking_status,
-         asthma,
-         bpcat,
-         immunosuppression, 
-         chronic_resp_dis, 
-         diabetes, 
-         cld, 
-         chd, 
-         asplenia, 
-         cancer, 
-         haem_cancer,
-         obesity, 
-         chronic_neuro_dis_inc_sig_learn_dis, 
-         sev_mental_ill, 
-         non_kidney_transplant,
-         multimorb,
-         prior_covid_cat,
+         any_ckd_flag,
          time_between_vaccinations1_2,
          time_between_vaccinations2_3
          ) %>%
@@ -96,33 +105,27 @@ table1 <- counts0$table_body %>%
 table1$percent = round(table1$count/nrow(data_cohort)*100,1)
 colnames(table1) = c("Group", "Variable", "Count", "Percent")
 
-## Relabel variables for plotting
-table1$Variable[table1$Variable=="cev"] = "Clinically extremely vulnerable"
+# Relabel variables for plotting
 table1$Variable[table1$Variable=="care_home"] = "Care home resident"
-table1$Variable[table1$Variable=="hscworker"] = "Health and social care worker"
-table1$Variable[table1$Variable=="endoflife"] = "End of life care"
+table1$Variable[table1$Variable=="hscworker"] = "Health/social care worker"
+table1$Variable[table1$Variable=="cev"] = "Clinically extremely vulnerable"
 table1$Variable[table1$Variable=="housebound"] = "Housebound"
-table1$Variable[table1$Variable=="chronic_kidney_disease_diagnostic"] = "CKD diagnostic code"
-table1$Variable[table1$Variable=="dialysis"] = "Dialysis"
-table1$Variable[table1$Variable=="kidney_transplant"] = "Kidney transplant"
-table1$Variable[table1$Variable=="chronic_kidney_disease_stages_3_5"] = "CKD stage 3-5 code"
-table1$Variable[table1$Variable=="smoking_status"] = "Current or former smoker"
-table1$Variable[table1$Variable=="asthma"] = "Asthma"
-table1$Variable[table1$Variable=="bpcat"] = "High or elevated blood pressure"
+table1$Variable[table1$Variable=="endoflife"] = "End of life care"
+table1$Variable[table1$Variable=="prior_covid_cat"] = "Prior COVID"
 table1$Variable[table1$Variable=="immunosuppression"] = "Immunosuppression"
-table1$Variable[table1$Variable=="chronic_resp_dis"] = "Chronic respiratory disease"
+table1$Variable[table1$Variable=="mod_sev_obesity"] = "Moderate/severe obesity"
 table1$Variable[table1$Variable=="diabetes"] = "Diabetes"
-table1$Variable[table1$Variable=="cld"] = "Chronic liver disease"
+table1$Variable[table1$Variable=="any_resp_dis"] = "Chronic respiratory disease (inc. asthma)"
 table1$Variable[table1$Variable=="chd"] = "Chronic heart disease"
+table1$Variable[table1$Variable=="cld"] = "Chronic liver disease"
 table1$Variable[table1$Variable=="asplenia"] = "Asplenia"
-table1$Variable[table1$Variable=="cancer"] = "Cancer"
+table1$Variable[table1$Variable=="cancer"] = "Cancer (non-haematologic)"
 table1$Variable[table1$Variable=="haem_cancer"] = "Haematologic cancer"
-table1$Variable[table1$Variable=="obesity"] = "Obesity"
+table1$Variable[table1$Variable=="non_kidney_transplant"] = "Organ transplant (non-kidney)"
 table1$Variable[table1$Variable=="chronic_neuro_dis_inc_sig_learn_dis"] = "Chronic neurological disease (including learning disability)"
 table1$Variable[table1$Variable=="sev_mental_ill"] = "Severe mental illness"
-table1$Variable[table1$Variable=="non_kidney_transplant"] = "Organ transplant (non-kidney)"
-table1$Variable[table1$Variable=="multimorb"] = "Comorbidity count (non-CKD)"
-table1$Variable[table1$Variable=="prior_covid_cat"] = "Prior COVID"
+table1$Variable[table1$Variable=="cev_other"] = "Clinically extremely vulnerable (other)"
+table1$Variable[table1$Variable=="any_ckd_flag"] = "CKD diagnostic code"
 
 # Relabel groups for plotting
 # Demography
@@ -133,16 +136,13 @@ table1$Group[table1$Group=="imd"] = "IMD"
 table1$Group[table1$Group=="region"] = "Region"
 table1$Group[table1$Group=="jcvi_group"] = "JCVI group"
 table1$Group[table1$Group=="rural_urban_group"] = "Setting"
-
-# Other
-table1$Group[table1$Variable %in% c("CKD diagnostic code", "Dialysis", "Kidney transplant", "CKD stage 3-5 code")] = "Clinical (CKD-related)"
-table1$Group[table1$Variable %in% c("Clinically extremely vulnerable", "Care home resident", "Healthcare worker", "End of life care", "Housebound", 
-                                    "Current or former smoker", "Asthma", "High or elevated blood pressure", "Shielding", "Immunosuppression", 
-                                    "Chronic respiratory disease", "Diabetes", "Chronic liver disease", "Chronic heart disease", "Asplenia", "Cancer",
-                                    "Haematologic cancer", "Obesity", "Chronic neurological disease (including learning disability)", "Severe mental illness", 
-                                    "Organ transplant (any)", "Organ transplant (non-kidney)", "Comorbidity count (non-CKD)", "Prior COVID")] = "Other"
+table1$Group[table1$Group=="ckd_7cat"] = "CKD subgroup"
 table1$Group[table1$Group=="time_between_vaccinations1_2"] = "Time between doses 1 and 2"
 table1$Group[table1$Group=="time_between_vaccinations2_3"] = "Time between doses 2 and 3"
+
+# Other
+table1$Group[!(table1$Group %in% c("Age", "Sex", "Ethnicity", "IMD", "Region", "JCVI group", "Setting", "CKD subgroup", 
+                                   "Time between doses 1 and 2", "Time between doses 2 and 3"))] = "Other"
 
 # Redaction ----
 rounded_n = plyr::round_any(nrow(data_cohort),5)
@@ -161,4 +161,3 @@ table1_redacted <- table1_redacted %>% select(-Non_Count)
 # Save as html ----
 gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_coverage_redacted.html"))
 write_rds(table1_redacted, here::here("output", "tables", "table1_coverage_redacted.rds"), compress = "gz")
-
