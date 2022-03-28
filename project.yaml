@@ -71,7 +71,7 @@ actions:
   # Logistic models - dose-2 coverage ----
   logistic_model:
     run: r:latest analysis/coverage/logistic_model.R
-    needs: [cox_model]
+    needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
         data: output/model/mod_strat_logistic_redacted.rds
