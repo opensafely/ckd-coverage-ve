@@ -34,6 +34,9 @@ data <- read_rds(here::here("output", "data", "data_cohort_coverage_logistic.rds
 ## Import custom user functions and packages
 source(here::here("analysis", "functions.R"))
 
+## Create output directory
+dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
+
 ## Set variable list
 var_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "rural_urban_group",
               "sex", "ethnicity", "imd", "ckd_7cat", 
