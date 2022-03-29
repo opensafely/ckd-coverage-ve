@@ -338,10 +338,10 @@ data_processed <- data_extract %>%
     cev_other = ifelse(cev==1 & any_comorb==0, 1, 0),
     
     # Prior covid
-    prior_covid_cat = !is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_hospitalisation_date, na.rm=TRUE)),
+    prior_covid_cat = as.numeric(!is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_hospitalisation_date, na.rm=TRUE))),
     
     # Covid in window spanning 90 days pre dose 1 up to dose 2
-    prevax_covid_cat = !is.na(pmin(prevax_positive_test_date, prevax_primary_care_covid_case_date, prevax_covid_hospitalisation_date, na.rm=TRUE)),
+    prevax_covid_cat = as.numeric(!is.na(pmin(prevax_positive_test_date, prevax_primary_care_covid_case_date, prevax_covid_hospitalisation_date, na.rm=TRUE))),
 
     # Number of tests in pre-vaccination period
     prevax_tests_conducted_any = ifelse(is.na(prevax_tests_conducted_any), 0, prevax_tests_conducted_any),

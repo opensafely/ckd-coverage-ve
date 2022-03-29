@@ -92,9 +92,9 @@ extract_model = function(model_output) {
 }
 
 ## Extract coefficients and p values from logistic model output (quick method)
-extract_model_logistic = function(variable_name, model_output) {
+extract_model_logistic = function(model_output) {
   summary = data.frame(
-    term = paste0(as.character(unlist(model_output$xlevels))),
+    outcome = names(model_output$coefficients),
     N = length(model_output$fitted.values), 
     estimate = round(exp(model_output$coefficients),2), 
     conf.low = round(exp(confint.default(model_output))[,1],2), 

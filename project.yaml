@@ -74,7 +74,8 @@ actions:
     needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
-        data: output/model/mod_strat_logistic_redacted.rds
+        data1: output/data/data_lr.rds
+        data2: output/model/mod_strat_logistic_redacted.rds
       moderately_sensitive:
         csv: output/model/mod_strat_logistic_redacted.csv
 
