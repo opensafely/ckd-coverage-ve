@@ -23,6 +23,33 @@ library('survminer')
 library('glue')
 library('fs')
 
+## Import command-line arguments
+args <- commandArgs(trailingOnly=TRUE)
+
+## Set input and output pathways for matched/unmatched data - default is unmatched
+if(length(args)==0){
+  # default (dose 2, 1st July 2021) 
+  outcome = "vax2_date"
+  outcome_label = "dose2"
+  cutoff = as.Date("2021-07-01", format = "%Y-%m-%d")
+} else {
+  if (args[[1]]=="dose2") {
+    outcome = "vax2_date"
+    outcome_label = "dose2"
+    cutoff = as.Date("2021-07-01", format = "%Y-%m-%d")
+  } else if (args[[1]]=="dose3") {
+    outcome = "vax3_date"
+    outcome_label = "dose3"
+    cutoff = as.Date("2022-02-16", format = "%Y-%m-%d")
+  } else if (args[[1]]=="dose4") {
+    outcome = "vax4_date"
+    outcome_label = "dose4"
+    cutoff = as.Date("2022-02-16", format = "%Y-%m-%d")
+  } else {
+    # print error if no argument specified
+    stop("No outcome specified")
+  }
+}
 
 ## Import data
 data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
@@ -37,19 +64,22 @@ data_cox <- data_cohort %>%
     start_date = as.Date("2020-12-08", format = "%Y-%m-%d"),
     
     # End date
-    end_date = as.Date("2021-07-01", format = "%Y-%m-%d"),
+    end_date = cutoff,
+    
+    # Determine date for selected outcome
+    selected_outcome_date = get(outcome),
     
     # Censoring
     censor_date = pmin(death_date, 
                        dereg_date, 
-                       as.Date("2021-07-01", format = "%Y-%m-%d"), 
+                       end_date, 
                        na.rm=TRUE),
     
     # Follow-up time
-    follow_up_time = tte(start_date, vax2_date, censor_date),
+    follow_up_time = tte(start_date, selected_outcome_date, censor_date),
     
     # COVID vaccination: 1 of vaccinated before end date, 0 otherwise
-    covid_vax = dplyr::if_else((vax2_date>censor_date) | is.na(vax2_date), 0, 1),
+    covid_vax = dplyr::if_else((selected_outcome_date>censor_date) | is.na(selected_outcome_date), 0, 1),
     
     # Uncensored pre cut-off
     uncensored_at_cut_off = if_else( (is.na(death_date) & is.na(dereg_date)) | 
@@ -84,8 +114,8 @@ data_cox$ckd_7cat <- factor(data_cox$ckd_7cat, levels = c("CKD3a (D-T-)", "CKD3b
 if (all(complete.cases(data_cox))==FALSE) stop('incomplete data for one or more patients in model') 
 
 ## Save cox model input data
-write_rds(data_cox, here::here("output", "data", "data_cox.rds"), compress="gz")
-write_csv(data_cox, here::here("output", "data", "data_cox.csv"))
+write_rds(data_cox, here::here("output", "data", paste0("data_cox_coverage_",outcome_label,".rds")), compress="gz")
+# write_csv(data_cox, here::here("output", "data", paste0("data_cox_coverage",outcome_label,".csv")))
 
 
 
@@ -265,5 +295,5 @@ for (i in 1:nrow(tbl_reduced)) {
 }
 
 ## Save outputs
-write_rds(tbl_reduced, here::here("output", "model", "mod_strat_coxph_redacted.rds"), compress="gz")
-write_csv(tbl_reduced, here::here("output", "model", "mod_strat_coxph_redacted.csv"))
+write_rds(tbl_reduced, here::here("output", "model", paste0("mod_strat_coxph_redacted_",outcome_label,".rds")), compress="gz")
+write_csv(tbl_reduced, here::here("output", "model", paste0("mod_strat_coxph_redacted_",outcome_label,".csv")))

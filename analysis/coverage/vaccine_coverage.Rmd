@@ -47,7 +47,7 @@ Vaccine recommendations for CKD patients in the UK have evolved over time (see [
 
 A total of **`r prettyNum(rounded_n)`** (rounded to the nearest 5) met the inclusion criteria (see *output/data/flowchart.csv* for additional details).    
 `r if(flag=="present") { paste0("NB: Dummy data processing flag detected!") }`    
-<br/><br/>    
+<br/><br/><br/><br/>    
 
 #### Table 1: Summary of population
 ```{r}
@@ -182,7 +182,8 @@ t_dose_dose4 = data.frame(table(data_cohort$vax4_type_descr)) %>%
   mutate(Group = "Dose 4")
 
 # Generate combined table
-rbind(t_dose_dose1, t_dose_dose2, t_dose_dose3, t_dose_dose4) %>% 
+collated = rbind(t_dose_dose1, t_dose_dose2, t_dose_dose3, t_dose_dose4)
+collated %>% 
   gt(groupname_col = "Group") %>%
   tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
   tab_options(table.font.size = pct(95)) %>% #table.width = pct(80) 
@@ -192,6 +193,32 @@ rbind(t_dose_dose1, t_dose_dose2, t_dose_dose3, t_dose_dose4) %>%
   )
 ```
 <br/><br/>  
+
+```{r, fig.width=8, fig.height=3}
+collated$Vaccine = factor(collated$Combination, levels = c("other", "Moderna", "ChAdOx1", "BNT162b2"))
+collated$Dose = str_replace(collated$Group, "Dose ", "")
+
+# Frequency plot
+g1 = ggplot(collated, aes(fill=Vaccine, y=as.numeric(Frequency)/1000, x=Dose)) + 
+    geom_bar(position="stack", stat="identity") +
+    theme_bw() + ylab("N doses (thousands)") + scale_fill_manual(values = palette[c(4,2,1,3)]) +
+    theme(legend.position="right") + xlab("Dose") +
+    ggtitle("Product profile by dose (frequency)") +
+    theme(legend.title = element_text(size=14), legend.text = element_text(size=12), 
+        axis.text = element_text(size=14), axis.title = element_text(size=14))
+
+# % plot
+g2 = ggplot(collated, aes(fill=Vaccine, y=as.numeric(Percent), x=Dose)) + 
+    geom_bar(position="stack", stat="identity") +
+    theme_bw() + ylab("% doses") + scale_fill_manual(values = palette[c(4,2,1,3)]) +
+    theme(legend.position="right") + xlab("Dose") +
+    ggtitle("Product profile by dose (%)") +
+    theme(legend.title = element_text(size=14), legend.text = element_text(size=12), 
+        axis.text = element_text(size=14), axis.title = element_text(size=14))
+
+plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"))
+```
+<br/><br/>
 
 #### Product combinations across doses
 ```{r}
@@ -232,21 +259,21 @@ subset(table_1, Group=="Time between doses 1 and 2" | Group=="Time between doses
     locations = cells_column_labels(columns = "Count")
   )
 ```
-<br/><br/>  
+<br/><br/><br/><br/> 
 
-#### Covariates associated with vaccine coverage
+#### Covariates associated with vaccine coverage: dose 2 by 01 July 2021
 
 ##### Approach (1): Cox proportional hazards
 ```{r}
-data_cox <- read_rds(here::here("output", "data", "data_cox.rds"))
+data_cox <- read_rds(here::here("output", "data", "data_cox_coverage_dose2.rds"))
 total_vax = plyr::round_any(sum(data_cox$covid_vax),5)
 total_N = plyr::round_any(nrow(data_cox),5)
 vax_perc = round(total_vax/total_N*100,1)
 ```
 
-Cox proportional hazards models were used to explore factors associated with completion of a 2-dose primary series via any product combination between **08 Dec 2020** and **01 Jul 2021** (at which point 2nd-dose vaccination had plateaued based on the coverage plots above). Individuals with complete data for the listed covariates were included (N = `r prettyNum(total_N)`, rounded to nearest 5).    
+Cox proportional hazards models were used to explore factors associated with completion of a 2-dose series via any product combination between **08 Dec 2020** and **01 Jul 2021** (at which point 2nd-dose vaccination had plateaued based on the coverage plots above).  
     
-Overall 2-dose prevalence as of **01 Jul 2021** was `r vax_perc`% (`r prettyNum(total_vax)` / `r prettyNum(total_N)`, rounded to nearest 5). Follow-up was censored on the date of death, deregistration, or the end of the study period (01 Jul 2021).     
+Overall coverage as of **01 Jul 2021** was `r vax_perc`% (`r prettyNum(total_vax)` / `r prettyNum(total_N)`, rounded to nearest 5). Follow-up was censored on the date of death, deregistration, or the end of the study period (01 Jul 2021).     
     
 Univariate models stratified by region were used to explore the potential influence of each covariate in turn. Multivariate models stratified by region, adjusting for all other covariates, were used to explore the potential influence of each covariate after adjusting for the effect of others.
 <br/><br/>   
@@ -254,7 +281,7 @@ Univariate models stratified by region were used to explore the potential influe
 ##### Univariate and multivariate model outputs (scroll left/right for full table)
 ```{r}
 ## Import cox regression results
-tbl_summary <- read_rds(here::here("output", "model", "mod_strat_coxph_redacted.rds")) 
+tbl_summary <- read_rds(here::here("output", "model", "mod_strat_coxph_redacted_dose2.rds")) 
 
 ## Add % unvaccinated at cut-off
 tbl_summary$perc_unvac <- round(as.numeric(tbl_summary$n_unvax_at_cut_off)/as.numeric(tbl_summary$n_uncensored_at_cut_off)*100,1)
@@ -366,9 +393,9 @@ g2 = ggplot(tbl_reduced, aes(y = `% unvaccinated`, x = level,  colour = var_grou
 
 plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"), rel_widths = c(3,0.9))
 ```
-<br/><br/>     
+<br/><br/><br/><br/>     
 
-##### Approach (2): Logistic regression
+##### Approach (2): Logistic regression (sensitivity analysis)
 ```{r}
 data_lr <- read_rds(here::here("output", "data", "data_lr.rds"))
 total_vax = plyr::round_any(sum(data_lr$covid_vax),5)
@@ -376,9 +403,9 @@ total_N = plyr::round_any(nrow(data_lr),5)
 vax_perc = round(total_vax/total_N*100,1)
 ```
 
-Logistic regression models were used to explore factors associated with completion of a 2-dose primary series via any product combination by **01 Jul 2021** as a binary outcome variable. Individuals with complete data for the listed covariates were included (N = `r prettyNum(total_N)`, rounded to nearest 5).    
+Logistic regression models were used to explore factors associated with completion of a 2-dose series via any product combination by **01 Jul 2021** as a binary outcome variable. Individuals were included if they were registered and alive up to the analysis cut-off (N = `r prettyNum(total_N)`, rounded to nearest 5).    
     
-Overall 2-dose prevalence as of **01 Jul 2021** was `r vax_perc`% (`r prettyNum(total_vax)` / `r prettyNum(total_N)`, rounded to nearest 5).    
+Overall coverage as of **01 Jul 2021** was `r vax_perc`% (`r prettyNum(total_vax)` / `r prettyNum(total_N)`, rounded to nearest 5).    
     
 Univariate models were used to explore the potential influence of each covariate in turn. Multivariate models adjusting for all other covariates were used to explore the potential influence of each covariate after adjusting for the effect of others.
 <br/><br/>    
@@ -479,6 +506,274 @@ g1 = ggplot(tbl_reduced, aes(y = `OR (multi)`, x = level, colour = var_group)) +
   theme_bw() + theme(strip.background = element_blank()) + labs(colour = "Group") +
   geom_hline(yintercept=1, linetype="dotted") + 
   ylab("Odds ratio") + xlab("") +
+  scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
+  scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2)) +
+  theme(axis.title = element_text(size=12), axis.text = element_text(size=12), strip.text = element_blank(), 
+        legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = c(-1.5,0.95))
+
+
+plot_max = max(tbl_reduced$`% unvaccinated`, na.rm=T)+5
+g2 = ggplot(tbl_reduced, aes(y = `% unvaccinated`, x = level,  colour = var_group)) + 
+  geom_point(size = 2, alpha=0.8) +
+  geom_segment(aes(xend=level), yend=0) +
+  ylim(0,plot_max) + coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
+  theme_bw() + theme(strip.background = element_blank()) + 
+  ylab("% Unvaccinated") + xlab("") +
+  scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
+  theme(axis.title = element_text(size=12), axis.text.x = element_text(size=12), axis.text.y = element_blank(), strip.text = element_blank(), 
+        legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = "none")
+
+plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"), rel_widths = c(3,0.9))
+```
+<br/><br/><br/><br/>
+
+#### Covariates associated with vaccine coverage: dose 3 by 16 Feb 2022
+
+##### Cox proportional hazards
+```{r}
+data_cox <- read_rds(here::here("output", "data", "data_cox_coverage_dose3.rds"))
+total_vax = plyr::round_any(sum(data_cox$covid_vax),5)
+total_N = plyr::round_any(nrow(data_cox),5)
+vax_perc = round(total_vax/total_N*100,1)
+```
+
+Cox proportional hazards models were used to explore factors associated with completion of a 3-dose series via any product combination between **08 Dec 2020** and **16 Feb 2022** (date of most recent update for [OpenSAFELY vaccine coverage analyses](https://www.opensafely.org/research/2021/covid-vaccine-coverage/)). 
+    
+Overall coverage as of **16 Feb 2022** was `r vax_perc`% (`r prettyNum(total_vax)` / `r prettyNum(total_N)`, rounded to nearest 5). Follow-up was censored on the date of death, deregistration, or the end of the study period (16 Feb 2022).     
+    
+Univariate models stratified by region were used to explore the potential influence of each covariate in turn. Multivariate models stratified by region, adjusting for all other covariates, were used to explore the potential influence of each covariate after adjusting for the effect of others.
+<br/><br/>   
+
+##### Univariate and multivariate model outputs (scroll left/right for full table)
+```{r}
+## Import cox regression results
+tbl_summary <- read_rds(here::here("output", "model", "mod_strat_coxph_redacted_dose3.rds")) 
+
+## Add % unvaccinated at cut-off
+tbl_summary$perc_unvac <- round(as.numeric(tbl_summary$n_unvax_at_cut_off)/as.numeric(tbl_summary$n_uncensored_at_cut_off)*100,1)
+
+## Select variables of interes
+tbl_reduced <- tbl_summary %>%
+  select(var_group, var_label, label, n_obs,  n_event, n_uncensored_at_cut_off, perc_unvac,
+         estimate_uni, conf.low_uni, conf.high_uni, p.value_uni,
+         estimate_partial, conf.low_partial, conf.high_partial, p.value_partial,
+         estimate, conf.low, conf.high, p.value)
+
+## Relabel columns
+names(tbl_reduced) = c("var_group", "group", "level", "n (total)", "n (vaccinated)", "n (uncensored)", "% unvaccinated",
+                            "HR (uni)", "lower CI (uni)", "upper CI (uni)", "p (uni)",
+                            "HR (multi)", "lower CI (multi)", "upper CI (multi)", "p (multi)",
+                            "HR (full)", "lower CI (full)", "upper CI (full)", "p (full)")
+
+## Create formatted gt output
+tbl_reduced %>% 
+  gt(rowname_col = "level", groupname_col = "group") %>%
+  tab_spanner(
+    label = "univariate",
+    columns = c("HR (uni)", "lower CI (uni)", "upper CI (uni)", "p (uni)")
+  ) %>%
+    tab_spanner(
+    label = "partially adjusted",
+    columns = c("HR (multi)", "lower CI (multi)", "upper CI (multi)", "p (multi)")
+  ) %>%
+  tab_spanner(
+    label = "fully adjusted",
+    columns = c("HR (full)", "lower CI (full)", "upper CI (full)", "p (full)")
+  )  %>%
+  cols_hide(columns = "var_group") %>%
+  tab_options(table.font.size = pct(85)) %>%
+   tab_style(
+      style = list(
+        cell_borders(
+          sides = c("right"), color = "#cccccc"
+        )
+        ),
+      locations = list(
+        cells_body(
+          columns = c("p (uni)", "p (multi)", "% unvaccinated")
+        )
+      )
+   ) %>%
+  tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
+  tab_footnote(
+    footnote = "All counts rounded to nearest 5; data redacted for any rows with rounded values of <=10 for n (total), 
+            n (vaccinated), or n (unvaccinated), where n (unvaccinated) is the difference between n (total) and n (vaccinated) after rounding.",
+    locations = cells_column_labels(columns = "n (vaccinated)")
+  )  %>%
+  tab_footnote(
+    footnote = "n (unvaccinated and uncensored)/n (uncensored)*100",
+    locations = cells_column_labels(columns = "% unvaccinated")
+  )
+```
+<br/><br/>    
+
+#### Plot of partially adjusted model outputs
+```{r, fig.width=8, fig.height=12}
+## Remove redacted components from plot
+tbl_reduced$`HR (multi)`[tbl_reduced$`HR (multi)`=="[Redacted]"] = NA
+tbl_reduced$`lower CI (multi)`[tbl_reduced$`HR (multi)`=="[Redacted]"] = NA
+tbl_reduced$`upper CI (multi)`[tbl_reduced$`HR (multi)`=="[Redacted]"] = NA
+
+## Recode HRs and CIs as numerics
+tbl_reduced$`HR (multi)` = as.numeric(tbl_reduced$`HR (multi)`)
+tbl_reduced$`lower CI (multi)` = as.numeric(tbl_reduced$`lower CI (multi)`)
+tbl_reduced$`upper CI (multi)` = as.numeric(tbl_reduced$`upper CI (multi)`)
+
+## Set plot min
+plot_min = 0.5
+if(min(tbl_reduced$`lower CI (multi)`, na.rm=T) < plot_min) { plot_min = min(tbl_reduced$`lower CI (multi)`, na.rm=T) }
+
+## Set plot max
+plot_max = 2
+if(max(tbl_reduced$`upper CI (multi)`, na.rm=T) > plot_max) { plot_max = max(tbl_reduced$`upper CI (multi)`, na.rm=T) }
+
+## Add redaction text variable
+tbl_reduced$redaction = NA
+tbl_reduced$redaction[tbl_reduced$`n (total)`=="[Redacted]"] = "[R]"
+
+## Generate plot of HRs
+g1 = ggplot(tbl_reduced, aes(y = `HR (multi)`, x = level, colour = var_group)) + 
+  geom_point(size = 2, alpha=0.8) +
+  geom_text(aes(y = plot_min+0.02, label = redaction)) +
+  geom_errorbar(aes(ymin=as.numeric(`lower CI (multi)`), ymax=as.numeric(`upper CI (multi)`), colour = var_group), width=0) + 
+  coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
+  theme_bw() + theme(strip.background = element_blank()) + labs(colour = "Group") +
+  geom_hline(yintercept=1, linetype="dotted") + 
+  ylab("Hazard ratio") + xlab("") +
+  scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
+  scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2)) +
+  theme(axis.title = element_text(size=12), axis.text = element_text(size=12), strip.text = element_blank(), 
+        legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = c(-1.5,0.95))
+
+
+plot_max = max(tbl_reduced$`% unvaccinated`, na.rm=T)+5
+g2 = ggplot(tbl_reduced, aes(y = `% unvaccinated`, x = level,  colour = var_group)) + 
+  geom_point(size = 2, alpha=0.8) +
+  geom_segment(aes(xend=level), yend=0) +
+  ylim(0,plot_max) + coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
+  theme_bw() + theme(strip.background = element_blank()) + 
+  ylab("% Unvaccinated") + xlab("") +
+  scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
+  theme(axis.title = element_text(size=12), axis.text.x = element_text(size=12), axis.text.y = element_blank(), strip.text = element_blank(), 
+        legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = "none")
+
+plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"), rel_widths = c(3,0.9))
+```
+<br/><br/><br/><br/>
+
+#### Covariates associated with vaccine coverage: dose 4 by 16 Feb 2022
+
+##### Cox proportional hazards
+```{r}
+data_cox <- read_rds(here::here("output", "data", "data_cox_coverage_dose4.rds"))
+total_vax = plyr::round_any(sum(data_cox$covid_vax),5)
+total_N = plyr::round_any(nrow(data_cox),5)
+vax_perc = round(total_vax/total_N*100,1)
+```
+
+Cox proportional hazards models were used to explore factors associated with completion of a 4-dose series via any product combination between **08 Dec 2020** and **16 Feb 2022** (date of most recent update for [OpenSAFELY vaccine coverage analyses](https://www.opensafely.org/research/2021/covid-vaccine-coverage/)).   
+    
+Overall coverage as of **16 Feb 2022** was `r vax_perc`% (`r prettyNum(total_vax)` / `r prettyNum(total_N)`, rounded to nearest 5). Follow-up was censored on the date of death, deregistration, or the end of the study period (16 Feb 2022).     
+    
+Univariate models stratified by region were used to explore the potential influence of each covariate in turn. Multivariate models stratified by region, adjusting for all other covariates, were used to explore the potential influence of each covariate after adjusting for the effect of others.
+<br/><br/>   
+
+##### Univariate and multivariate model outputs (scroll left/right for full table)
+```{r}
+## Import cox regression results
+tbl_summary <- read_rds(here::here("output", "model", "mod_strat_coxph_redacted_dose3.rds")) 
+
+## Add % unvaccinated at cut-off
+tbl_summary$perc_unvac <- round(as.numeric(tbl_summary$n_unvax_at_cut_off)/as.numeric(tbl_summary$n_uncensored_at_cut_off)*100,1)
+
+## Select variables of interes
+tbl_reduced <- tbl_summary %>%
+  select(var_group, var_label, label, n_obs,  n_event, n_uncensored_at_cut_off, perc_unvac,
+         estimate_uni, conf.low_uni, conf.high_uni, p.value_uni,
+         estimate_partial, conf.low_partial, conf.high_partial, p.value_partial,
+         estimate, conf.low, conf.high, p.value)
+
+## Relabel columns
+names(tbl_reduced) = c("var_group", "group", "level", "n (total)", "n (vaccinated)", "n (uncensored)", "% unvaccinated",
+                            "HR (uni)", "lower CI (uni)", "upper CI (uni)", "p (uni)",
+                            "HR (multi)", "lower CI (multi)", "upper CI (multi)", "p (multi)",
+                            "HR (full)", "lower CI (full)", "upper CI (full)", "p (full)")
+
+## Create formatted gt output
+tbl_reduced %>% 
+  gt(rowname_col = "level", groupname_col = "group") %>%
+  tab_spanner(
+    label = "univariate",
+    columns = c("HR (uni)", "lower CI (uni)", "upper CI (uni)", "p (uni)")
+  ) %>%
+    tab_spanner(
+    label = "partially adjusted",
+    columns = c("HR (multi)", "lower CI (multi)", "upper CI (multi)", "p (multi)")
+  ) %>%
+  tab_spanner(
+    label = "fully adjusted",
+    columns = c("HR (full)", "lower CI (full)", "upper CI (full)", "p (full)")
+  )  %>%
+  cols_hide(columns = "var_group") %>%
+  tab_options(table.font.size = pct(85)) %>%
+   tab_style(
+      style = list(
+        cell_borders(
+          sides = c("right"), color = "#cccccc"
+        )
+        ),
+      locations = list(
+        cells_body(
+          columns = c("p (uni)", "p (multi)", "% unvaccinated")
+        )
+      )
+   ) %>%
+  tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
+  tab_footnote(
+    footnote = "All counts rounded to nearest 5; data redacted for any rows with rounded values of <=10 for n (total), 
+            n (vaccinated), or n (unvaccinated), where n (unvaccinated) is the difference between n (total) and n (vaccinated) after rounding.",
+    locations = cells_column_labels(columns = "n (vaccinated)")
+  )  %>%
+  tab_footnote(
+    footnote = "n (unvaccinated and uncensored)/n (uncensored)*100",
+    locations = cells_column_labels(columns = "% unvaccinated")
+  )
+```
+<br/><br/>    
+
+#### Plot of partially adjusted model outputs
+```{r, fig.width=8, fig.height=12}
+## Remove redacted components from plot
+tbl_reduced$`HR (multi)`[tbl_reduced$`HR (multi)`=="[Redacted]"] = NA
+tbl_reduced$`lower CI (multi)`[tbl_reduced$`HR (multi)`=="[Redacted]"] = NA
+tbl_reduced$`upper CI (multi)`[tbl_reduced$`HR (multi)`=="[Redacted]"] = NA
+
+## Recode HRs and CIs as numerics
+tbl_reduced$`HR (multi)` = as.numeric(tbl_reduced$`HR (multi)`)
+tbl_reduced$`lower CI (multi)` = as.numeric(tbl_reduced$`lower CI (multi)`)
+tbl_reduced$`upper CI (multi)` = as.numeric(tbl_reduced$`upper CI (multi)`)
+
+## Set plot min
+plot_min = 0.5
+if(min(tbl_reduced$`lower CI (multi)`, na.rm=T) < plot_min) { plot_min = min(tbl_reduced$`lower CI (multi)`, na.rm=T) }
+
+## Set plot max
+plot_max = 2
+if(max(tbl_reduced$`upper CI (multi)`, na.rm=T) > plot_max) { plot_max = max(tbl_reduced$`upper CI (multi)`, na.rm=T) }
+
+## Add redaction text variable
+tbl_reduced$redaction = NA
+tbl_reduced$redaction[tbl_reduced$`n (total)`=="[Redacted]"] = "[R]"
+
+## Generate plot of HRs
+g1 = ggplot(tbl_reduced, aes(y = `HR (multi)`, x = level, colour = var_group)) + 
+  geom_point(size = 2, alpha=0.8) +
+  geom_text(aes(y = plot_min+0.02, label = redaction)) +
+  geom_errorbar(aes(ymin=as.numeric(`lower CI (multi)`), ymax=as.numeric(`upper CI (multi)`), colour = var_group), width=0) + 
+  coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
+  theme_bw() + theme(strip.background = element_blank()) + labs(colour = "Group") +
+  geom_hline(yintercept=1, linetype="dotted") + 
+  ylab("Hazard ratio") + xlab("") +
   scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
   scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2)) +
   theme(axis.title = element_text(size=12), axis.text = element_text(size=12), strip.text = element_blank(), 

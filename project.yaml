@@ -57,16 +57,37 @@ actions:
         table: output/tables/table1_coverage_redacted.html
         
   # Cox models - dose-2 coverage ----
-  cox_model:
-    run: r:latest analysis/coverage/cox_model.R
+  cox_model_dose2:
+    run: r:latest analysis/coverage/cox_model.R dose2
     needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
-        data1: output/data/data_cox.rds
-        data2: output/model/mod_strat_coxph_redacted.rds
-        csv: output/data/data_cox.csv
+        data1: output/data/data_cox_coverage_dose2.rds
+        data2: output/model/mod_strat_coxph_redacted_dose2.rds
       moderately_sensitive:
-        csv: output/model/mod_strat_coxph_redacted.csv
+        csv: output/model/mod_strat_coxph_redacted_dose2.csv
+        
+  # Cox models - dose-3 coverage ----
+  cox_model_dose3:
+    run: r:latest analysis/coverage/cox_model.R dose3
+    needs: [data_selection_coverage]
+    outputs:
+      highly_sensitive:
+        data1: output/data/data_cox_coverage_dose3.rds
+        data2: output/model/mod_strat_coxph_redacted_dose3.rds
+      moderately_sensitive:
+        csv: output/model/mod_strat_coxph_redacted_dose3.csv
+        
+  # Cox models - dose-4 coverage ----
+  cox_model_dose4:
+    run: r:latest analysis/coverage/cox_model.R dose4
+    needs: [data_selection_coverage]
+    outputs:
+      highly_sensitive:
+        data1: output/data/data_cox_coverage_dose4.rds
+        data2: output/model/mod_strat_coxph_redacted_dose4.rds
+      moderately_sensitive:
+        csv: output/model/mod_strat_coxph_redacted_dose4.csv
         
   # Logistic models - dose-2 coverage ----
   logistic_model:
@@ -82,7 +103,7 @@ actions:
   # Coverage summaries ----
   vaccine_coverage:
     run: r:latest -e 'rmarkdown::render("analysis/coverage/vaccine_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [data_selection_coverage, table_1_coverage, cox_model, logistic_model]
+    needs: [data_selection_coverage, table_1_coverage, cox_model_dose2, cox_model_dose3, cox_model_dose4, logistic_model]
     outputs:
       moderately_sensitive:
         html: output/markdown/vaccine_coverage.html
