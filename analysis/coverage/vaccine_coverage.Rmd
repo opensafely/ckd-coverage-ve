@@ -681,7 +681,7 @@ Univariate models stratified by region were used to explore the potential influe
 ##### Univariate and multivariate model outputs (scroll left/right for full table)
 ```{r}
 ## Import cox regression results
-tbl_summary <- read_rds(here::here("output", "model", "mod_strat_coxph_redacted_dose3.rds")) 
+tbl_summary <- read_rds(here::here("output", "model", "mod_strat_coxph_redacted_dose4.rds")) 
 
 ## Add % unvaccinated at cut-off
 tbl_summary$perc_unvac <- round(as.numeric(tbl_summary$n_unvax_at_cut_off)/as.numeric(tbl_summary$n_uncensored_at_cut_off)*100,1)
@@ -779,12 +779,12 @@ g1 = ggplot(tbl_reduced, aes(y = `HR (multi)`, x = level, colour = var_group)) +
   theme(axis.title = element_text(size=12), axis.text = element_text(size=12), strip.text = element_blank(), 
         legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = c(-1.5,0.95))
 
-
+plot_min = max(tbl_reduced$`% unvaccinated`, na.rm=T)-10
 plot_max = max(tbl_reduced$`% unvaccinated`, na.rm=T)+5
 g2 = ggplot(tbl_reduced, aes(y = `% unvaccinated`, x = level,  colour = var_group)) + 
   geom_point(size = 2, alpha=0.8) +
   geom_segment(aes(xend=level), yend=0) +
-  ylim(0,plot_max) + coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
+  ylim(plot_min,plot_max) + coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
   theme_bw() + theme(strip.background = element_blank()) + 
   ylab("% Unvaccinated") + xlab("") +
   scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
@@ -793,6 +793,7 @@ g2 = ggplot(tbl_reduced, aes(y = `% unvaccinated`, x = level,  colour = var_grou
 
 plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"), rel_widths = c(3,0.9))
 ```
+<br/><br/>    
 
 ##### Session info
 ```{r}
