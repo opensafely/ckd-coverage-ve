@@ -18,34 +18,53 @@ library('gtsummary')
 library('plyr')
 library('reshape2')
 
-## Import custom user functions
-#source(here("analysis", "functions.R"))
+## Import command-line arguments
+args <- commandArgs(trailingOnly=TRUE)
+
+## Set input and output pathways for matched/unmatched data - default is unmatched
+if(length(args)==0) {
+  outcome_label = "dose2"
+} else {
+  if (args[[1]]=="dose2") {
+    outcome_label = "dose2"
+  } else if (args[[1]]=="dose4") {
+    outcome_label = "dose4"
+  } else {
+    # print error if no argument specified
+    stop("No outcome specified")
+  }
+}
 
 ## Create output directory
 fs::dir_create(here::here("output", "tables"))
 
 ## Import data
-data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
+if (outcome_label=="dose2") {
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
+} else {
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage_dose4.rds"))
+}
 
 ## Format data
 data_cohort <- data_cohort %>%
   mutate(
-    any_ckd_flag = ifelse(chronic_kidney_disease_diagnostic==1 | chronic_kidney_disease_stages_3_5==1, 1, 0)
+    # Calculate time between vaccinations 1-2
+    time_between_vaccinations1_2 = as.character(cut(tbv1_2,
+                                                    breaks = c(0, 42, 56, 70, 84, 98, Inf),
+                                                    labels = c("6 weeks or less", "6-8 weeks", "8-10 weeks", "10-12 weeks", "12-14 weeks", "14+ weeks"),
+                                                    right = FALSE)),
+    # Calculate time between vaccinations 2-3
+    time_between_vaccinations2_3 = as.character(cut(tbv2_3,
+                                                    breaks = c(0, 84, 168, 252, Inf),
+                                                    labels = c("12 weeks or less", "12-24 weeks", "24-36 week", "36+ weeks"),
+                                                    right = FALSE)),
+    smoking_status = ifelse(is.na(smoking_status), "N&M", smoking_status),
+    bpcat = ifelse(bpcat=="High" | bpcat=="Elevated", 1, 0),
   ) %>%
-  mutate(time_between_vaccinations1_2 = as.character(cut(tbv1_2,
-                                         breaks = c(0, 42, 56, 70, 84, 98, Inf),
-                                         labels = c("6 weeks or less", "6-8 weeks", "8-10 weeks", "10-12 weeks", "12-14 weeks", "14 weeks or more"),
-                                         right = FALSE)),
-         time_between_vaccinations2_3 = as.character(cut(tbv2_3,
-                                            breaks = c(0, 84, 168, Inf),
-                                            labels = c("12 weeks or less", "12-24 weeks", "24 weeks or more"),
-                                            right = FALSE)),
-         smoking_status = ifelse(is.na(smoking_status), "N&M", smoking_status),
-         bpcat = ifelse(bpcat=="High" | bpcat=="Elevated", 1, 0),
-  ) %>%
-  mutate(smoking_status = ifelse(smoking_status=="S&E", 1, 0),
-        time_between_vaccinations1_2 = ifelse(is.na(vax2_date), "Not applicable (no dose given)", time_between_vaccinations1_2),
-        time_between_vaccinations2_3 = ifelse(is.na(vax3_date), "Not applicable (no dose given)", time_between_vaccinations2_3)
+  mutate(
+    smoking_status = ifelse(smoking_status=="S&E", 1, 0),
+    time_between_vaccinations1_2 = ifelse(is.na(vax2_date), "Not applicable (no dose given)", time_between_vaccinations1_2),
+    time_between_vaccinations2_3 = ifelse(is.na(vax3_date), "Not applicable (no dose given)", time_between_vaccinations2_3)
   )
 
 counts0 <- data_cohort %>% 
@@ -122,7 +141,7 @@ table1$Variable[table1$Variable=="asplenia"] = "Asplenia"
 table1$Variable[table1$Variable=="cancer"] = "Cancer (non-haematologic)"
 table1$Variable[table1$Variable=="haem_cancer"] = "Haematologic cancer"
 table1$Variable[table1$Variable=="non_kidney_transplant"] = "Organ transplant (non-kidney)"
-table1$Variable[table1$Variable=="chronic_neuro_dis_inc_sig_learn_dis"] = "Chronic neurological disease (including learning disability)"
+table1$Variable[table1$Variable=="chronic_neuro_dis_inc_sig_learn_dis"] = "Chronic neurological disease (inc. learning disability)"
 table1$Variable[table1$Variable=="sev_mental_ill"] = "Severe mental illness"
 table1$Variable[table1$Variable=="cev_other"] = "Clinically extremely vulnerable (other)"
 table1$Variable[table1$Variable=="any_ckd_flag"] = "CKD diagnostic code"
@@ -159,5 +178,10 @@ table1_redacted$Percent[table1_redacted$Count<=10 | table1_redacted$Non_Count<=1
 table1_redacted <- table1_redacted %>% select(-Non_Count)
 
 # Save as html ----
-gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_coverage_redacted.html"))
-write_rds(table1_redacted, here::here("output", "tables", "table1_coverage_redacted.rds"), compress = "gz")
+if (outcome_label=="dose2") {
+  gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_coverage_redacted.html"))
+  write_rds(table1_redacted, here::here("output", "tables", "table1_coverage_redacted.rds"), compress = "gz")
+} else {
+  gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_coverage_redacted_dose4.html"))
+  write_rds(table1_redacted, here::here("output", "tables", "table1_coverage_redacted_dose4.rds"), compress = "gz")
+}

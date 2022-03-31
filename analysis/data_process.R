@@ -71,6 +71,9 @@ data_extract <- read_csv(
     prior_positive_test_date = col_date(format="%Y-%m-%d"),
     prior_primary_care_covid_case_date = col_date(format="%Y-%m-%d"),
     prior_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
+    prior_positive_test_date_boost = col_date(format="%Y-%m-%d"),
+    prior_primary_care_covid_case_date_boost = col_date(format="%Y-%m-%d"),
+    prior_covid_hospitalisation_date_boost = col_date(format="%Y-%m-%d"),
     prevax_positive_test_date	= col_date(format="%Y-%m-%d"),
     prevax_primary_care_covid_case_date	= col_date(format="%Y-%m-%d"),
     prevax_covid_hospitalisation_date	= col_date(format="%Y-%m-%d"),
@@ -102,6 +105,7 @@ data_extract <- read_csv(
     # Clinical/demographic variables
     age = col_integer(),    
     age_index = col_integer(),
+    age_creatinine = col_integer(),
     sex = col_character(),
     bmi = col_character(),
     smoking_status =  col_character(),
@@ -168,7 +172,7 @@ data_extract <- data_extract %>%
                     sex == "F" ~ max(SCR_adj/0.7, 1, na.rm = F)^-1.209)) %>%
   ungroup() %>%
   mutate(
-    egfr = (min*max*141)*(0.993^age),
+    egfr = (min*max*141)*(0.993^age_creatinine),
     egfr = case_when(sex == "F" ~ egfr*1.018, TRUE ~ egfr),
     
     egfr_cat5 = cut(
@@ -201,6 +205,7 @@ data_processed <- data_extract %>%
     # CKD inclusion criteria
     ckd_inclusion_any = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_diagnostic==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
     ckd_inclusion_strict = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1, 1, 0),
+    any_ckd_flag = ifelse(chronic_kidney_disease_diagnostic==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
     
     # CKD 7-levels
     ckd_7cat = ifelse(egfr_cat5 == "Stage 3a" & dialysis == 0 & kidney_transplant== 0, "CKD3a (D-T-)", NA),
@@ -211,6 +216,11 @@ data_processed <- data_extract %>%
     ckd_7cat = ifelse(dialysis == 0 & kidney_transplant == 1, "CKD (D-T+)", ckd_7cat),
     ckd_7cat = ifelse(dialysis == 1 & kidney_transplant == 1, "CKD (D+T+)", ckd_7cat),
     ckd_7cat = ifelse(is.na(ckd_7cat), "Unknown", ckd_7cat),
+    
+    # CKD 5-levels (merging kidney transplant and 4/5)
+    ckd_5cat = ckd_7cat,
+    ckd_5cat = ifelse(ckd_7cat == "CKD (D-T+)" | ckd_7cat == "CKD (D+T+)", "CKD (T+)", ckd_5cat),
+    ckd_5cat = ifelse(ckd_7cat == "CKD4 (D-T-)" | ckd_7cat == "CKD5 (D-T-)", "CKD4-5 (D-T-)", ckd_5cat),
     
     # Age
     ageband = cut(
@@ -224,6 +234,13 @@ data_processed <- data_extract %>%
       age,
       breaks = c(16, 65, 70, 75, 80, Inf),
       labels = c("16-64", "65-69", "70-74", "75-79", "80+"),
+      right = FALSE
+    ),
+    
+    ageband3 = cut(
+      age,
+      breaks = c(16, 65, 70, 75, 80, 85, 90, Inf),
+      labels = c("16-64", "65-69", "70-74", "75-79", "80-84", "85-89", "90+"),
       right = FALSE
     ),
     
@@ -293,8 +310,8 @@ data_processed <- data_extract %>%
     
     # Rurality
     rural_urban_group = fct_case_when(
-      rural_urban %in% c(1,2) ~ "Urban conurbation",
       rural_urban %in% c(3,4) ~ "Urban city or town",
+      rural_urban %in% c(1,2) ~ "Urban conurbation",
       rural_urban %in% c(5,6,7,8) ~ "Rural town or village",
       TRUE ~ "Unknown"
     ),
@@ -316,16 +333,6 @@ data_processed <- data_extract %>%
     # Immunosuppression
     immunosuppression = ifelse(!is.na(immunosuppression_diagnosis_date) | !is.na(immunosuppression_medication_date), 1, 0),
     
-    # Multiple morbidities (non-CKD) - 0, 1, or 2+
-    multimorb =
-      (mod_sev_obesity) +
-      (diabetes) +
-      (chronic_resp_dis | asthma) +
-      (chd) +
-      (cld) +
-      (asplenia),
-    multimorb = cut(multimorb, breaks = c(0, 1, 2, Inf), labels=c("0", "1", "2+"), right=FALSE),
-    
     # Any respiratory disease
     any_resp_dis= ifelse(chronic_resp_dis==1 | asthma==1, 1, 0), 
     
@@ -333,14 +340,27 @@ data_processed <- data_extract %>%
     any_cancer = ifelse(cancer==1 | haem_cancer==1, 1, 0), 
 
     # CEV other
-    any_comorb = pmax(dialysis, kidney_transplant, immunosuppression, mod_sev_obesity, diabetes, chronic_resp_dis,
+    any_comorb = pmax(dialysis, kidney_transplant, immunosuppression, mod_sev_obesity, diabetes, any_resp_dis,
                       chd, cld, asplenia, cancer, haem_cancer, non_kidney_transplant, chronic_neuro_dis_inc_sig_learn_dis, sev_mental_ill),
     cev_other = ifelse(cev==1 & any_comorb==0, 1, 0),
     
-    # Prior covid
+    # Multiple comorbidities (non-CKD) - 0, 1, or 2+
+    multimorb =
+      (mod_sev_obesity) +
+      (diabetes) +
+      (any_resp_dis) +
+      (chd) +
+      (cld) +
+      (asplenia),
+    multimorb = cut(multimorb, breaks = c(0, 1, 2, Inf), labels=c("0", "1", "2+"), right=FALSE),
+    
+    # Prior COVID - index
     prior_covid_cat = as.numeric(!is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_hospitalisation_date, na.rm=TRUE))),
     
-    # Covid in window spanning 90 days pre dose 1 up to dose 2
+    # Prior COVID - boost index
+    prior_covid_cat_boost = as.numeric(!is.na(pmin(prior_positive_test_date_boost, prior_primary_care_covid_case_date_boost, prior_covid_hospitalisation_date_boost, na.rm=TRUE))),
+
+    # COVID in window spanning 90 days pre dose 1 up to dose 2
     prevax_covid_cat = as.numeric(!is.na(pmin(prevax_positive_test_date, prevax_primary_care_covid_case_date, prevax_covid_hospitalisation_date, na.rm=TRUE))),
 
     # Number of tests in pre-vaccination period

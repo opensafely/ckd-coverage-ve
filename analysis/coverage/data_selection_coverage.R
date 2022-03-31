@@ -23,11 +23,6 @@ fs::dir_create(here::here("output", "tables"))
 ## Import processed data ----
 data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))
 
-# vaccine initiation dates
-first_pfizer = as_date("2020-12-08")
-first_az = as_date("2021-01-04")
-first_moderna = as_date("2021-04-13")
-
 # Define selection criteria ----
 data_criteria <- data_processed %>%
   transmute(
@@ -48,10 +43,13 @@ data_criteria <- data_processed %>%
     has_region = !is.na(region),
 
     # Vaccine profile
-    has_max_4_vax = n_vax <= 4, # maximum of 4 recorded doses
+    has_max_5_vax = n_vax <= 5, # maximum of 4 recorded doses
     valid_vaxgap12 = tbv1_2 >= 14 | is.na(vax2_date), # at least 14 days between dose 1 and dose 2 if dose 2 given
     valid_vaxgap23 = tbv2_3 >= 14 | is.na(vax3_date), # at least 14 days between dose 2 and dose 3 if dose 3 given
     valid_vaxgap34 = tbv3_4 >= 14 | is.na(vax4_date), # at least 14 days between dose 3 and dose 4 f dose 3 given
+    
+    # Dose 4 denominator
+    has_immunosuppression = (haem_cancer==1 | immunosuppression==1 | kidney_transplant==1 | non_kidney_transplant==1), 
     
     # Other
     alive_throughout = is.na(death_date),
@@ -60,7 +58,11 @@ data_criteria <- data_processed %>%
     include = (
       has_age & has_ckd_any & has_ckd_strict & 
       has_sex & has_imd & has_ethnicity & has_region &
-        has_max_4_vax & valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34
+        has_max_5_vax & valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34
+    ),
+    
+    include_dose4 = (
+      include & has_immunosuppression
     ),
     
     include_logistic = (
@@ -79,6 +81,17 @@ data_cohort <- data_criteria %>%
 write_rds(data_cohort, here::here("output", "data", "data_cohort_coverage.rds"), compress="gz")
 write_csv(data_cohort, here::here("output", "data", "data_cohort_coverage.csv"))
 
+## Define data cohort for dose 4 analyses (requires immunosuppression, transplant, or haem cancer flag)
+data_cohort_dose4 <- data_criteria %>%
+  filter(include_dose4) %>%
+  select(patient_id) %>%
+  left_join(data_processed, by="patient_id") %>%
+  select(-c(ckd_inclusion_any, ckd_inclusion_strict)) %>%
+  droplevels()
+
+write_rds(data_cohort_dose4, here::here("output", "data", "data_cohort_coverage_dose4.rds"), compress="gz")
+write_csv(data_cohort_dose4, here::here("output", "data", "data_cohort_coverage_dose4.csv"))
+
 ## Define data cohort for logistic regression (sensitivity analyses)
 data_cohort_logistic <- data_criteria %>%
   filter(include_logistic) %>%
@@ -96,10 +109,13 @@ data_flowchart <- data_criteria %>%
     c1 = c0 & has_age & has_ckd_any,
     c2 = c1 & has_ckd_strict,
     c3 = c2 & (has_sex & has_imd & has_ethnicity & has_region),
-    c4 = c3 & (has_max_4_vax),
+    c4 = c3 & (has_max_5_vax),
     c5 = c4 & (valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34),
-    c6 = c5 & alive_throughout,
-    c7 = c6 & registered_throughout
+    # Dose 4 analysis cohort
+    c6 = c5 & has_immunosuppression,
+    # Logistic regression analysis cohort
+    c7 = c5 & alive_throughout,
+    c8 = c6 & registered_throughout
   ) %>%
   summarise(
     across(.fns=sum)
@@ -120,10 +136,11 @@ data_flowchart <- data_criteria %>%
       crit == "c1" ~ "  with eGFR<60 or any CKD-related code (diagnostic/dialysis/kidney transplant)", 
       crit == "c2" ~ "  with eGFR<60 or dialysis/kidney transplant code",
       crit == "c3" ~ "  with no missing demographic information",
-      crit == "c4" ~ "  with maximum of 4 doses recorded up to 31 Dec 2021",
+      crit == "c4" ~ "  with maximum of 5 doses recorded up to 16 Feb 2022",
       crit == "c5" ~ "  with no vaccines administered at an interval of <14 days (primary analysis subset)",
-      crit == "c6" ~ "  alive throughout follow-up period (logistic regression sensitivity subset only)",
-      crit == "c7" ~ "  registered throughout follow-up period (logistic regression sensitivity subset only)",
+      crit == "c6" ~ "  with history of immunosuppression/transplant/haematologic cancer (dose 4 analysis cohort only)",
+      crit == "c7" ~ "  alive throughout follow-up period (logistic regression sensitivity subset only)",
+      crit == "c8" ~ "  registered throughout follow-up period (logistic regression sensitivity subset only)",
       TRUE ~ NA_character_
     )
   )

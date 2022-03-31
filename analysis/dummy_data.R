@@ -22,8 +22,19 @@ nsamples <- nrow(data_processed)
 
 # set product-specific start dates
 start_date <- date("2020-12-08")
-end_date <- date("2021-12-31")
+end_date <- date("2022-02-16")
 
+# set distribution of CKD groups
+data_processed$ckd_7cat <- rcat(n=nsamples, c("CKD3a (D-T-)", "CKD3b (D-T-)", "CKD4 (D-T-)", "CKD5 (D-T-)",
+                                              "CKD (D+T-)", "CKD (D-T+)", "CKD (D+T+)"), c(0.60,0.25,0.07,0.02,0.02,0.02,0.02))
+# recalculate CKD5 categories
+data_processed <- data_processed %>%
+  mutate(
+    ckd_5cat = ckd_7cat,
+    ckd_5cat = ifelse(ckd_7cat == "CKD (D-T+)" | ckd_7cat == "CKD (D+T+)", "CKD (T+)", ckd_5cat),
+    ckd_5cat = ifelse(ckd_7cat == "CKD4 (D-T-)" | ckd_7cat == "CKD5 (D-T-)", "CKD4-5 (D-T-)", ckd_5cat)
+  )
+  
 # set vaccine coverage for primary doses, third, and fourth dose
 primary_coverage <- 0.95
 third_coverage <- 0.6 # assignments only retained if primary doses given, so final prevalence ~0.6*0.95=0.57
@@ -80,7 +91,5 @@ data_processed$moderna_date_1[primary_vax_type=="moderna"] = data_processed$covi
 data_processed$moderna_date_2[primary_vax_type=="moderna"] = data_processed$covid_vax_date_2[primary_vax_type=="moderna"]
 data_processed$moderna_date_3[third_vax_type=="moderna"] = data_processed$covid_vax_date_3[third_vax_type=="moderna"]
 data_processed$moderna_date_4[fourth_vax_type=="moderna"] = data_processed$covid_vax_date_4[fourth_vax_type=="moderna"]
-
-
 
 

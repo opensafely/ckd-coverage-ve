@@ -5,7 +5,7 @@
 version: '3.0'
 
 expectations:
-  population_size: 300000
+  population_size: 150000
 
 actions:
 
@@ -33,22 +33,24 @@ actions:
       highly_sensitive:
         data1: output/data/data_cohort_coverage.rds
         csv1: output/data/data_cohort_coverage.csv
-        data2: output/data/data_cohort_coverage_logistic.rds
-        csv2: output/data/data_cohort_coverage_logistic.csv
+        data2: output/data/data_cohort_coverage_dose4.rds
+        csv2: output/data/data_cohort_coverage_dose4.csv
+        data3: output/data/data_cohort_coverage_logistic.rds
+        csv3: output/data/data_cohort_coverage_logistic.csv
       moderately_sensitive:
         csv: output/tables/flowchart_coverage.csv
 
  # Data properties ----      
-  data_properties:
-    run: r:latest analysis/data_properties.R output/data/data_cohort_coverage.rds output/data_properties
-    needs: [data_selection_coverage]
-    outputs:
-      moderately_sensitive:
-        cohort: output/data_properties/data_cohort*.txt
+  #data_properties:
+  #  run: r:latest analysis/data_properties.R output/data/data_cohort_coverage.rds output/data_properties
+  #  needs: [data_selection_coverage]
+  #  outputs:
+  #    moderately_sensitive:
+  #      cohort: output/data_properties/data_cohort*.txt
         
-  # Table 1 ----
+  # Table 1 primary cohort----
   table_1_coverage:
-    run: r:latest analysis/coverage/table_1_coverage.R
+    run: r:latest analysis/coverage/table_1_coverage.R dose2
     needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
@@ -56,16 +58,26 @@ actions:
       moderately_sensitive:
         table: output/tables/table1_coverage_redacted.html
         
+  # Table 1 dose 4 cohort ----
+  table_1_coverage_dose4:
+    run: r:latest analysis/coverage/table_1_coverage.R dose4
+    needs: [data_selection_coverage]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table1_coverage_redacted_dose4.rds
+      moderately_sensitive:
+        table: output/tables/table1_coverage_redacted_dose4.html
+        
   # Cox models - dose-2 coverage ----
   cox_model_dose2:
     run: r:latest analysis/coverage/cox_model.R dose2
     needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
-        data1: output/data/data_cox_coverage_dose2.rds
-        data2: output/model/mod_strat_coxph_redacted_dose2.rds
+        data1: output/data/data_cox_coverage_dose2*.rds
+        data2: output/model/mod_strat_coxph_redacted_dose2*.rds
       moderately_sensitive:
-        csv: output/model/mod_strat_coxph_redacted_dose2.csv
+        csv: output/model/mod_strat_coxph_redacted_dose2*.csv
         
   # Cox models - dose-3 coverage ----
   cox_model_dose3:
@@ -73,10 +85,10 @@ actions:
     needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
-        data1: output/data/data_cox_coverage_dose3.rds
-        data2: output/model/mod_strat_coxph_redacted_dose3.rds
+        data1: output/data/data_cox_coverage_dose3*.rds
+        data2: output/model/mod_strat_coxph_redacted_dose3*.rds
       moderately_sensitive:
-        csv: output/model/mod_strat_coxph_redacted_dose3.csv
+        csv: output/model/mod_strat_coxph_redacted_dose3*.csv
         
   # Cox models - dose-4 coverage ----
   cox_model_dose4:

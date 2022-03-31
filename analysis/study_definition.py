@@ -235,14 +235,37 @@ study = StudyDefinition(
     find_last_match_in_period=True,
     between=["index_date - 2 years","index_date - 1 day"],
     returning="numeric_value",
-    include_date_of_match=True,
-    date_format = "YYYY-MM-DD", #formerly include_month=True,
+    #include_date_of_match=True,
+    #date_format = "YYYY-MM-DD", #formerly include_month=True,
     return_expectations={
         "float": {"distribution": "normal", "mean": 60.0, "stddev": 15},
         "incidence": 0.95,
     },
   ),
-
+  
+  ## Determine date of creatinine test
+  creatinine_date = patients.with_these_clinical_events(
+    creatinine_codes,
+    find_last_match_in_period=True,
+    between=["index_date - 2 years","index_date - 1 day"],
+    returning="date",
+    date_format = "YYYY-MM-DD",
+    return_expectations = {
+      "date": {"earliest": "index_date - 2 years", "latest" : "index_date - 1 day"},
+      "rate": "uniform",
+      "incidence": 0.95,
+    },
+  ),
+  
+  ## Age at creatinine test
+  age_creatinine = patients.age_as_of(
+    "creatinine_date",
+       return_expectations = {
+      "rate": "universal",
+      "int": {"distribution": "population_ages"},
+    },
+  ),
+  
   ## CKD - dialysis
   dialysis = patients.with_these_clinical_events(
     dialysis_codes,
@@ -798,31 +821,57 @@ study = StudyDefinition(
     },
   ),
   
-  ## Count of tests (any) in study period
-#    tests_conducted_any = patients.with_test_result_in_sgss(
-#    pathogen = "SARS-CoV-2",
-#    test_result = "any",
-#    returning = "number_of_matches_in_period",
-#    between = ["index_date", end_date],
-#    restrict_to_earliest_specimen_date = False,
-#    return_expectations={
-#      "int": {"distribution": "normal", "mean": 4, "stddev": 1},
-#      "incidence": 0.05,
-#    },
-#  ),
+  ########################################################
+  ############ pre-index COVID events (boost) ############
+  ########################################################
   
-  ## Count of tests (positive) in study period
-#  tests_conducted_positive = patients.with_test_result_in_sgss(
-#    pathogen = "SARS-CoV-2",
-#    test_result = "positive",
-#    returning = "number_of_matches_in_period",
-#    between = ["index_date", end_date],
-#    restrict_to_earliest_specimen_date = False,
-#    return_expectations={
-#      "int": {"distribution": "normal", "mean": 2, "stddev": 0.1},
-#      "incidence": 0.01,
-#    },
-#  ),
+  ## Positive test prior to study period
+  prior_positive_test_date_boost = patients.with_test_result_in_sgss(
+    pathogen = "SARS-CoV-2",
+    test_result = "positive",
+    returning = "date",
+    date_format = "YYYY-MM-DD",
+    on_or_before = "2021-08-31", # day before JCVI extended series recommendations
+    find_first_match_in_period = True,
+    restrict_to_earliest_specimen_date = False,
+    return_expectations = {
+      "date": {"earliest": "2020-02-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
+      "rate": "exponential_increase",
+      "incidence": 0.02,
+    },
+  ),
+  
+  ## Positive case identification prior to study period
+  prior_primary_care_covid_case_date_boost = patients.with_these_clinical_events(
+    combine_codelists(
+      covid_primary_care_code,
+      covid_primary_care_positive_test,
+      covid_primary_care_sequalae,
+    ),
+    returning = "date",
+    date_format = "YYYY-MM-DD",
+    on_or_before = "2021-08-31", # day before JCVI extended series recommendations
+    find_first_match_in_period=True,
+    return_expectations = {
+      "date": {"earliest": "2020-02-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
+      "rate": "exponential_increase",
+      "incidence": 0.02,
+    },
+  ),
+
+  ## Positive covid admission prior to study period
+  prior_covid_hospitalisation_date_boost = patients.admitted_to_hospital(
+    returning = "date_admitted",
+    with_these_diagnoses = covid_icd10,
+    on_or_before = "2021-08-31", # day before JCVI extended series recommendations
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2020-02-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
+      "rate": "exponential_increase",
+      "incidence": 0.005,
+    },
+  ),
 
 ###############################################################################
 # ADDITIONAL VARIABLES FOR COMPARATIVE VE
