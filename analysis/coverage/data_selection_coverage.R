@@ -115,7 +115,7 @@ data_flowchart <- data_criteria %>%
     c6 = c5 & has_immunosuppression,
     # Logistic regression analysis cohort
     c7 = c5 & alive_throughout,
-    c8 = c6 & registered_throughout
+    c8 = c7 & registered_throughout
   ) %>%
   summarise(
     across(.fns=sum)

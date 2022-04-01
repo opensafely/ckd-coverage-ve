@@ -5,7 +5,7 @@
 version: '3.0'
 
 expectations:
-  population_size: 150000
+  population_size: 300000
 
 actions:
 
@@ -90,16 +90,27 @@ actions:
       moderately_sensitive:
         csv: output/model/mod_strat_coxph_redacted_dose3*.csv
         
-  # Cox models - dose-4 coverage ----
-  cox_model_dose4:
-    run: r:latest analysis/coverage/cox_model.R dose4
+  # Cox models - dose-4 coverage (full cohort) ----
+  cox_model_dose4full:
+    run: r:latest analysis/coverage/cox_model.R dose4full
     needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
-        data1: output/data/data_cox_coverage_dose4.rds
-        data2: output/model/mod_strat_coxph_redacted_dose4.rds
+        data1: output/data/data_cox_coverage_dose4full*.rds
+        data2: output/model/mod_strat_coxph_redacted_dose4full*.rds
       moderately_sensitive:
-        csv: output/model/mod_strat_coxph_redacted_dose4.csv
+        csv: output/model/mod_strat_coxph_redacted_dose4full*.csv
+        
+  # Cox models - dose-4 coverage (subset cohort) ----
+  cox_model_dose4subset:
+    run: r:latest analysis/coverage/cox_model.R dose4subset
+    needs: [data_selection_coverage]
+    outputs:
+      highly_sensitive:
+        data1: output/data/data_cox_coverage_dose4subset*.rds
+        data2: output/model/mod_strat_coxph_redacted_dose4subset*.rds
+      moderately_sensitive:
+        csv: output/model/mod_strat_coxph_redacted_dose4subset*.csv
         
   # Logistic models - dose-2 coverage ----
   logistic_model:
@@ -115,7 +126,7 @@ actions:
   # Coverage summaries ----
   vaccine_coverage:
     run: r:latest -e 'rmarkdown::render("analysis/coverage/vaccine_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [data_selection_coverage, table_1_coverage, cox_model_dose2, cox_model_dose3, cox_model_dose4, logistic_model]
+    needs: [data_selection_coverage, table_1_coverage, cox_model_dose2, cox_model_dose3, cox_model_dose4full, cox_model_dose4subset, logistic_model]
     outputs:
       moderately_sensitive:
         html: output/markdown/vaccine_coverage.html
