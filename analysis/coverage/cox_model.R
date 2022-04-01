@@ -163,9 +163,14 @@ for (s in 1:length(strata)) {
     data_subset = subset(data_cox, ckd_5cat==ckd_group) 
     var_list_subset = var_list[var_list!="ckd_7cat"]
     }
+  
   ## Remove cev_other from dose4 subset analyses as all individuals will have at least one other flag
   if (outcome_label == "dose4subset") {
     var_list_subset = var_list_subset[var_list_subset!="cev_other"]
+  }
+  ## Remove any_ckd_flag from dose4 CKD T+ subset due to unstable estimates
+  if ( (outcome_label == "dose4subset" | outcome_label == "dose4full") & ckd_group == "CKD (T+)") {
+    var_list_subset = var_list_subset[var_list_subset!="any_ckd_flag"]
   }
   
   

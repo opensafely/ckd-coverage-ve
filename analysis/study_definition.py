@@ -313,14 +313,14 @@ study = StudyDefinition(
 
   ## Death
   death_date = patients.died_from_any_cause(
-    on_or_after = "index_date",
+    between=["index_date",end_date],
     returning = "date_of_death",
     date_format = "YYYY-MM-DD",
   ),
   
   ## De-registration
   dereg_date = patients.date_deregistered_from_all_supported_practices(
-    on_or_after = "index_date",
+    between=["index_date",end_date],
     date_format = "YYYY-MM-DD",
   ),
   
@@ -950,13 +950,13 @@ study = StudyDefinition(
   postvax_positive_test_date = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "positive",
-    on_or_after = "covid_vax_date_2",
+    between=["covid_vax_date_2",end_date],
     find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
     returning = "date",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "date": {"earliest": "2021-02-01", "latest" : "2021-02-16"},
       "rate": "exponential_increase",
     },
   ),
@@ -965,11 +965,11 @@ study = StudyDefinition(
   postvax_covid_emergency_date = patients.attended_emergency_care(
     returning = "date_arrived",
     with_these_diagnoses = covid_emergency,
-    on_or_after = "covid_vax_date_2",
+    between=["covid_vax_date_2",end_date],
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "date": {"earliest": "2021-02-01", "latest" : "2021-02-16"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -980,11 +980,11 @@ study = StudyDefinition(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
     with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
-    on_or_after = "covid_vax_date_2",
+    between=["covid_vax_date_2",end_date],
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "date": {"earliest": "2021-02-01", "latest" : "2021-02-16"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -994,10 +994,10 @@ study = StudyDefinition(
   postvax_covid_death_date = patients.with_these_codes_on_death_certificate(
     covid_icd10,
     returning = "date_of_death",
-    on_or_after = "covid_vax_date_2",
+    between=["covid_vax_date_2",end_date],
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "date": {"earliest": "2021-02-01", "latest" : "2021-02-16"},
       "rate": "uniform",
       "incidence": 0.02
     },
@@ -1011,13 +1011,13 @@ study = StudyDefinition(
   postvax_any_test_date = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "any",
-    on_or_after = "covid_vax_date_2",
+    between=["covid_vax_date_2",end_date],
     find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
     returning = "date",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-02-16"},
       "rate": "exponential_increase",
     },
   ),
@@ -1025,11 +1025,11 @@ study = StudyDefinition(
   ## Any emergency admission after second dose
   postvax_any_emergency_date = patients.attended_emergency_care(
     returning = "date_arrived",
-    on_or_after = "covid_vax_date_2",
+    between=["covid_vax_date_2",end_date],
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-02-16"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -1039,11 +1039,11 @@ study = StudyDefinition(
   postvax_any_hospitalisation_date = patients.admitted_to_hospital(
     returning = "date_admitted",
     with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
-    on_or_after = "covid_vax_date_2",
+    between=["covid_vax_date_2",end_date],
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-02-16"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -1052,10 +1052,10 @@ study = StudyDefinition(
   # Any death after second dose
   postvax_any_death_date = patients.died_from_any_cause(
     returning="date_of_death",
-    on_or_after = "covid_vax_date_2",
+    between=["covid_vax_date_2",end_date],
     date_format="YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2021-12-31"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-02-16"},
       "rate": "uniform",
       "incidence": 0.02
     },
