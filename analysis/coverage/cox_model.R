@@ -165,7 +165,7 @@ for (s in 1:length(strata)) {
     }
   ## Remove cev_other from dose4 subset analyses as all individuals will have at least one other flag
   if (outcome_label == "dose4subset") {
-    var_list_subset = var_list[var_list!="cev_other"]
+    var_list_subset = var_list_subset[var_list_subset!="cev_other"]
   }
   
   
