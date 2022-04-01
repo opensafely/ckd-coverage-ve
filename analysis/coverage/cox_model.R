@@ -44,14 +44,14 @@ if(length(args)==0) {
     outcome_label = "dose3"
     prior_covid_var = "prior_covid_cat" # option to update to prior_covid_cat_boost but measured after indexing
     cutoff = as.Date("2022-02-16", format = "%Y-%m-%d")
-  } else if (args[[1]]=="dose4subset") {
-    outcome = "vax4_date"
-    outcome_label = "dose4subset"
-    prior_covid_var = "prior_covid_cat" # option to update to prior_covid_cat_boost but measured after indexing
-    cutoff = as.Date("2022-02-16", format = "%Y-%m-%d")
   } else if (args[[1]]=="dose4full") {
     outcome = "vax4_date"
     outcome_label = "dose4full"
+    prior_covid_var = "prior_covid_cat" # option to update to prior_covid_cat_boost but measured after indexing
+    cutoff = as.Date("2022-02-16", format = "%Y-%m-%d")
+  } else if (args[[1]]=="dose4subset") {
+    outcome = "vax4_date"
+    outcome_label = "dose4subset"
     prior_covid_var = "prior_covid_cat" # option to update to prior_covid_cat_boost but measured after indexing
     cutoff = as.Date("2022-02-16", format = "%Y-%m-%d")
   } else {
@@ -163,7 +163,10 @@ for (s in 1:length(strata)) {
     data_subset = subset(data_cox, ckd_5cat==ckd_group) 
     var_list_subset = var_list[var_list!="ckd_7cat"]
     }
-  
+  ## Remove cev_other from dose4 subset analyses as all individuals will have at least one other flag
+  if (outcome_label == "dose4subset") {
+    var_list_subset = var_list[var_list!="cev_other"]
+  }
   
   
   ## Fit stratified univariate models in loop
