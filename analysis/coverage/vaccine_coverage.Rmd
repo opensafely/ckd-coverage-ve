@@ -327,16 +327,15 @@ Follow-up was censored on the date of death, deregistration, or the end of the s
 ##### Univariate and multivariate model outputs (scroll left/right for full table)
 ```{r}
 ## Function to create clean table of dose-specific cox outputs
-create_reduced_tbl = function(selected_dose=c("dose2", "dose3", "dose4full", "dose4subset")) {
+create_reduced_tbl = function(input_tbl) {
   # example: selected_dose = "dose2"
   ## Import cox regression results
-  tbl_summary <- read_rds(here::here("output", "model", paste0("mod_strat_coxph_redacted_",selected_dose,"_full.rds")))
   
   ## Add % unvaccinated at cut-off
-  tbl_summary$perc_unvac <- round(as.numeric(tbl_summary$n_unvax_at_cut_off)/as.numeric(tbl_summary$n_uncensored_at_cut_off)*100,1)
+  input_tbl$perc_unvac <- round(as.numeric(input_tbl$n_unvax_at_cut_off)/as.numeric(input_tbl$n_uncensored_at_cut_off)*100,1)
   
   ## Select variables of interes
-  tbl_reduced <- tbl_summary %>%
+  tbl_reduced <- input_tbl %>%
     select(var_group, var_label, label, n_obs,  n_event, n_uncensored_at_cut_off, perc_unvac,
            estimate_uni, conf.low_uni, conf.high_uni, p.value_uni,
            estimate_partial, conf.low_partial, conf.high_partial, p.value_partial,
@@ -383,7 +382,8 @@ tabulate_reduced_tbl = function(input_tbl) {
     tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold")
 }
 
-dose2_tbl = create_reduced_tbl("dose2")
+dose2_tbl <- read_rds(here::here("output", "model", paste0("mod_strat_coxph_redacted_dose2_full.rds"))) %>%
+  create_reduced_tbl()
 tabulate_reduced_tbl(dose2_tbl)
 ```
 All counts rounded to nearest 5; data redacted for any rows with rounded values of <=10 for n (total), n (vaccinated), or n (unvaccinated), where n (unvaccinated) is the difference between n (total) and n (vaccinated) after rounding. % unvaccinated calculated among individuals who were uncensored at cut-off.<br/><br/>    
@@ -608,7 +608,8 @@ Follow-up was censored on the date of death, deregistration, or the end of the s
 
 ##### Univariate and multivariate model outputs (scroll left/right for full table)
 ```{r}
-dose3_tbl = create_reduced_tbl("dose3")
+dose3_tbl <- read_rds(here::here("output", "model", paste0("mod_strat_coxph_redacted_dose3_full.rds"))) %>%
+  create_reduced_tbl()
 tabulate_reduced_tbl(dose3_tbl)
 ```
 <br/><br/>    
@@ -645,7 +646,8 @@ Follow-up was censored on the date of death, deregistration, or the end of the s
 
 ##### Univariate and multivariate model outputs (scroll left/right for full table)
 ```{r}
-dose4full_tbl = create_reduced_tbl("dose4full")
+dose4full_tbl <- read_rds(here::here("output", "model", paste0("mod_strat_coxph_redacted_dose4full_full.rds"))) %>%
+  create_reduced_tbl()
 tabulate_reduced_tbl(dose4full_tbl)
 ```
 <br/><br/>    
@@ -684,7 +686,8 @@ Follow-up was censored on the date of death, deregistration, or the end of the s
 
 ##### Univariate and multivariate model outputs (scroll left/right for full table)
 ```{r}
-dose4subset_tbl = create_reduced_tbl("dose4subset")
+dose4subset_tbl <- read_rds(here::here("output", "model", paste0("mod_strat_coxph_redacted_dose4subset_full.rds"))) %>%
+  create_reduced_tbl()
 tabulate_reduced_tbl(dose4subset_tbl)
 ```
 <br/><br/>    
@@ -819,7 +822,7 @@ tabulate_reduced_tbl_subgroup(dose2_tbl_subgroup, "dose2")
 ```{r, fig.width=13, fig.height=10}
 ## Function to create plot of cox subgroup outputs 
 plot_reduced_tbl_subgroup = function(input_tbl) {
-  ## Example: input_tbl = dose2_tbl_subgroup
+  ## Example: input_tbl = tbl_subgroup
   
   ## Remove redacted components from plot
   input_tbl$estimate_partial[input_tbl$estimate_partial=="[Redacted]"] = NA
