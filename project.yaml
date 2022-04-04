@@ -54,20 +54,24 @@ actions:
     needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
-        data: output/tables/table1_coverage_redacted.rds
+        data1: output/tables/table1_coverage_redacted.rds
+        data2: output/tables/table1_coverage_redacted_by_CKD.rds
       moderately_sensitive:
-        table: output/tables/table1_coverage_redacted.html
-        
+        table1: output/tables/table1_coverage_redacted.html
+        table2: output/tables/table1_coverage_redacted_by_CKD.html
+
   # Table 1 dose 4 cohort ----
   table_1_coverage_dose4:
     run: r:latest analysis/coverage/table_1_coverage.R dose4
     needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
-        data: output/tables/table1_coverage_redacted_dose4.rds
+        data1: output/tables/table1_coverage_redacted_dose4.rds
+        data2: output/tables/table1_coverage_redacted_dose4_by_CKD.rds
       moderately_sensitive:
-        table: output/tables/table1_coverage_redacted_dose4.html
-        
+        table1: output/tables/table1_coverage_redacted_dose4.html
+        table2: output/tables/table1_coverage_redacted_dose4_by_CKD.html
+
   # Cox models - dose-2 coverage ----
   cox_model_dose2:
     run: r:latest analysis/coverage/cox_model.R dose2

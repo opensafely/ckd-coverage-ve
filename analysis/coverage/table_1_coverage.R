@@ -48,6 +48,8 @@ if (outcome_label=="dose2") {
 ## Format data
 data_cohort <- data_cohort %>%
   mutate(
+    N = 1,
+    allpop = "All",
     # Calculate time between vaccinations 1-2
     time_between_vaccinations1_2 = as.character(cut(tbv1_2,
                                                     breaks = c(0, 42, 56, 70, 84, 98, Inf),
@@ -59,7 +61,7 @@ data_cohort <- data_cohort %>%
                                                     labels = c("12 weeks or less", "12-24 weeks", "24-36 week", "36+ weeks"),
                                                     right = FALSE)),
     smoking_status = ifelse(is.na(smoking_status), "N&M", smoking_status),
-    bpcat = ifelse(bpcat=="High" | bpcat=="Elevated", 1, 0),
+    bpcat = ifelse(bpcat=="High" | bpcat=="Elevated", 1, 0)
   ) %>%
   mutate(
     smoking_status = ifelse(smoking_status=="S&E", 1, 0),
@@ -67,8 +69,10 @@ data_cohort <- data_cohort %>%
     time_between_vaccinations2_3 = ifelse(is.na(vax3_date), "Not applicable (no dose given)", time_between_vaccinations2_3)
   )
 
-counts0 <- data_cohort %>% 
+counts <- data_cohort %>% 
   select(
+         N,
+         allpop,
          ## Factors associated with attitudes/confidence
          ageband2,
          care_home,
@@ -84,6 +88,7 @@ counts0 <- data_cohort %>%
          prior_covid_cat,
          
          ## Clinical risk group (CKD-related)
+         ckd_5cat,
          ckd_7cat,
          #removed: dialysis, kidney_transplant, chronic_kidney_disease_stages_3_5,
          
@@ -109,72 +114,82 @@ counts0 <- data_cohort %>%
          any_ckd_flag,
          time_between_vaccinations1_2,
          time_between_vaccinations2_3
-         ) %>%
-  tbl_summary()
-counts0$inputs$data <- NULL
+         ) 
 
-table1 <- counts0$table_body %>%
-  select(group = variable, variable = label, count = stat_0) %>%
+## Function to clean table names
+clean_table_names = function(input_table) {
+  # Relabel variables for plotting
+  input_table$Variable[input_table$Variable=="care_home"] = "Care home resident"
+  input_table$Variable[input_table$Variable=="hscworker"] = "Health/social care worker"
+  input_table$Variable[input_table$Variable=="cev"] = "Clinically extremely vulnerable"
+  input_table$Variable[input_table$Variable=="housebound"] = "Housebound"
+  input_table$Variable[input_table$Variable=="endoflife"] = "End of life care"
+  input_table$Variable[input_table$Variable=="prior_covid_cat"] = "Prior COVID"
+  input_table$Variable[input_table$Variable=="immunosuppression"] = "Immunosuppression"
+  input_table$Variable[input_table$Variable=="mod_sev_obesity"] = "Moderate/severe obesity"
+  input_table$Variable[input_table$Variable=="diabetes"] = "Diabetes"
+  input_table$Variable[input_table$Variable=="any_resp_dis"] = "Chronic respiratory disease (inc. asthma)"
+  input_table$Variable[input_table$Variable=="chd"] = "Chronic heart disease"
+  input_table$Variable[input_table$Variable=="cld"] = "Chronic liver disease"
+  input_table$Variable[input_table$Variable=="asplenia"] = "Asplenia"
+  input_table$Variable[input_table$Variable=="cancer"] = "Cancer (non-haematologic)"
+  input_table$Variable[input_table$Variable=="haem_cancer"] = "Haematologic cancer"
+  input_table$Variable[input_table$Variable=="non_kidney_transplant"] = "Organ transplant (non-kidney)"
+  input_table$Variable[input_table$Variable=="chronic_neuro_dis_inc_sig_learn_dis"] = "Chronic neurological disease (inc. learning disability)"
+  input_table$Variable[input_table$Variable=="sev_mental_ill"] = "Severe mental illness"
+  input_table$Variable[input_table$Variable=="cev_other"] = "Clinically extremely vulnerable (other)"
+  input_table$Variable[input_table$Variable=="any_ckd_flag"] = "CKD diagnostic code"
+  
+  # Relabel groups for plotting
+  # Demography
+  input_table$Group[input_table$Group=="ageband2"] = "Age"
+  input_table$Group[input_table$Group=="sex"] = "Sex"
+  input_table$Group[input_table$Group=="ethnicity"] = "Ethnicity"
+  input_table$Group[input_table$Group=="imd"] = "IMD"
+  input_table$Group[input_table$Group=="region"] = "Region"
+  input_table$Group[input_table$Group=="jcvi_group"] = "JCVI group"
+  input_table$Group[input_table$Group=="rural_urban_group"] = "Setting"
+  input_table$Group[input_table$Group=="ckd_7cat"] = "CKD subgroup"
+  input_table$Group[input_table$Group=="time_between_vaccinations1_2"] = "Time between doses 1 and 2"
+  input_table$Group[input_table$Group=="time_between_vaccinations2_3"] = "Time between doses 2 and 3"
+  
+  # Other
+  input_table$Group[!(input_table$Group %in% c("Age", "Sex", "Ethnicity", "IMD", "Region", "JCVI group", "Setting", "CKD subgroup", 
+                                     "Time between doses 1 and 2", "Time between doses 2 and 3"))] = "Other"
+  input_table$Group[input_table$Variable=="N"] = "N"
+  return(input_table)
+}
+
+## Generate full table
+counts_summary = counts %>% 
+  select(-ckd_5cat) %>%
+  tbl_summary(by = allpop)
+counts_summary$inputs$data <- NULL
+
+table1 <- counts_summary$table_body %>%
+  select(group = variable, variable = label, count = stat_1) %>%
   separate(count, c("count","perc"), sep = "([(])") %>%
   mutate(count = gsub(" ", "", count)) %>%
   mutate(count = as.numeric(gsub(",", "", count))) %>%
   filter(!(is.na(count))) %>%
   select(-perc)
-
 table1$percent = round(table1$count/nrow(data_cohort)*100,1)
 colnames(table1) = c("Group", "Variable", "Count", "Percent")
 
-# Relabel variables for plotting
-table1$Variable[table1$Variable=="care_home"] = "Care home resident"
-table1$Variable[table1$Variable=="hscworker"] = "Health/social care worker"
-table1$Variable[table1$Variable=="cev"] = "Clinically extremely vulnerable"
-table1$Variable[table1$Variable=="housebound"] = "Housebound"
-table1$Variable[table1$Variable=="endoflife"] = "End of life care"
-table1$Variable[table1$Variable=="prior_covid_cat"] = "Prior COVID"
-table1$Variable[table1$Variable=="immunosuppression"] = "Immunosuppression"
-table1$Variable[table1$Variable=="mod_sev_obesity"] = "Moderate/severe obesity"
-table1$Variable[table1$Variable=="diabetes"] = "Diabetes"
-table1$Variable[table1$Variable=="any_resp_dis"] = "Chronic respiratory disease (inc. asthma)"
-table1$Variable[table1$Variable=="chd"] = "Chronic heart disease"
-table1$Variable[table1$Variable=="cld"] = "Chronic liver disease"
-table1$Variable[table1$Variable=="asplenia"] = "Asplenia"
-table1$Variable[table1$Variable=="cancer"] = "Cancer (non-haematologic)"
-table1$Variable[table1$Variable=="haem_cancer"] = "Haematologic cancer"
-table1$Variable[table1$Variable=="non_kidney_transplant"] = "Organ transplant (non-kidney)"
-table1$Variable[table1$Variable=="chronic_neuro_dis_inc_sig_learn_dis"] = "Chronic neurological disease (inc. learning disability)"
-table1$Variable[table1$Variable=="sev_mental_ill"] = "Severe mental illness"
-table1$Variable[table1$Variable=="cev_other"] = "Clinically extremely vulnerable (other)"
-table1$Variable[table1$Variable=="any_ckd_flag"] = "CKD diagnostic code"
-
-# Relabel groups for plotting
-# Demography
-table1$Group[table1$Group=="ageband2"] = "Age"
-table1$Group[table1$Group=="sex"] = "Sex"
-table1$Group[table1$Group=="ethnicity"] = "Ethnicity"
-table1$Group[table1$Group=="imd"] = "IMD"
-table1$Group[table1$Group=="region"] = "Region"
-table1$Group[table1$Group=="jcvi_group"] = "JCVI group"
-table1$Group[table1$Group=="rural_urban_group"] = "Setting"
-table1$Group[table1$Group=="ckd_7cat"] = "CKD subgroup"
-table1$Group[table1$Group=="time_between_vaccinations1_2"] = "Time between doses 1 and 2"
-table1$Group[table1$Group=="time_between_vaccinations2_3"] = "Time between doses 2 and 3"
-
-# Other
-table1$Group[!(table1$Group %in% c("Age", "Sex", "Ethnicity", "IMD", "Region", "JCVI group", "Setting", "CKD subgroup", 
-                                   "Time between doses 1 and 2", "Time between doses 2 and 3"))] = "Other"
+table1_clean = clean_table_names(table1)
 
 # Redaction ----
 rounded_n = plyr::round_any(nrow(data_cohort),5)
 
 ## Round to nearest 5
-table1_redacted <- table1 %>%
+table1_redacted <- table1_clean %>%
   mutate(Count = plyr::round_any(Count, 5))
 table1_redacted$Percent = round(table1_redacted$Count/rounded_n*100,1)
 table1_redacted$Non_Count = rounded_n - table1_redacted$Count
 
 ## Redact any rows with rounded cell counts <=10 or within 10 of total population size
-table1_redacted$Count[table1_redacted$Count<=10 | table1_redacted$Non_Count<=10] = "[Redacted]"
-table1_redacted$Percent[table1_redacted$Count<=10 | table1_redacted$Non_Count<=10] = "[Redacted]"
+table1_redacted$Count[(table1_redacted$Count>0 & table1_redacted$Count<=10) | (table1_redacted$Non_Count>0 & table1_redacted$Non_Count<=10)] = "[Redacted]"
+table1_redacted$Percent[(table1_redacted$Count>0 & table1_redacted$Count<=10) | (table1_redacted$Non_Count>0 & table1_redacted$Non_Count<=10)] = "[Redacted]"
 table1_redacted <- table1_redacted %>% select(-Non_Count)
 
 # Save as html ----
@@ -184,4 +199,60 @@ if (outcome_label=="dose2") {
 } else {
   gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_coverage_redacted_dose4.html"))
   write_rds(table1_redacted, here::here("output", "tables", "table1_coverage_redacted_dose4.rds"), compress = "gz")
+}
+
+
+
+## Set CKD levels for stratified table
+ckd_levels = c( "CKD3a (D-T-)", "CKD3b (D-T-)",  "CKD4-5 (D-T-)", "CKD (T+)", "CKD (D+T-)")
+
+## Generate CKD-statified table
+for (i in 1:length(ckd_levels)) {
+  data_subset = subset(counts, ckd_5cat==ckd_levels[i])
+  counts_summary = data_subset %>% 
+    select(-ckd_5cat, -ckd_7cat) %>%
+    tbl_summary(by = allpop)
+  counts_summary$inputs$data <- NULL
+
+  table1 <- counts_summary$table_body %>%
+    select(group = variable, variable = label, count = stat_1) %>%
+    separate(count, c("count","perc"), sep = "([(])") %>%
+    mutate(count = gsub(" ", "", count)) %>%
+    mutate(count = as.numeric(gsub(",", "", count))) %>%
+    filter(!(is.na(count))) %>%
+    select(-perc)
+  table1$percent = round(table1$count/nrow(data_cohort)*100,1)
+  colnames(table1) = c("Group", "Variable", "Count", "Percent")
+  
+  # Clean names
+  table1_clean = clean_table_names(table1)
+  
+  # Redaction ----
+  rounded_n = plyr::round_any(nrow(data_subset),5)
+  
+  ## Round to nearest 5
+  table1_redacted <- table1_clean %>%
+    mutate(Count = plyr::round_any(Count, 5))
+  table1_redacted$Percent = round(table1_redacted$Count/rounded_n*100,1)
+  table1_redacted$Non_Count = rounded_n - table1_redacted$Count
+  
+  ## Redact any rows with rounded cell counts <=10 or within 10 of total population size
+  table1_redacted$Summary =  paste0(prettyNum(table1_redacted$Count, big.mark=",")," (",table1_redacted$Percent,"%)")
+  table1_redacted$Summary[(table1_redacted$Count>0 & table1_redacted$Count<=10) | (table1_redacted$Non_Count>0 & table1_redacted$Non_Count<=10)] = "[Redacted]"
+  table1_redacted$Summary[table1_redacted$Variable=="N"] = prettyNum(table1_redacted$Count[table1_redacted$Variable=="N"], big.mark=",")
+  
+  table1_redacted <- table1_redacted %>%
+    select(-Non_Count, -Count, -Percent)
+  names(table1_redacted)[3] = ckd_levels[i]
+  
+  if (i==1) { collated_table = table1_redacted } else { collated_table[,2+i] = table1_redacted[,3] }
+}
+
+# Save as html ----
+if (outcome_label=="dose2") {
+  gt::gtsave(gt(collated_table), here::here("output","tables", "table1_coverage_redacted_by_CKD.html"))
+  write_rds(collated_table, here::here("output", "tables", "table1_coverage_redacted_by_CKD.rds"), compress = "gz")
+} else {
+  gt::gtsave(gt(collated_table), here::here("output","tables", "table1_coverage_redacted_dose4_by_CKD.html"))
+  write_rds(collated_table, here::here("output", "tables", "table1_coverage_redacted_dose4_by_CKD.rds"), compress = "gz")
 }
