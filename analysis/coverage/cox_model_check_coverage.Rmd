@@ -55,8 +55,6 @@ for (i in 1:length(var_list)) {
   km_plot = ggsurvplot(surv, censor = FALSE, xlim = c(250,450))[[1]]
   assign(paste0("km_", i), km_plot) # saves plot_i to environment
   
-  log_pli = ggsurvplot(km_home, fun = "cloglog")
-
   # generate survival table for univariate model
   survival.table <- broom::tidy(surv) %>% 
     filter(n.event > 0) %>% 
