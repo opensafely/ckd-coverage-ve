@@ -202,7 +202,6 @@ if (outcome_label=="dose2") {
 }
 
 
-
 ## Set CKD levels for stratified table
 ckd_levels = c( "CKD3a (D-T-)", "CKD3b (D-T-)",  "CKD4-5 (D-T-)", "CKD (T+)", "CKD (D+T-)")
 
