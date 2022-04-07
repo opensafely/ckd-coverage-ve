@@ -6,7 +6,6 @@ output: html_document
 
 ### Dose 3 models (primary outcome)
 
-#### Summary of univariate model without stratification
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 
@@ -37,50 +36,244 @@ var_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "
               "prior_covid", "immunosuppression", "mod_sev_obesity", "diabetes", "any_resp_dis", "chd", "cld", "asplenia", "cancer",
               "haem_cancer", "non_kidney_transplant", "chronic_neuro_dis_inc_sig_learn_dis","sev_mental_ill",
               "cev_other") 
+
+## Set subset of variables to be used in partially adjusted models
+adj_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "rural_urban_group",
+              "sex", "ethnicity", "imd", "prior_covid")
 ```
 
-#### Visualisation of KM for each coveriate in turn
+#### Visualisation of KM curves for each covariate in turn
 ```{r, fig.width=10, fig.height=35}
 for (i in 1:length(var_list)) {
+  # assign variable
+  data_cox$var = data_cox[,var_list[i]]
+  
+  # create survival object
   surv = survfit(as.formula(paste0("Surv(follow_up_time, covid_vax) ~",var_list[i])), data = data_cox)
-  plot = ggsurvplot(surv)[[1]]
-  assign(paste0("p_", i), plot) # saves to environment
+  
+  # generate km plot
+  km_plot = ggsurvplot(surv, censor = FALSE, xlim = c(250,450))[[1]]
+  assign(paste0("km_", i), km_plot) # saves plot_i to environment
+  
+  log_pli = ggsurvplot(km_home, fun = "cloglog")
+
+  # generate survival table for univariate model
+  survival.table <- broom::tidy(surv) %>% 
+    filter(n.event > 0) %>% 
+    group_by(strata) %>%
+    mutate(hazard = n.event / (n.risk * (lead(time) - time)),
+           log_cum_hazard = log(cumsum(hazard)))
+  
+  # create log plot
+  log_plot = ggplot() +
+    geom_step(data = survival.table, aes(x = log(time), y = log_cum_hazard, col = strata)) +
+    labs(x = "log(time)", y = "log(-log(survival))") +
+    theme_classic() +
+    guides(col = guide_legend(nrow = 1)) + 
+    theme(legend.position = "top" ,legend.background = element_rect(fill = "white", colour = NA),
+          plot.title = element_text(hjust = 0.5), legend.title = element_blank())
+    assign(paste0("log_", i), log_plot) # saves plot_i to environment
 }
 
 plot_grid(
-  p_1, p_2, p_3, p_4, p_5, p_6, p_7, p_8, p_9, p_10,
-  p_11, p_12, p_13, p_14, p_15, p_16, p_17, p_18, p_19, p_20,
-  p_21, p_22, p_23, p_24, p_25,
+  km_1, km_2, km_3, km_4, km_5, km_6, km_7, km_8, km_9, km_10,
+  km_11, km_12, km_13, km_14, km_15, km_16, km_17, km_18, km_19, km_20,
+  km_21, km_22, km_23, km_24, km_25,
   ncol=2
 )
 ```
 
-####
+####  Log cumulative hazard plot for each variable in turn
+```{r, fig.width=10, fig.height=35}
+plot_grid(
+  log_1, log_2, log_3, log_4, log_5, log_6, log_7, log_8, log_9, log_10,
+  log_11, log_12, log_13, log_14, log_15, log_16, log_17, log_18, log_19, log_20,
+  log_21, log_22, log_23, log_24, log_25,
+  ncol=2
+)
+```
 
+#### Test for proportional hazards (partially/fully adjusted models)
 ```{r}
-cox_full <- coxph(as.formula(paste0("Surv(follow_up_time, covid_vax) ~", paste(var_list, collapse="+"),"+ strata(region)")),
-                    data = data_cox)
+############################################################################
+## Update of ggcoxzph function to address confidence interval plotting issue
+## https://github.com/kassambara/survminer/issues/444
+############################################################################
+
+ggcoxzph_mod = function (fit, resid = TRUE, se = TRUE, df = 4, nsmo = 40, var, 
+    point.col = "red", point.size = 1, point.shape = 19, point.alpha = 1, 
+    caption = NULL, ggtheme = theme_survminer(), ...) 
+{
+    x <- fit
+    if (!methods::is(x, "cox.zph")) 
+        stop("Can't handle an object of class ", class(x))
+    xx <- x$x
+    yy <- x$y
+    d <- nrow(yy)
+    df <- max(df)
+    nvar <- ncol(yy)
+    pred.x <- seq(from = min(xx), to = max(xx), length = nsmo)
+    temp <- c(pred.x, xx)
+    lmat <- splines::ns(temp, df = df, intercept = TRUE)
+    pmat <- lmat[1:nsmo, ]
+    xmat <- lmat[-(1:nsmo), ]
+    qmat <- qr(xmat)
+    if (qmat$rank < df) 
+        stop("Spline fit is singular, try a smaller degrees of freedom")
+    if (se) {
+        bk <- backsolve(qmat$qr[1:df, 1:df], diag(df))
+        xtx <- bk %*% t(bk)
+        seval <- ((pmat %*% xtx) * pmat) %*% rep(1, df) # d * removed prior to first bracket
+    }
+    ylab <- paste("Beta(t)") # Cut dimnames(yy)[[2]] from paste0
+    if (missing(var)) 
+        var <- 1:nvar
+    else {
+        if (is.character(var)) 
+            var <- match(var, dimnames(yy)[[2]])
+        if (any(is.na(var)) || max(var) > nvar || min(var) < 
+            1) 
+            stop("Invalid variable requested")
+    }
+    if (x$transform == "log") {
+        xx <- exp(xx)
+        pred.x <- exp(pred.x)
+    }
+    else if (x$transform != "identity") {
+        xtime <- as.numeric(dimnames(yy)[[1]])
+        indx <- !duplicated(xx)
+        apr1 <- approx(xx[indx], xtime[indx], seq(min(xx), max(xx), 
+            length = 17)[2 * (1:8)])
+        temp <- signif(apr1$y, 2)
+        apr2 <- approx(xtime[indx], xx[indx], temp)
+        xaxisval <- apr2$y
+        xaxislab <- rep("", 8)
+        for (i in 1:8) xaxislab[i] <- format(temp[i])
+    }
+    plots <- list()
+    plots <- lapply(var, function(i) {
+        invisible(pval <- round(x$table[i, 3], 4))
+        gplot <- ggplot() + labs(title = paste0(dimnames(yy)[[2]], ", p: ", # Cut Schoenfeld Individual Test to shorten title, replced with var name
+            pval)) + ggtheme + 
+            theme(axis.text = element_text(size=10), axis.title = element_text(size=10)) # added to reduce font size of axis text
+        y <- yy[, i]
+        yhat <- as.vector(pmat %*% qr.coef(qmat, y))
+        if (resid) 
+            yr <- range(yhat, y)
+        else yr <- range(yhat)
+        if (se) {
+            temp <- as.vector(2 * sqrt(x$var[i, i] * seval))
+            yup <- yhat + temp
+            ylow <- yhat - temp
+            yr <- range(yr, yup, ylow)
+        }
+        if (x$transform == "identity") {
+            gplot <- gplot + geom_line(aes(x = pred.x, y = yhat)) + 
+                xlab("Time") + ylab(ylab[i]) + ylim(yr)
+        }
+        else if (x$transform == "log") {
+            gplot <- gplot + geom_line(aes(x = log(pred.x), y = yhat)) + 
+                xlab("Time") + ylab(ylab[i]) + ylim(yr)
+        }
+        else {
+            gplot <- gplot + geom_line(aes(x = pred.x, y = yhat)) + 
+                xlab("Time") + ylab(ylab[i]) + scale_x_continuous(breaks = xaxisval, 
+                labels = xaxislab) + ylim(yr)
+        }
+        if (resid) 
+            gplot <- gplot + geom_point(aes(x = xx, y = y), col = point.col, 
+                shape = point.shape, size = point.size, alpha = point.alpha)
+        if (se) {
+            gplot <- gplot + geom_line(aes(x = pred.x, y = yup), 
+                lty = "dashed") + geom_line(aes(x = pred.x, y = ylow), 
+                lty = "dashed")
+        }
+        ggpubr::ggpar(gplot, ...)
+    })
+    names(plots) <- var
+    class(plots) <- c("ggcoxzph", "ggsurv", "list")
+    if ("GLOBAL" %in% rownames(x$table)) 
+        global_p <- x$table["GLOBAL", 3]
+    else global_p <- NULL
+    attr(plots, "global_pval") <- global_p
+    attr(plots, "caption") <- caption
+    plots
+}
+############################################################################
+############################################################################
+
+## Fit fully adjusted model
+cox_full <- coxph(as.formula(paste0("Surv(follow_up_time, covid_vax) ~", paste(var_list, collapse="+"),"+ strata(region)")),data = data_cox)
+
+## Run full cox.zph test
 test.ph = cox.zph(cox_full)
-test.ph
-```
-#### Schoenfeld residuals (ggplot)
-```{r, fig.width=8, fig.height=30}
+tab = data.frame(test.ph$table)
+names(tab) = paste0(names(tab),"_full")
+
+## Create variables to fill with results from partially adjusted models
+tab$chisq_partial = NA
+tab$df_partial = NA
+tab$p_partial = NA
+
+## Fit partially adjusted models in loop and extract proportional test results
 for (i in 1:length(var_list)) {
-  plot = ggcoxzph(test.ph, var=var_list[i])[[1]]
-  assign(paste0("p_", i), plot) # saves to environment
+  # Create residual plot for variable in question - fully adjusted model
+  resid_full = ggcoxzph_mod(test.ph, var=var_list[i], point.alpha=0.005)[[1]]
+  assign(paste0("res_f_", i), resid_full) # saves to environment
+  
+  # Fit partially adjusted model
+  var = var_list[i]
+  if (var %in% adj_list) { final_list = adj_list } else { final_list = c(var, adj_list) }
+  
+  # Fit model and extract output
+  cox_partial = coxph(as.formula(paste0("Surv(follow_up_time, covid_vax) ~",paste(final_list, collapse="+"),"+ strata(region)")), 
+                        data = data_cox)
+  test.ph_partial = cox.zph(cox_partial)
+  
+  tab_partial = data.frame(test.ph_partial$table)
+  tab$chisq_partial[i] = tab_partial[var,"chisq"]
+  tab$df_partial[i] = tab_partial[var,"df"]
+  tab$p_partial[i] = tab_partial[var,"p"]
+  
+  # Create residual plot for variable in question - partially adjusted model
+  resid_partial = ggcoxzph_mod(test.ph_partial, var=var_list[i], point.alpha=0.005)[[1]]
+  assign(paste0("res_p_", i), resid_partial) # saves to environment
 }
+```
+
+#### Schoenfeld residuals - partially adjusted models (left) and fully adjusted models (right)
+```{r, fig.width=8, fig.height=60}
+## Create residual plots for partially adjusted models
 plot_grid(
-  p_1, p_2, p_3, p_4, p_5, p_6, p_7, p_8, p_9, p_10,
-  p_11, p_12, p_13, p_14, p_15, p_16, p_17, p_18, p_19, p_20,
-  p_21, p_22, p_23, p_24, p_25,
+  res_p_1, res_f_1,
+  res_p_2, res_f_2,
+  res_p_3, res_f_3,
+  res_p_4, res_f_4,
+  res_p_5, res_f_5,
+  res_p_6, res_f_6,
+  res_p_7, res_f_7,
+  res_p_8, res_f_8,
+  res_p_9, res_f_9,
+  res_p_10, res_f_10,
+  res_p_11, res_f_11,
+  res_p_12, res_f_12,
+  res_p_13, res_f_13,
+  res_p_14, res_f_14,
+  res_p_15, res_f_15,
+  res_p_16, res_f_16,
+  res_p_17, res_f_17,
+  res_p_18, res_f_18,
+  res_p_19, res_f_19,
+  res_p_20, res_f_20,
+  res_p_21, res_f_21,
+  res_p_22, res_f_22,
+  res_p_23, res_f_23,
+  res_p_24, res_f_24,
+  res_p_25, res_f_25,
   ncol=2
 )
 ```
 
-#### Schoenfeld residuals (base plot)
-```{r}
-plot(test.ph)
-```
 
 
 
