@@ -65,6 +65,7 @@ for (i in 1:length(var_list)) {
   # create log plot
   log_plot = ggplot() +
     geom_step(data = survival.table, aes(x = log(time), y = log_cum_hazard, col = strata)) +
+    xlim(log(250),log(450)) +
     labs(x = "log(time)", y = "log(-log(survival))") +
     theme_classic() +
     guides(col = guide_legend(nrow = 1)) + 
@@ -123,7 +124,7 @@ ggcoxzph_mod = function (fit, resid = TRUE, se = TRUE, df = 4, nsmo = 40, var,
         xtx <- bk %*% t(bk)
         seval <- ((pmat %*% xtx) * pmat) %*% rep(1, df) # d * removed prior to first bracket
     }
-    ylab <- paste("Beta(t)") # Cut dimnames(yy)[[2]] from paste0
+    ylab <- paste("B(t) for", dimnames(yy)[[2]])
     if (missing(var)) 
         var <- 1:nvar
     else {
@@ -151,9 +152,9 @@ ggcoxzph_mod = function (fit, resid = TRUE, se = TRUE, df = 4, nsmo = 40, var,
     plots <- list()
     plots <- lapply(var, function(i) {
         invisible(pval <- round(x$table[i, 3], 4))
-        gplot <- ggplot() + labs(title = paste0(dimnames(yy)[[2]], ", p: ", # Cut Schoenfeld Individual Test to shorten title, replced with var name
+        gplot <- ggplot() + labs(title = paste0("p: ", 
             pval)) + ggtheme + 
-            theme(axis.text = element_text(size=10), axis.title = element_text(size=10)) # added to reduce font size of axis text
+            theme(axis.text = element_text(size=9), axis.title = element_text(size=9)) # added to reduce font size of axis text
         y <- yy[, i]
         yhat <- as.vector(pmat %*% qr.coef(qmat, y))
         if (resid) 
@@ -237,6 +238,7 @@ for (i in 1:length(var_list)) {
   resid_partial = ggcoxzph_mod(test.ph_partial, var=var_list[i], point.alpha=0.005)[[1]]
   assign(paste0("res_p_", i), resid_partial) # saves to environment
 }
+gt(tab)
 ```
 
 #### Schoenfeld residuals - partially adjusted models (left) and fully adjusted models (right)
