@@ -337,6 +337,7 @@ collated %>%
 <br/>Data for full cohort (censored/uncensored). Any counts of <=100 grouped as 'other'; all counts rounded to nearest 5; any rounded counts <=10 redacted.<br/><br/>  
 
 ```{r, fig.width=8, fig.height=3}
+palette = c("#003c30","#b2182b","#74add1","grey")
 collated$Vaccine = factor(collated$Combination, levels = c("other", "Moderna", "ChAdOx1", "BNT162b2"))
 collated$Dose = str_replace(collated$Group, "Dose ", "")
 
