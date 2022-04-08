@@ -19,6 +19,8 @@ library('reshape2')
 library('kableExtra')
 library('cowplot')
 library('fs')
+library('survival')
+library('survminer')
 
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
@@ -82,7 +84,29 @@ subset(table_1, Group!="Time between doses 1 and 2" & Group!="Time between doses
 ```
 <br/><br/>    
 
-#### Coverage over time
+#### Table 1: Summary of population, stratified by CKD status
+```{r}
+table_1 <- read_rds(here::here("output", "tables", "table1_coverage_redacted_by_CKD.rds"))
+
+## Set factor levels for group
+table_1$Group[table_1$Group=="Other"] = "Risk group"
+
+subset(table_1, Group!="Time between doses 1 and 2" & Group!="Time between doses 2 and 3") %>% 
+   gt(groupname_col = "Group") %>%
+   tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
+   tab_style(
+     style = cell_text(indent = pct(5)),
+     locations = cells_body(columns = "Variable")
+     ) %>%
+   tab_options(table.font.size = pct(95)) %>% #table.width = pct(80) 
+   tab_footnote(
+     footnote = "All counts rounded to nearest 5; any rounded counts <=10 or within <=10 of population total redacted.",
+     locations = cells_column_labels(columns = "Variable")
+   )
+```
+<br/><br/>    
+
+#### Coverage over time (uncensored population)
 ```{r, message=FALSE, fig.width=8, fig.height=8}
 # Create vector of dates between first and last recorded vaccines
 campaign_start <- as_date("2020-12-01")
@@ -170,6 +194,74 @@ plot_grid(g1, g2, ncol=1,  align="v", axis = c("lr"))
 <br/>Numbers rounded to the nearest 10 before plotting.     
 <br/><br/>    
 
+
+#### Coverage over time (1 - Kaplan-Meier)
+```{r, fig.width=8, fig.height=4}
+data_km <- data_cohort %>%
+  mutate(
+    # Start date
+    start_date = as.Date("2020-12-01", format = "%Y-%m-%d"),
+    
+    # End date
+    end_date = as.Date("2022-02-16", format = "%Y-%m-%d"),
+    
+    # Censoring
+    censor_date = pmin(death_date, 
+                       dereg_date, 
+                       end_date, 
+                       na.rm=TRUE),
+    
+    # Follow-up time
+    follow_up_time_dose1 = tte(start_date, vax1_date, censor_date),
+    follow_up_time_dose2 = tte(start_date, vax2_date, censor_date),
+    follow_up_time_dose3 = tte(start_date, vax3_date, censor_date),
+    follow_up_time_dose4 = tte(start_date, vax4_date, censor_date),
+
+    # COVID vaccination: 1 of vaccinated before end date, 0 otherwise
+    covid_vax_dose1 = dplyr::if_else((vax1_date>censor_date) | is.na(vax1_date), 0, 1),
+    covid_vax_dose2 = dplyr::if_else((vax2_date>censor_date) | is.na(vax2_date), 0, 1),
+    covid_vax_dose3 = dplyr::if_else((vax3_date>censor_date) | is.na(vax3_date), 0, 1),
+    covid_vax_dose4 = dplyr::if_else((vax4_date>censor_date) | is.na(vax4_date), 0, 1),
+    
+    # Uncensored pre cut-off
+    uncensored_at_cut_off = if_else(
+                              (is.na(death_date) & is.na(dereg_date)) | 
+                              (!is.na(death_date) & death_date>end_date) | 
+                              (!is.na(dereg_date) & dereg_date>end_date), 1, 0)
+)
+
+
+# Dose 1
+decimal_threshold = 10/nrow(data_km)
+surv_table = function(dose, dosenum) {
+  surv = survfit(as.formula(paste0("Surv(follow_up_time_",dose,", covid_vax_",dose,") ~ 1")), data = data_km) %>% 
+    broom::tidy() %>% 
+    filter(estimate > 0) %>%
+    mutate(
+      estimate_rounded = pmin(1,plyr::round_any(estimate, decimal_threshold), na.rm=TRUE),
+      cum.in_rounded = 1 - estimate,
+      dose = dosenum,
+      date = as.Date("2020-12-01", format = "%Y-%m-%d")+time
+    ) %>%
+    select(time, n.risk, n.censor, cum.in_rounded, dose, date) %>%
+    filter(time>=0)
+}
+km_collated = rbind(
+  surv_table("dose1", 1),
+  surv_table("dose2", 2),
+  surv_table("dose3", 3),
+  surv_table("dose4", 4)
+)
+
+palette = c("#3B9AB2","#78B7C5","#EBCC2A","#E1AF00","#B40F20")
+ggplot(km_collated, aes(x = date, y = cum.in_rounded, colour = factor(dose))) + geom_line() +
+          theme_bw()+ scale_colour_manual(values = palette[c(1,2,4,5)]) +
+          theme(legend.position="right") + 
+  ylim(0,1) + ylab("Vaccination probability") + labs(colour="Dose") +
+  ggtitle("Any vaccine") +
+  theme(legend.title = element_text(size=14), legend.text = element_text(size=12), axis.text = element_text(size=14), axis.title = element_text(size=14)) 
+```
+
 #### Coverage as of 16-Feb-2022
 ```{r}
 ## Calculate coverage in total and uncensored populations
@@ -189,6 +281,11 @@ collated = data.frame(
 names(collated) = c("Dose", "N (total)", "n vaccinated (total)", "Coverage (total), %",
                             "N (uncensored)", "n vaccinated (uncensored)", "Coverage (uncensored), %")
 
+collated$`Cumulative probability` = c(round(max(subset(km_collated, dose==1)$cum.in_rounded)*100,1),
+                      round(max(subset(km_collated, dose==2)$cum.in_rounded)*100,1),
+                      round(max(subset(km_collated, dose==3)$cum.in_rounded)*100,1),
+                      round(max(subset(km_collated, dose==4)$cum.in_rounded)*100,1))
+
 ## Generate table
 gt(collated) %>%
    tab_spanner(
@@ -198,6 +295,10 @@ gt(collated) %>%
     tab_spanner(
     label = "uncensored",
     columns = c("N (uncensored)", "n vaccinated (uncensored)", "Coverage (uncensored), %")
+  ) %>%
+    tab_spanner(
+    label = "KM",
+    columns = c("Cumulative probability")
   )
 ```
 <br/>Dose 4 calculations restricted to individuals with a history of immunosuppression, haematologic cancer, or transplant on the index date (01-Dec-2020). Uncensored analyses restricted to individauls alive and registered throughout follow-up (01-Dec-2020 to 16-Feb-2022).<br/><br/>  
