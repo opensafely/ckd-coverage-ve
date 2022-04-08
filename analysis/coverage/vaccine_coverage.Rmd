@@ -240,7 +240,7 @@ surv_table = function(dose, dosenum) {
     mutate(
       estimate_rounded = pmin(1,plyr::round_any(estimate, decimal_threshold), na.rm=TRUE),
       cum.in_rounded = 1 - estimate,
-      dose = dosenum,
+      dose = paste0("dose ",dosenum),
       date = as.Date("2020-12-01", format = "%Y-%m-%d")+time
     ) %>%
     select(time, n.risk, n.censor, cum.in_rounded, dose, date) %>%
@@ -257,7 +257,7 @@ palette = c("#3B9AB2","#78B7C5","#EBCC2A","#E1AF00","#B40F20")
 ggplot(km_collated, aes(x = date, y = cum.in_rounded, colour = factor(dose))) + geom_line() +
           theme_bw()+ scale_colour_manual(values = palette[c(1,2,4,5)]) +
           theme(legend.position="right") + 
-  ylim(0,1) + ylab("Vaccination probability") + labs(colour="Dose") +
+  ylim(0,1) + ylab("Vaccination probability") + labs(colour="dose") +
   ggtitle("Any vaccine") +
   theme(legend.title = element_text(size=14), legend.text = element_text(size=12), axis.text = element_text(size=14), axis.title = element_text(size=14)) 
 ```
@@ -266,25 +266,27 @@ ggplot(km_collated, aes(x = date, y = cum.in_rounded, colour = factor(dose))) + 
 ```{r}
 ## Calculate coverage in total and uncensored populations
 collated = data.frame(
-  Dose = c("1", "2", "3", "4"),
-  N_cohort_total = c(rep(rounded_n, 3), rounded_n_dose4),
+  Dose = c("1", "2", "3", "4", "4 (subset)"),
+  N_cohort_total = c(rep(rounded_n, 4), rounded_n_dose4),
   N_vaccinated_total = c(sum(data_cohort$vax1_date<=end_date, na.rm=T), sum(data_cohort$vax2_date<=end_date, na.rm=T), 
-                         sum(data_cohort$vax3_date<=end_date, na.rm=T), sum(data_dose4$vax4_date<=end_date, na.rm=T))
+                         sum(data_cohort$vax3_date<=end_date, na.rm=T), sum(data_cohort$vax4_date<=end_date, na.rm=T),
+                         sum(data_dose4$vax4_date<=end_date, na.rm=T))
 ) %>%
   mutate(
     coverage_total = round(N_vaccinated_total/N_cohort_total*100,1),
-    N_cohort_uncensored = c(rep(rounded_n_uncensored, 3), rounded_n_dose4_uncensored),
+    N_cohort_uncensored = c(rep(rounded_n_uncensored, 4), rounded_n_dose4_uncensored),
     N_vaccinated_uncensored = c(sum(data_uncensored$vax1_date<=end_date, na.rm=T), sum(data_uncensored$vax2_date<=end_date, na.rm=T), 
-                                sum(data_uncensored$vax3_date<=end_date, na.rm=T), sum(data_uncensored$vax4_date<=end_date, na.rm=T)),
+                                sum(data_uncensored$vax3_date<=end_date, na.rm=T), sum(data_uncensored$vax4_date<=end_date, na.rm=T),
+                                sum(data_dose4_uncensored$vax4_date<=end_date, na.rm=T)),
     coverage_uncensored = round(N_vaccinated_uncensored/N_cohort_uncensored*100,1)
   )
 names(collated) = c("Dose", "N (total)", "n vaccinated (total)", "Coverage (total), %",
                             "N (uncensored)", "n vaccinated (uncensored)", "Coverage (uncensored), %")
 
-collated$`Cumulative probability` = c(round(max(subset(km_collated, dose==1)$cum.in_rounded)*100,1),
-                      round(max(subset(km_collated, dose==2)$cum.in_rounded)*100,1),
-                      round(max(subset(km_collated, dose==3)$cum.in_rounded)*100,1),
-                      round(max(subset(km_collated, dose==4)$cum.in_rounded)*100,1))
+collated$`Cumulative probability` = c(round(max(subset(km_collated, dose=="dose 1")$cum.in_rounded)*100,1),
+                      round(max(subset(km_collated, dose=="dose 2")$cum.in_rounded)*100,1),
+                      round(max(subset(km_collated, dose=="dose 3")$cum.in_rounded)*100,1),
+                      round(max(subset(km_collated, dose=="dose 4")$cum.in_rounded)*100,1), "-")
 
 ## Generate table
 gt(collated) %>%
@@ -301,7 +303,7 @@ gt(collated) %>%
     columns = c("Cumulative probability")
   )
 ```
-<br/>Dose 4 calculations restricted to individuals with a history of immunosuppression, haematologic cancer, or transplant on the index date (01-Dec-2020). Uncensored analyses restricted to individauls alive and registered throughout follow-up (01-Dec-2020 to 16-Feb-2022).<br/><br/>  
+<br/>Dose 4 subset calculations restricted to individuals with a history of immunosuppression, haematologic cancer, or transplant on the index date (01-Dec-2020). Uncensored analyses restricted to individauls alive and registered throughout follow-up (01-Dec-2020 to 16-Feb-2022).<br/><br/>  
 
 #### Product profile by dose
 ```{r}
