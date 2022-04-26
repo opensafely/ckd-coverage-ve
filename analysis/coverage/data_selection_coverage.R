@@ -37,7 +37,7 @@ data_criteria <- data_processed %>%
     # Age + CKD
     has_age = !is.na(age) & age >=16 & age<120,
     has_ckd_any = ckd_inclusion_any==1,
-    has_ckd_strict_or_3to5 = ckd_inclusion_incentive==1,
+    has_ckd_strict_or_3to5 = ckd_inclusion_strict_or_3to5==1,
     has_ckd_strict = ckd_inclusion_strict==1,
     
     # Demography
