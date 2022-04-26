@@ -21,7 +21,10 @@ source(here::here("analysis", "functions.R"))
 fs::dir_create(here::here("output", "tables"))
 
 ## Import processed data ----
-data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))
+data_processed <- read_rds(here::here("output", "data", "data_processed.rds")) %>%
+  mutate(
+    ckd_inclusion_strict_or_3to5 = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
+  )
 
 # Define selection criteria ----
 data_criteria <- data_processed %>%
@@ -34,6 +37,7 @@ data_criteria <- data_processed %>%
     # Age + CKD
     has_age = !is.na(age) & age >=16 & age<120,
     has_ckd_any = ckd_inclusion_any==1,
+    has_ckd_strict_or_3to5 = ckd_inclusion_incentive==1,
     has_ckd_strict = ckd_inclusion_strict==1,
     
     # Demography
@@ -56,7 +60,7 @@ data_criteria <- data_processed %>%
     registered_throughout = is.na(dereg_date),
     
     include = (
-      has_age & has_ckd_any & has_ckd_strict & 
+      has_age & has_ckd_any & has_ckd_strict_or_3to5 & has_ckd_strict & 
       has_sex & has_imd & has_ethnicity & has_region &
         has_max_5_vax & valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34
     ),
@@ -107,15 +111,16 @@ data_flowchart <- data_criteria %>%
   transmute(
     c0 = study_definition,
     c1 = c0 & has_age & has_ckd_any,
-    c2 = c1 & has_ckd_strict,
-    c3 = c2 & (has_sex & has_imd & has_ethnicity & has_region),
-    c4 = c3 & (has_max_5_vax),
-    c5 = c4 & (valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34),
+    c2 = c1 & has_age & has_ckd_strict_or_3to5,
+    c3 = c2 & has_ckd_strict,
+    c4 = c3 & (has_sex & has_imd & has_ethnicity & has_region),
+    c5 = c4 & (has_max_5_vax),
+    c6 = c5 & (valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34),
     # Dose 4 analysis cohort
-    c6 = c5 & has_immunosuppression,
+    c7 = c6 & has_immunosuppression,
     # Logistic regression analysis cohort
-    c7 = c5 & alive_throughout,
-    c8 = c7 & registered_throughout
+    c8 = c6 & alive_throughout,
+    c9 = c8 & registered_throughout
   ) %>%
   summarise(
     across(.fns=sum)
@@ -134,13 +139,14 @@ data_flowchart <- data_criteria %>%
     criteria = fct_case_when(
       crit == "c0" ~ "Aged 16+ with serum creatinine record in 2y before 01 Dec 2020, or dialysis code, kidney transplant code, CKD diagnostic code, or CKD3-5 code",
       crit == "c1" ~ "  with eGFR<60 or any CKD-related code (diagnostic/dialysis/kidney transplant)", 
-      crit == "c2" ~ "  with eGFR<60 or dialysis/kidney transplant code",
-      crit == "c3" ~ "  with no missing demographic information",
-      crit == "c4" ~ "  with maximum of 5 doses recorded up to 16 Feb 2022",
-      crit == "c5" ~ "  with no vaccines administered at an interval of <14 days (primary analysis subset)",
-      crit == "c6" ~ "  with history of immunosuppression/transplant/haematologic cancer (dose 4 analysis cohort only)",
-      crit == "c7" ~ "  alive throughout follow-up period (logistic regression sensitivity subset only)",
-      crit == "c8" ~ "  registered throughout follow-up period (logistic regression sensitivity subset only)",
+      crit == "c2" ~ "  with eGFR<60 or CDK3-5/dialysis/kidney transplant code", 
+      crit == "c3" ~ "  with eGFR<60 or dialysis/kidney transplant code",
+      crit == "c4" ~ "  with no missing demographic information",
+      crit == "c5" ~ "  with maximum of 5 doses recorded up to 16 Feb 2022",
+      crit == "c6" ~ "  with no vaccines administered at an interval of <14 days (primary analysis subset)",
+      crit == "c7" ~ "  with history of immunosuppression/transplant/haematologic cancer (dose 4 analysis cohort only)",
+      crit == "c8" ~ "  alive throughout follow-up period (logistic regression sensitivity subset only)",
+      crit == "c9" ~ "  registered throughout follow-up period (logistic regression sensitivity subset only)",
       TRUE ~ NA_character_
     )
   )
