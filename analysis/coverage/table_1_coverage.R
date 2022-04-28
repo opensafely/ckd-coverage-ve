@@ -23,10 +23,10 @@ args <- commandArgs(trailingOnly=TRUE)
 
 ## Set input and output pathways for matched/unmatched data - default is unmatched
 if(length(args)==0) {
-  outcome_label = "dose2"
+  outcome_label = "dose3"
 } else {
-  if (args[[1]]=="dose2") {
-    outcome_label = "dose2"
+  if (args[[1]]=="dose3") {
+    outcome_label = "dose3"
   } else if (args[[1]]=="dose4") {
     outcome_label = "dose4"
   } else {
@@ -39,7 +39,7 @@ if(length(args)==0) {
 fs::dir_create(here::here("output", "tables"))
 
 ## Import data
-if (outcome_label=="dose2") {
+if (outcome_label=="dose3") {
   data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
 } else {
   data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage_dose4.rds"))
@@ -90,7 +90,7 @@ counts <- data_cohort %>%
          ## Clinical risk group (CKD-related)
          ckd_5cat,
          ckd_7cat,
-         #removed: dialysis, kidney_transplant, chronic_kidney_disease_stages_3_5,
+         #removed: dialysis, kidney_transplant, chronic_kidney_disease_stages_3_5
          
          ## Clinical risk group (non-CKD-related)
          immunosuppression, 
@@ -106,14 +106,15 @@ counts <- data_cohort %>%
          chronic_neuro_dis_inc_sig_learn_dis,
          sev_mental_ill,
          cev_other,
-         #removed: smoking_status, asthma, bpcat,
+         #removed: smoking_status, asthma, bpcat
          
          ## Other descriptors of interest
          region,
          jcvi_group,
-         any_ckd_flag,
+         chronic_kidney_disease_stages_3_5,
          time_between_vaccinations1_2,
          time_between_vaccinations2_3
+         #removed: any_ckd_flag
          ) 
 
 ## Function to clean table names
@@ -138,7 +139,7 @@ clean_table_names = function(input_table) {
   input_table$Variable[input_table$Variable=="chronic_neuro_dis_inc_sig_learn_dis"] = "Chronic neurological disease (inc. learning disability)"
   input_table$Variable[input_table$Variable=="sev_mental_ill"] = "Severe mental illness"
   input_table$Variable[input_table$Variable=="cev_other"] = "Clinically extremely vulnerable (other)"
-  input_table$Variable[input_table$Variable=="any_ckd_flag"] = "CKD diagnostic code"
+  input_table$Variable[input_table$Variable=="chronic_kidney_disease_stages_3_5"] = "CKD3-5 diagnostic code"
   
   # Relabel groups for plotting
   # Demography
@@ -193,7 +194,7 @@ table1_redacted$Percent[(table1_redacted$Count>0 & table1_redacted$Count<=10) | 
 table1_redacted <- table1_redacted %>% select(-Non_Count)
 
 # Save as html ----
-if (outcome_label=="dose2") {
+if (outcome_label=="dose3") {
   gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_coverage_redacted.html"))
   write_rds(table1_redacted, here::here("output", "tables", "table1_coverage_redacted.rds"), compress = "gz")
 } else {
@@ -248,7 +249,7 @@ for (i in 1:length(ckd_levels)) {
 }
 
 # Save as html ----
-if (outcome_label=="dose2") {
+if (outcome_label=="dose3") {
   gt::gtsave(gt(collated_table), here::here("output","tables", "table1_coverage_redacted_by_CKD.html"))
   write_rds(collated_table, here::here("output", "tables", "table1_coverage_redacted_by_CKD.rds"), compress = "gz")
 } else {

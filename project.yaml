@@ -32,15 +32,13 @@ actions:
     outputs:
       highly_sensitive:
         data1: output/data/data_cohort_coverage.rds
-        csv1: output/data/data_cohort_coverage.csv
+        csv: output/data/data_cohort_coverage.csv
         data2: output/data/data_cohort_coverage_dose4.rds
-        csv2: output/data/data_cohort_coverage_dose4.csv
         data3: output/data/data_cohort_coverage_logistic.rds
-        csv3: output/data/data_cohort_coverage_logistic.csv
       moderately_sensitive:
         csv: output/tables/flowchart_coverage.csv
 
- # Data properties ----      
+  #Data properties ----
   #data_properties:
   #  run: r:latest analysis/data_properties.R output/data/data_cohort_coverage.rds output/data_properties
   #  needs: [data_selection_coverage]
@@ -50,7 +48,7 @@ actions:
         
   # Table 1 primary cohort----
   table_1_coverage:
-    run: r:latest analysis/coverage/table_1_coverage.R dose2
+    run: r:latest analysis/coverage/table_1_coverage.R dose3
     needs: [data_selection_coverage]
     outputs:
       highly_sensitive:
@@ -61,27 +59,16 @@ actions:
         table2: output/tables/table1_coverage_redacted_by_CKD.html
 
   # Table 1 dose 4 cohort ----
-  table_1_coverage_dose4:
-    run: r:latest analysis/coverage/table_1_coverage.R dose4
-    needs: [data_selection_coverage]
-    outputs:
-      highly_sensitive:
-        data1: output/tables/table1_coverage_redacted_dose4.rds
-        data2: output/tables/table1_coverage_redacted_dose4_by_CKD.rds
-      moderately_sensitive:
-        table1: output/tables/table1_coverage_redacted_dose4.html
-        table2: output/tables/table1_coverage_redacted_dose4_by_CKD.html
-
-  # Cox models - dose-2 coverage ----
-  cox_model_dose2:
-    run: r:latest analysis/coverage/cox_model.R dose2
-    needs: [data_selection_coverage]
-    outputs:
-      highly_sensitive:
-        data1: output/data/data_cox_coverage_dose2*.rds
-        data2: output/model/mod_strat_coxph_redacted_dose2*.rds
-      moderately_sensitive:
-        csv: output/model/mod_strat_coxph_redacted_dose2*.csv
+  #table_1_coverage_dose4:
+  #  run: r:latest analysis/coverage/table_1_coverage.R dose4
+  #  needs: [data_selection_coverage]
+  #  outputs:
+  #    highly_sensitive:
+  #      data1: output/tables/table1_coverage_redacted_dose4.rds
+  #      data2: output/tables/table1_coverage_redacted_dose4_by_CKD.rds
+  #    moderately_sensitive:
+  #      table1: output/tables/table1_coverage_redacted_dose4.html
+  #      table2: output/tables/table1_coverage_redacted_dose4_by_CKD.html
         
   # Cox models - dose-3 coverage ----
   cox_model_dose3:
@@ -116,7 +103,7 @@ actions:
       moderately_sensitive:
         csv: output/model/mod_strat_coxph_redacted_dose4subset*.csv
         
-  # Logistic models - dose-2 coverage ----
+  # Logistic models - dose-3 coverage ----
   logistic_model:
     run: r:latest analysis/coverage/logistic_model.R
     needs: [data_selection_coverage]
@@ -130,7 +117,7 @@ actions:
   # Coverage summaries ----
   vaccine_coverage:
     run: r:latest -e 'rmarkdown::render("analysis/coverage/vaccine_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [data_selection_coverage, table_1_coverage, cox_model_dose2, cox_model_dose3, cox_model_dose4full, cox_model_dose4subset, logistic_model]
+    needs: [data_selection_coverage, table_1_coverage, cox_model_dose3, cox_model_dose4full, cox_model_dose4subset, logistic_model]
     outputs:
       moderately_sensitive:
         html: output/markdown/vaccine_coverage.html

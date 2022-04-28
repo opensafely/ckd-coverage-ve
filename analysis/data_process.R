@@ -192,6 +192,12 @@ data_extract <- data_extract %>%
   # Drop extra variables
   select(-c(min, max, SCR_adj))
 
+# Cross-tabulate creatinine measuresments with corresponding date recordings
+print("Cross-tabulate !is.na for creatinine vs creatinine_date")
+print(table(!is.na(data_extract$creatinine), !is.na(data_extract$creatinine_date)))
+print("Cross-tabulate !is.na for creatinine vs age_creatinine")
+print(table(!is.na(data_extract$creatinine), !is.na(data_extract$age_creatinine)))
+
 # Replace NAs with 'No CKD' in new categories
 data_extract$egfr_cat5[is.na(data_extract$egfr_cat5)] = "No CKD"
 data_extract$egfr_cat3[is.na(data_extract$egfr_cat3)] = "No CKD"
@@ -204,6 +210,7 @@ data_processed <- data_extract %>%
   mutate(
     # CKD inclusion criteria
     ckd_inclusion_any = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_diagnostic==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
+    ckd_inclusion_strict_or_3to5 = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
     ckd_inclusion_strict = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1, 1, 0),
     any_ckd_flag = ifelse(chronic_kidney_disease_diagnostic==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
     
@@ -249,7 +256,7 @@ data_processed <- data_extract %>%
     
     # https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1007737/Greenbook_chapter_14a_30July2021.pdf#page=12
     jcvi_group = fct_case_when(
-      care_home==1 ~ "1 (care home residents/staff)",
+      care_home==1 ~ "1 (care home resident)",
       care_home==0 & (age>=80 | hscworker==1) ~ "2 (80+ or health/social care worker)",
       care_home==0 & (age>=75 & age<80) ~ "3 (75+)",
       care_home==0 & ((age>=70 & age<75) | (cev==1 & age>=16 & age<70)) ~ "4 (70+ or clinically extremely vulnerable)",
@@ -264,7 +271,7 @@ data_processed <- data_extract %>%
       TRUE ~ NA_character_
     ),
     
-    # obesity
+    # Obesity
     obesity = ifelse(bmi == "Not obese",0,1),
     mod_sev_obesity = ifelse(bmi == "Obese II (35-39.9)" | bmi == "Obese III (40+)", 1, 0),
     
@@ -351,7 +358,9 @@ data_processed <- data_extract %>%
       (any_resp_dis) +
       (chd) +
       (cld) +
-      (asplenia),
+      (asplenia) +
+      (cancer) +
+      (haem_cancer),
     multimorb = cut(multimorb, breaks = c(0, 1, 2, Inf), labels=c("0", "1", "2+"), right=FALSE),
     
     # Prior COVID - index
@@ -496,7 +505,7 @@ data_processed_updated <- data_processed %>%
     tbv3_4 = as.numeric(vax4_date - vax3_date) 
 
   ) %>%
-  # Remove unneccessary variables including overall and product-specific dates (now replaced by vax{N}_date)
+  # Remove unnecessary variables including overall and product-specific dates (now replaced by vax{N}_date)
   select(
     -starts_with(c("covid_vax_", "pfizer_date_", "az_date_", "moderna_date_"))
   )

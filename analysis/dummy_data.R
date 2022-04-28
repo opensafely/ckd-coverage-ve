@@ -27,7 +27,7 @@ end_date <- date("2022-02-16")
 # set distribution of CKD groups
 data_processed$ckd_7cat <- rcat(n=nsamples, c("CKD3a (D-T-)", "CKD3b (D-T-)", "CKD4 (D-T-)", "CKD5 (D-T-)",
                                               "CKD (D+T-)", "CKD (D-T+)", "CKD (D+T+)"), c(0.60,0.25,0.07,0.02,0.02,0.02,0.02))
-# recalculate CKD5 categories
+# recalculate CKD5 categories based on random assignments above
 data_processed <- data_processed %>%
   mutate(
     ckd_5cat = ckd_7cat,

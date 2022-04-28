@@ -21,10 +21,7 @@ source(here::here("analysis", "functions.R"))
 fs::dir_create(here::here("output", "tables"))
 
 ## Import processed data ----
-data_processed <- read_rds(here::here("output", "data", "data_processed.rds")) %>%
-  mutate(
-    ckd_inclusion_strict_or_3to5 = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
-  )
+data_processed <- read_rds(here::here("output", "data", "data_processed.rds")) 
 
 # Define selection criteria ----
 data_criteria <- data_processed %>%
@@ -79,7 +76,7 @@ data_cohort <- data_criteria %>%
   filter(include) %>%
   select(patient_id) %>%
   left_join(data_processed, by="patient_id") %>%
-  select(-c(ckd_inclusion_any, ckd_inclusion_strict)) %>%
+  select(-c(ckd_inclusion_any, ckd_inclusion_strict_or_3to5, ckd_inclusion_strict)) %>%
   droplevels()
 
 write_rds(data_cohort, here::here("output", "data", "data_cohort_coverage.rds"), compress="gz")
@@ -94,7 +91,6 @@ data_cohort_dose4 <- data_criteria %>%
   droplevels()
 
 write_rds(data_cohort_dose4, here::here("output", "data", "data_cohort_coverage_dose4.rds"), compress="gz")
-write_csv(data_cohort_dose4, here::here("output", "data", "data_cohort_coverage_dose4.csv"))
 
 ## Define data cohort for logistic regression (sensitivity analyses)
 data_cohort_logistic <- data_criteria %>%
@@ -105,7 +101,6 @@ data_cohort_logistic <- data_criteria %>%
   droplevels()
 
 write_rds(data_cohort_logistic, here::here("output", "data", "data_cohort_coverage_logistic.rds"), compress="gz")
-write_csv(data_cohort_logistic, here::here("output", "data", "data_cohort_coverage_logistic.csv"))
 
 data_flowchart <- data_criteria %>%
   transmute(
@@ -138,11 +133,11 @@ data_flowchart <- data_criteria %>%
     crit = str_extract(criteria, "^c\\d+"),
     criteria = fct_case_when(
       crit == "c0" ~ "Aged 16+ with serum creatinine record in 2y before 01 Dec 2020, or dialysis code, kidney transplant code, CKD diagnostic code, or CKD3-5 code",
-      crit == "c1" ~ "  with eGFR<60 or any CKD-related code (diagnostic/dialysis/kidney transplant)", 
+      crit == "c1" ~ "  with eGFR<60 or any CKD-related code (diagnostic/CDK3-5/dialysis/kidney transplant)", 
       crit == "c2" ~ "  with eGFR<60 or CDK3-5/dialysis/kidney transplant code", 
       crit == "c3" ~ "  with eGFR<60 or dialysis/kidney transplant code",
       crit == "c4" ~ "  with no missing demographic information",
-      crit == "c5" ~ "  with maximum of 5 doses recorded up to 16 Feb 2022",
+      crit == "c5" ~ "  with maximum of 5 doses recorded up to 30 March 2022",
       crit == "c6" ~ "  with no vaccines administered at an interval of <14 days (primary analysis subset)",
       crit == "c7" ~ "  with history of immunosuppression/transplant/haematologic cancer (dose 4 analysis cohort only)",
       crit == "c8" ~ "  alive throughout follow-up period (logistic regression sensitivity subset only)",

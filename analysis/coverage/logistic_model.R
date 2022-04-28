@@ -26,9 +26,9 @@ library('fs')
 ## Import data
 data <- read_rds(here::here("output", "data", "data_cohort_coverage_logistic.rds")) %>%
   mutate(
-    end_date = as.Date("2021-07-01", format = "%Y-%m-%d"),
+    end_date = as.Date("2022-03-30", format = "%Y-%m-%d"),
     # COVID vaccination: 1 of vaccinated before end date, 0 otherwise
-    covid_vax = dplyr::if_else(!is.na(vax2_date) & vax2_date<=end_date, 1, 0)
+    covid_vax = dplyr::if_else(!is.na(vax3_date) & vax3_date<=end_date, 1, 0)
   )
  
 ## Import custom user functions and packages
@@ -39,19 +39,20 @@ dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
 
 ## Set variable list
 var_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "rural_urban_group",
-              "sex", "ethnicity", "imd", "ckd_7cat", 
+              "sex", "ethnicity", "imd", "ckd_7cat", "chronic_kidney_disease_stages_3_5",
               "prior_covid_cat", "immunosuppression", "mod_sev_obesity", "diabetes", "any_resp_dis", "chd", "cld", "asplenia", "cancer",
               "haem_cancer", "non_kidney_transplant", "chronic_neuro_dis_inc_sig_learn_dis","sev_mental_ill",
-              "cev_other") 
+              "cev_other", "region") 
+min_adj_list <- c("ageband2", "care_home", "hscworker", "region")
 adj_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "rural_urban_group",
-              "sex", "ethnicity", "imd", "prior_covid_cat")
+              "sex", "ethnicity", "imd", "prior_covid_cat", "region")
 
 ## Pick out variables and recode list as factors
-data <- data %>% select(all_of(var_list), covid_vax, region)
+data <- data %>% select(all_of(var_list), covid_vax)
 data[,var_list] <- lapply(data[,var_list], factor)
 
 ## Set factor levels for CKD subgroup
-data_cox$ckd_7cat <- factor(data_cox$ckd_7cat, levels = c("CKD3a (D-T-)", "CKD3b (D-T-)", "CKD4 (D-T-)", "CKD5 (D-T-)",
+data$ckd_7cat <- factor(data$ckd_7cat, levels = c("CKD3a (D-T-)", "CKD3b (D-T-)", "CKD4 (D-T-)", "CKD5 (D-T-)",
                                                           "CKD (D+T-)", "CKD (D-T+)", "CKD (D+T+)"))
 
 ## Check all cases complete
@@ -67,17 +68,40 @@ write_rds(data, here::here("output", "data", "data_lr.rds"), compress="gz")
 ### UNIVARIATE + MULTIVARIATE LOGISTIC REGRESSION MODELS ----
 
 ## Fit univariate models in loop
+# for (i in 1:length(var_list)) {
+#   lr_uni = glm(as.formula(paste0("covid_vax ~",var_list[i])), data = data, family = binomial)
+#   summary = extract_model_logistic(lr_uni)
+#   
+#   ## Determine factor levels for variable of interest, provided at least 1 observation
+#   var_levels = table(data[,var_list[i]])
+#   summary$term = paste0(var_list[i], names(var_levels)[var_levels>0])
+#   if (i == 1) { lr_uni_collated = summary } else { lr_uni_collated = rbind(lr_uni_collated,summary) }
+# }
+# names(lr_uni_collated)[2:6] = paste0(names(lr_uni_collated)[2:6],"_uni")
+
+
+## Fit stratified minimally adjusted models in loop
 for (i in 1:length(var_list)) {
-  lr_uni = glm(as.formula(paste0("covid_vax ~",var_list[i])), data = data, family = binomial)
-  summary = extract_model_logistic(lr_uni)
+  ## Select current variable from list, then select final list of model covariates
+  var = var_list[i]
+  if (var %in% min_adj_list) { final_list = min_adj_list } else { final_list = c(var, min_adj_list) }
+  
+  ## Fit model and extract output
+  lr_minimal = glm(as.formula(paste0("covid_vax ~", paste(final_list, collapse="+"))),
+                   data = data, family = binomial)
+  summary = extract_model_logistic(lr_minimal)
+  
+  ## Pick out adjusted outputs for term of interest and global intercept
+  summary_var = summary[grepl("Intercept", summary$outcome) | grepl(var, summary$outcome),]
   
   ## Determine factor levels for variable of interest, provided at least 1 observation
   var_levels = table(data[,var_list[i]])
-  summary$term = paste0(var_list[i], names(var_levels)[var_levels>0])
-  if (i == 1) { lr_uni_collated = summary } else { lr_uni_collated = rbind(lr_uni_collated,summary) }
+  summary_var$term = paste0(var_list[i], names(var_levels)[var_levels>0])
+  
+  ## Collate with previous model outputs
+  if (i == 1) { lr_minimal_collated = summary_var } else { lr_minimal_collated = rbind(lr_minimal_collated,summary_var) }
 }
-names(lr_uni_collated)[2:6] = paste0(names(lr_uni_collated)[2:6],"_uni")
-
+names(lr_minimal_collated)[2:6] = paste0(names(lr_minimal_collated)[2:6],"_minimal")
 
 
 ## Fit stratified partially adjusted models in loop
@@ -120,7 +144,7 @@ tbl_full <- tbl_regression(
   x = lr_full,
   exponentiate= TRUE,
   label = list(ageband2 = "Age", sex = "Sex", ethnicity = "Ethnicity", 
-               imd = "IMD", rural_urban_group = "Setting")
+               imd = "IMD", rural_urban_group = "Setting", region = "Region")
 ) %>%
   as_gt() %>%
   .$`_data` %>%
@@ -141,12 +165,12 @@ tbl_full <- tbl_regression(
     )
 
 ## Check unadjusted and adjusted models have outputs for same variables, then merge
-if (!all(tbl_full$term %in% lr_uni_collated$term)) stop('univariate/multivariate model outputs have non-matching variables') 
+if (!all(tbl_full$term %in% lr_minimal_collated$term)) stop('minimally/fully adjusted model outputs have non-matching variables') 
 if (!all(tbl_full$term %in% lr_partial_collated$term)) stop('partially/fully adjusted model outputs have non-matching variables') 
 
 tbl_summary <- tbl_full %>% 
     # Merge with outputs of univariate analysis for comparison
-    left_join(., lr_uni_collated %>% select(-outcome), by="term") %>% 
+    left_join(., lr_minimal_collated %>% select(-outcome), by="term") %>% 
     # Merge with outputs of partially adjusted analysis for comparison
     left_join(., lr_partial_collated %>% select(-outcome), by="term")
 
@@ -155,7 +179,7 @@ tbl_summary = subset(tbl_summary, var_nlevels>2 | variable=="sex" | !is.na(p.val
 tbl_summary$N_event = sum(data$covid_vax)
 
 ## Add reference ORs to univariate and partially adjusted models
-tbl_summary$estimate_uni[tbl_summary$reference_row==TRUE] = 1
+tbl_summary$estimate_minimal[tbl_summary$reference_row==TRUE] = 1
 tbl_summary$estimate_partial[tbl_summary$reference_row==TRUE] = 1
 
 ## Relabel variables for plotting
@@ -163,6 +187,7 @@ tbl_summary$label[tbl_summary$var_label=="care_home"] = "Care home resident"
 tbl_summary$label[tbl_summary$var_label=="hscworker"] = "Health/social care worker"
 tbl_summary$label[tbl_summary$var_label=="housebound"] = "Housebound"
 tbl_summary$label[tbl_summary$var_label=="endoflife"] = "End of life care"
+tbl_summary$label[tbl_summary$var_label=="chronic_kidney_disease_stages_3_5"] = "CKD3-5 diagnostic code"
 tbl_summary$label[tbl_summary$var_label=="prior_covid_cat"] = "Prior COVID"
 tbl_summary$label[tbl_summary$var_label=="immunosuppression"] = "Immunosuppression"
 tbl_summary$label[tbl_summary$var_label=="mod_sev_obesity"] = "Moderate/severe obesity"
@@ -181,6 +206,7 @@ tbl_summary$label[tbl_summary$var_label=="cev_other"] = "Clinically extremely vu
 ## Group variables for plotting
 # var_label
 tbl_summary$var_label[tbl_summary$var_label=="ckd_7cat"] = "CKD subgroup"
+tbl_summary$var_label[tbl_summary$label=="CKD3-5 diagnostic code"] = "CKD (other)"
 tbl_summary$var_label[tbl_summary$label %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care")] = "Risk group (occupation/access)"
 tbl_summary$var_label[tbl_summary$label %in% c("Prior COVID", "Immunosuppression", "Moderate/severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
                                                "Chronic heart disease", "Chronic liver disease","Asplenia", "Cancer (non-haematologic)", "Haematologic cancer", "Obesity", 
@@ -202,7 +228,7 @@ tbl_summary$N = plyr::round_any(tbl_summary$N,5)
 tbl_summary$N_event = plyr::round_any(tbl_summary$N_event,5)
 tbl_summary$n_obs = plyr::round_any(tbl_summary$n_obs,5)
 tbl_summary$n_event = plyr::round_any(tbl_summary$n_event,5)
-tbl_summary$N_uni = plyr::round_any(tbl_summary$N_uni,5)
+tbl_summary$N_minimal = plyr::round_any(tbl_summary$N_minimal,5)
 
 ## Add non-event count (overall and variable-specific)
 tbl_summary$N_nonevent = tbl_summary$N - tbl_summary$N_event
@@ -211,9 +237,9 @@ tbl_summary$n_nonevent = tbl_summary$n_obs - tbl_summary$n_event
 ## Pick out key variables for outputs
 tbl_reduced <- data.frame(tbl_summary) %>%
   select(variable, var_label, var_group, label, # columns 1:4
-         N, N_event, N_nonevent, n_obs, n_event, n_nonevent, N_uni, N_partial, # columns 5:12
+         N, N_event, N_nonevent, n_obs, n_event, n_nonevent, N_minimal, N_partial, # columns 5:12
          estimate, conf.low, conf.high, p.value, # columns 13:16
-         estimate_uni, conf.low_uni, conf.high_uni, p.value_uni, # columns 17:20
+         estimate_minimal, conf.low_minimal, conf.high_minimal, p.value_minimal, # columns 17:20
          estimate_partial, conf.low_partial, conf.high_partial, p.value_partial) # columns 21:24 
 
 ## Redact all model outputs if less than or equal to 10 events/non-events in group
