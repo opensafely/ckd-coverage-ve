@@ -14,18 +14,30 @@ library('gtsummary')
 library('scales')
 library('lubridate')
 
-## Set whether or not to import matched data - ONLY UPDATE THIS LINE BETWEEN MATCHED/UNMATCHED OUTPUTS
-matched=FALSE
+## Import command-line arguments (specifying whether or not to run matched analysis)
+args <- commandArgs(trailingOnly=TRUE)
 
-## Define input and output file names
-if (matched) {
-  input_name = "data_cohort_VE_matched.rds"
-  output_csv = "table_irr_matched_redacted.csv"
-  output_rds = "table_irr_matched_redacted.rds"
-} else {
+## Set input and output pathways for matched/unmatched data - default is unmatched
+if(length(args)==0){
+  # default (unmatched) file names
   input_name = "data_cohort_VE.rds"
   output_csv = "table_irr_redacted.csv"
   output_rds = "table_irr_redacted.rds"
+} else {
+  if (args[[1]]=="unmatched") { 
+    # unmatched file names    
+    input_name = "data_cohort_VE.rds"
+    output_csv = "table_irr_redacted.csv"
+    output_rds = "table_irr_redacted.rds"
+  } else if (args[[1]]=="matched") {
+    # matched file names
+    input_name = "data_cohort_VE_matched.rds"
+    output_csv = "table_irr_matched_redacted.csv"
+    output_rds = "table_irr_matched_redacted.rds"  
+  } else {
+    # print error if no argument specified
+    print("No matching argument specified")
+  }
 }
 
 ## Import custom user functions

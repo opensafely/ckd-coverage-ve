@@ -51,8 +51,8 @@ data <- data %>% select(all_of(var_list), covid_vax, region)
 data[,var_list] <- lapply(data[,var_list], factor)
 
 ## Set factor levels for CKD subgroup
-data$ckd_7cat <- factor(data$ckd_7cat, levels = c("CKD3a (D-T-)", "CKD3b (D-T-)", "CKD4 (D-T-)", "CKD5 (D-T-)",
-                                                          "CKD (D-T+)", "CKD (D+T-)", "CKD (D+T+)"))
+data_cox$ckd_7cat <- factor(data_cox$ckd_7cat, levels = c("CKD3a (D-T-)", "CKD3b (D-T-)", "CKD4 (D-T-)", "CKD5 (D-T-)",
+                                                          "CKD (D+T-)", "CKD (D-T+)", "CKD (D+T+)"))
 
 ## Check all cases complete
 if (all(complete.cases(data))==FALSE) stop('incomplete data for one or more patients in model') 

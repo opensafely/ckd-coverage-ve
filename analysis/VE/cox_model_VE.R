@@ -24,22 +24,34 @@ library('fs')
 library('splines')
 sessionInfo()
 
-## Set whether or not to import matched data - ONLY UPDATE THIS LINE BETWEEN MATCHED/UNMATCHED OUTPUTS
-matched=FALSE
+## Import command-line arguments (specifying whether or not to run matched analysis)
+args <- commandArgs(trailingOnly=TRUE)
 
-## Define input and output file names
-if (matched) {
-  db = "VE_matched"
-  input_name = "data_cohort_VE_matched.rds"
-  irr_name = "table_irr_matched_redacted.rds"
-} else {
+## Set input and output pathways for matched/unmatched data - default is unmatched
+if(length(args)==0){
+  # default (unmatched) file names
   db = "VE"
   input_name = "data_cohort_VE.rds"
   irr_name = "table_irr_redacted.rds"
+} else {
+  if (args[[1]]=="unmatched") { 
+    # unmatched file names    
+    db = "VE"
+    input_name = "data_cohort_VE.rds"
+    irr_name = "table_irr_redacted.rds"
+  } else if (args[[1]]=="matched") {
+    # matched file names
+    db = "VE_matched"
+    input_name = "data_cohort_VE_matched.rds"
+    irr_name = "table_irr_matched_redacted.rds"
+  } else {
+    # print error if no argument specified
+    print("No matching argument specified")
+  }
 }
 
 ## Import data
-data_tte <- read_rds(here::here("output", "data", input_name))
+data_cohort <- read_rds(here::here("output", "data", input_name))
 
 ## Import custom user functions and packages
 source(here::here("analysis", "functions.R"))
@@ -63,12 +75,12 @@ logoutput <- function(...){
 
 ### print dataset size ----
 logoutput(
-  glue("data_tte data size = ", nrow(data_tte)),
-  glue("data_tte memory usage = ", format(object.size(data_tte), units="GB", standard="SI", digits=3L))
+  glue("data_cohort data size = ", nrow(data_cohort)),
+  glue("data_cohort memory usage = ", format(object.size(data_cohort), units="GB", standard="SI", digits=3L))
 )
 
 # create dataset containing one row per patient per post-vaccination period
-postvax_time <- data_tte %>%
+postvax_time <- data_cohort %>%
   select(patient_id) %>%
   uncount(weights = length(postvaxcuts), .id="id_postvax") %>%
   mutate(
@@ -86,15 +98,32 @@ postvax_time <- data_tte %>%
 ####################################################### 
 ### formulae for unadjusted/adjusted models
 ####################################################### 
-# cox models stratified by follow-up window
-formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(timesincevax_pw)
-formula1 <- formula0 %>% update(. ~ . + ns(vax2_day, 3))
-formula2 <- formula1 %>% update(. ~ . + sex + imd + ethnicity + rural_urban_group + prevax_tests_cat + multimorb + sev_mental_ill)
+if (args[[1]]=="unmatched") {
+  # cox models stratified by follow-up window
+  formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(timesincevax_pw)
+  formula1 <- formula0 %>% update(. ~ . + strata(region)*ns(vax2_day, 3))
+  formula2 <- formula1 %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + sex + imd + ethnicity + 
+                                    rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
+  
+  # cox models for full follow-up time
+  formula0_full <- Surv(follow_up_time, ind_outcome) ~ vax2_az
+  formula1_full <- formula0_full %>% update(. ~ . + strata(region)*ns(vax2_day, 3))
+  formula2_full <- formula1_full %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + sex + imd + ethnicity + 
+                                              rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
 
-# cox models for full follow-up time
-formula0_full <- Surv(follow_up_time, ind_outcome) ~ vax2_az
-formula1_full <- formula0_full %>% update(. ~ . + ns(vax2_day, 3))
-formula2_full <- formula1_full %>% update(. ~ . + sex + imd + ethnicity + rural_urban_group + prevax_tests_cat + multimorb + sev_mental_ill)
+} else {
+  # cox models stratified by follow-up window - matched analysis
+  formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(timesincevax_pw)
+  formula1 <- formula0 %>% update(. ~ . + ns(vax2_day, 3)) # no longer need to adjust for region
+  formula2 <- formula1 %>% update(. ~ . + sex + imd + ethnicity + rural_urban_group + prevax_tests_cat + multimorb + sev_mental_ill) # no longer need to adjust for age or prior COVID
+  
+  # cox models for full follow-up time
+  formula0_full <- Surv(follow_up_time, ind_outcome) ~ vax2_az
+  formula1_full <- formula0_full %>% update(. ~ . + ns(vax2_day, 3)) # no longer need to adjust for region
+  formula2_full <- formula1_full %>% update(. ~ . + sex + imd + ethnicity + rural_urban_group + prevax_tests_cat + multimorb + sev_mental_ill) # no longer need to adjust for age or prior COVID
+}
+
+
 
 ####################################################### 
 ### function to fit cox model for specified formula 
@@ -187,12 +216,16 @@ for (i in 1:length(outcome_list)) {
   selected_outcome_clean = clean_list[i]
   irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
   
-  data_tte <- data_tte %>% 
+  data_tte <- data_cohort %>% 
     mutate(
-      tte_outcome = get(paste0("tte_",selected_outcome)),
-      follow_up_time = tte(vax2_date - 1, get(date_list[i]), censor_date),
-      ind_outcome = get(paste0("ind_",selected_outcome))
-    )
+      # select dates for outcome in question
+      outcome_date = get(date_list[i]),
+      
+      # calculate tte and ind for outcome in question
+      tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=TRUE),
+      ind_outcome = get(paste0("ind_",selected_outcome)),
+      tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE)
+  )
   
   data_cox <- tmerge(
     data1 = data_tte %>% select(-starts_with("ind_"), -ends_with("_date")),
@@ -226,7 +259,7 @@ for (i in 1:length(outcome_list)) {
   summary1_full <- cox_model_VE(1, formula1_full, stratified=FALSE)
   summary2_full <- cox_model_VE(2, formula2_full, stratified=FALSE)
   
-  # combine and save model summary (brief) 
+  ## Combine and save model summary (brief) 
   model_glance <- data.frame(
     bind_rows(summary0$glance, summary0_full$glance, 
               summary1$glance, summary1_full$glance, 
@@ -235,7 +268,7 @@ for (i in 1:length(outcome_list)) {
            outcome_clean = selected_outcome_clean)
   )
   
-  # redact statistical outputs if <=5 events
+  ## Redact statistical outputs if <=5 events
   redaction_columns = c("nevent", "statistic.log", "p.value.log", "statistic.sc", "p.value.sc", "statistic.wald", "p.value.wald", 
                         "statistic.robust", "p.value.robust", "r.squared", "r.squared.max", "concordance", "std.error.concordance", "logLik", "AIC", "BIC")
   for (i in 1:nrow(model_glance)) {

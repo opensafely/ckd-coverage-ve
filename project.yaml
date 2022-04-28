@@ -208,7 +208,7 @@ actions:
       moderately_sensitive:
         csv: output/model/VE/modelcox*.csv
         txt: output/model/VE/modelcox*.txt
-   
+
   # Cox VE summaries for unmatched analysis ----
   cox_VE_summary:
     run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
@@ -216,6 +216,24 @@ actions:
     outputs:
       moderately_sensitive:
         html: output/markdown/cox_VE_summary.html
+        
+# PLR models - comparative VE unmatched ----
+  plr_model_VE:
+    run: r:latest analysis/VE/plr_model_VE.R unmatched
+    needs: [data_selection_VE, table_irr]
+    outputs:
+      moderately_sensitive:
+        data: output/model/VE_plr/modelplr*.rds
+        csv: output/model/VE_plr/modelplr*.csv
+        txt: output/model/VE_plr/modelplr*.txt
+
+  # PLR VE summaries for unmatched analysis ----
+  plr_VE_summary:
+    run: r:latest -e 'rmarkdown::render("analysis/VE/plr_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
+    needs: [data_selection_VE, table_1_VE, table_irr, plr_model_VE]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/plr_VE_summary.html
 
 #############################
 ### VE - matched analyses

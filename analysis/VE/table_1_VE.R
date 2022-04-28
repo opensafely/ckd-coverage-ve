@@ -18,18 +18,29 @@ library('gtsummary')
 library('plyr')
 library('reshape2')
 
-## Set whether or not to import matched data - ONLY UPDATE THIS LINE BETWEEN MATCHED/UNMATCHED OUTPUTS
-matched=FALSE
+## Import command-line arguments (specifying whether or not to run matched analysis)
+args <- commandArgs(trailingOnly=TRUE)
 
-## Define input and output file names
-if (matched) {
-  input_name = "data_cohort_VE_matched.rds"
-  output_html = "table1_VE_matched_redacted.html"
-  output_rds = "table1_VE_matched_redacted.rds"
-} else {
+## Set input and output pathways for matched/unmatched data - default is unmatched
+if(length(args)==0){
+  # default (unmatched) file names
   input_name = "data_cohort_VE.rds"
   output_html = "table1_VE_redacted.html"
   output_rds = "table1_VE_redacted.rds"
+} else {
+  if (args[[1]]=="unmatched") { 
+    # unmatched file names
+    input_name = "data_cohort_VE.rds"
+    output_html = "table1_VE_redacted.html"
+    output_rds = "table1_VE_redacted.rds"
+  } else if (args[[1]]=="matched") {
+    input_name = "data_cohort_VE_matched.rds"
+    output_html = "table1_VE_matched_redacted.html"
+    output_rds = "table1_VE_matched_redacted.rds"
+  } else {
+    # print error if no argument specified
+    print("No matching argument specified")
+  }
 }
 
 ## Create output directory
