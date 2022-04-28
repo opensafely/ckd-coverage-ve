@@ -222,8 +222,9 @@ actions:
     run: r:latest analysis/VE/plr_model_VE.R unmatched
     needs: [data_selection_VE, table_irr]
     outputs:
-      moderately_sensitive:
+      highly_sensitive:
         data: output/model/VE_plr/modelplr*.rds
+      moderately_sensitive:
         csv: output/model/VE_plr/modelplr*.csv
         txt: output/model/VE_plr/modelplr*.txt
 
