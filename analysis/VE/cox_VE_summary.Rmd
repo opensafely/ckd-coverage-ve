@@ -102,9 +102,9 @@ date_list = c("postvax_positive_test_date", "postvax_covid_emergency_date", "pos
 
 ## Read in data for cumulative incidence curves
 if (matched) {
-  data_tte <- read_rds(here("output", "data", "data_cohort_VE_matched.rds"))
+  data_tte <- read_rds(here::here("output", "data", "data_cohort_VE_matched.rds"))
 } else {
-  data_tte <- read_rds(here("output", "data", "data_cohort_VE.rds"))
+  data_tte <- read_rds(here::here("output", "data", "data_cohort_VE.rds"))
   }
 data_tte <- data_tte %>%
   mutate(
