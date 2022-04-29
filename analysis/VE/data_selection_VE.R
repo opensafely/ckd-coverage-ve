@@ -188,9 +188,8 @@ write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE.csv"))
 exact_variables <- c(
   "jcvi_group",
   "region",
+  "immunosuppression",
   "care_home",
-  "kidney_transplant",
-  "dialysis",
   "ckd_7cat",
   "prior_covid_cat",
   NULL #"cev",

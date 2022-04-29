@@ -102,13 +102,13 @@ if (db=="VE") {
   # cox models stratified by follow-up window
   formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(timesincevax_pw)
   formula1 <- formula0 %>% update(. ~ . + strata(region)*ns(vax2_day, 3))
-  formula2 <- formula1 %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + care_home + sex + imd + ethnicity + 
+  formula2 <- formula1 %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + ckd_7cat + immunosuppression + care_home + sex + imd + ethnicity + 
                                     rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
   
   # cox models for full follow-up time
   formula0_full <- Surv(follow_up_time, ind_outcome) ~ vax2_az
   formula1_full <- formula0_full %>% update(. ~ . + strata(region)*ns(vax2_day, 3))
-  formula2_full <- formula1_full %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + care_home + sex + imd + ethnicity + 
+  formula2_full <- formula1_full %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + ckd_7cat + immunosuppression + care_home + sex + imd + ethnicity + 
                                               rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
 
 } else {

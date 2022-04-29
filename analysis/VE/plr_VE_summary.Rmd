@@ -139,9 +139,9 @@ model = read_rds(here::here("output", "model", db, paste0("modelplr_VE_estimates
 model$model_name = factor(model$model_name, levels = c("unadjusted", "region/date adjusted", "fully adjusted"))
 
 ## Remove redacted components from plot
-model$estimate = as.numeric(model$hr)
-model$conf.low = as.numeric(model$hr.ll)
-model$conf.high = as.numeric(model$hr.ul)
+model$estimate = as.numeric(model$loghr)
+model$conf.low = as.numeric(model$loghr.ll)
+model$conf.high = as.numeric(model$loghr.ul)
 model$outcome_clean = factor(model$outcome_clean, levels = clean_list)
 
 ## Add left, right, and midpoint for full models

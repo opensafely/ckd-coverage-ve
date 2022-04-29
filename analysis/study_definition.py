@@ -782,7 +782,7 @@ study = StudyDefinition(
     restrict_to_earliest_specimen_date = False,
     return_expectations = {
       "date": {"earliest": "2020-02-01", "latest": "index_date - 1 day"}, # need both earliest/latest to obtain expected incidence
-      "rate": "exponential_increase",
+      "rate": "uniform",
       "incidence": 0.02,
     },
   ),
@@ -800,7 +800,7 @@ study = StudyDefinition(
     find_first_match_in_period=True,
     return_expectations = {
       "date": {"earliest": "2020-02-01", "latest": "index_date - 1 day"}, # need both earliest/latest to obtain expected incidence
-      "rate": "exponential_increase",
+      "rate": "uniform",
       "incidence": 0.02,
     },
   ),
@@ -814,7 +814,7 @@ study = StudyDefinition(
     find_first_match_in_period = True,
     return_expectations = {
       "date": {"earliest": "2020-02-01", "latest": "index_date - 1 day"}, # need both earliest/latest to obtain expected incidence
-      "rate": "exponential_increase",
+      "rate": "uniform",
       "incidence": 0.005,
     },
   ),
@@ -834,7 +834,7 @@ study = StudyDefinition(
     restrict_to_earliest_specimen_date = False,
     return_expectations = {
       "date": {"earliest": "2020-02-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
-      "rate": "exponential_increase",
+      "rate": "uniform",
       "incidence": 0.02,
     },
   ),
@@ -852,7 +852,7 @@ study = StudyDefinition(
     find_first_match_in_period=True,
     return_expectations = {
       "date": {"earliest": "2020-02-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
-      "rate": "exponential_increase",
+      "rate": "uniform",
       "incidence": 0.02,
     },
   ),
@@ -866,7 +866,7 @@ study = StudyDefinition(
     find_first_match_in_period = True,
     return_expectations = {
       "date": {"earliest": "2020-02-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
-      "rate": "exponential_increase",
+      "rate": "uniform",
       "incidence": 0.005,
     },
   ),
@@ -889,8 +889,8 @@ study = StudyDefinition(
     find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
     return_expectations = {
-      "date": {"earliest": "2020-09-01", "latest": "2021-12-31"}, # need both earliest/latest to obtain expected incidence
-      "rate": "exponential_increase",
+      "date": {"earliest": "2020-09-01", "latest": "2021-04-01"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
       "incidence": 0.02,
     },
   ),
@@ -907,8 +907,8 @@ study = StudyDefinition(
     between=["covid_vax_date_1 - 90 days","covid_vax_date_2 - 1 day"],
     find_first_match_in_period=True,
     return_expectations = {
-      "date": {"earliest": "2020-09-01", "latest": "2021-12-31"}, # need both earliest/latest to obtain expected incidence
-      "rate": "exponential_increase",
+      "date": {"earliest": "2020-09-01", "latest": "2021-04-01"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
       "incidence": 0.02,
     },
   ),
@@ -921,8 +921,8 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2020-09-01", "latest": "2021-12-31"}, # need both earliest/latest to obtain expected incidence
-      "rate": "exponential_increase",
+      "date": {"earliest": "2020-09-01", "latest": "2021-04-01"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
       "incidence": 0.005,
     },
   ),
@@ -955,7 +955,8 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     return_expectations = {
       "date": {"earliest": "2021-02-01", "latest" : "2022-03-30"},
-      "rate": "exponential_increase",
+      "rate": "uniform",
+      "incidence": 0.15,
     },
   ),
   
@@ -1016,7 +1017,8 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     return_expectations = {
       "date": {"earliest": "2021-02-01", "latest" : "2022-03-30"},
-      "rate": "exponential_increase",
+      "rate": "uniform",
+      "incidence": 0.5,
     },
   ),
   

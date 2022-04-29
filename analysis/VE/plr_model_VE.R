@@ -17,9 +17,6 @@ library('sandwich')
 library('lubridate')
 sessionInfo()
 
-## Import command-line arguments (specifying whether or not to run matched analysis)
-args <- commandArgs(trailingOnly=TRUE)
-
 ## Specify number of non-outcomes to sample (5000 if running locally, 50,000 if on server)
 if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")){
   samplesize_nonoutcomes_n <- 5000
@@ -27,6 +24,8 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")){
   samplesize_nonoutcomes_n <- 50000
 }
 
+## Import command-line arguments (specifying whether or not to run matched analysis)
+args <- commandArgs(trailingOnly=TRUE)
 
 ## Set input and output pathways for matched/unmatched data - default is unmatched
 if(length(args)==0){
@@ -57,7 +56,7 @@ data_cohort <- read_rds(here::here("output", "data", input_name))
 ## Import custom user functions and packages
 source(here::here("analysis", "functions.R"))
 
-## Function for retrieving time-dependent hazard ratio ----
+## Function from HCW comparative effectiveness repo for retrieving time-dependent hazard ratio ----
 get_HR <- function(.data, model, vcov, term_index){
   ## function to get AZ/BNT hazard ratio spline over time since first dose
   tstop <- .data$tstop
@@ -119,7 +118,7 @@ logoutput(
 # plr models stratified by follow-up window
 formula0 <- outcome_event ~ vax2_az + timesincevax_pw + vax2_az:timesincevax_pw
 formula1 <- formula0 %>% update(. ~ . + region*ns(vax2_day, 3))
-formula2 <- formula1 %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + sex + imd + ethnicity + rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
+formula2 <- formula1 %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + ckd_7cat + immunosuppression + care_home + sex + imd + ethnicity + rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
 
 ## optimisation options ----
 parglmparams <- parglm.control(
@@ -171,6 +170,7 @@ plr_summary_VE <- function(plrmod, number, outcome) {
     add_column(
       model_name = model_type,
       model = number,
+      convergence = plrmod$converged,
       ram = format(object.size(plrmod), units="GB", standard="SI", digits=3L),
       .before = 1
     )
@@ -216,13 +216,15 @@ for (i in 1) {
       # select dates for outcome in question
       outcome_date = get(date_list[i]),
       
+      # censor date already defined in data_selection_VE.R script 
+      
       # calculate tte and ind for outcome in question
       tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=TRUE),
       ind_outcome = get(paste0("ind_",selected_outcome)),
       tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
       
       sample_outcome = sample_nonoutcomes_n(!is.na(tte_outcome), patient_id, samplesize_nonoutcomes_n),
-      sample_weights = sample_weights(!is.na(tte_outcome), sample_outcome),
+      sample_weights = sample_weights(!is.na(tte_outcome), sample_outcome)
     ) %>%
     filter(
       # select all patients who experienced the outcome, and a sample of those who don't
@@ -255,9 +257,8 @@ for (i in 1) {
     ) %>%
     mutate(
       timesincevax_pw = droplevels(timesince_cut(tstop, postvaxcuts)),
-      
       tstart_calendar = tstart + vax2_day - 1,
-      tstop_calendar = tstop + vax2_day - 1,
+      tstop_calendar = tstop + vax2_day - 1
     )
   
   ### print dataset size and save ----
@@ -278,7 +279,6 @@ for (i in 1) {
     na.action = "na.fail",
     model = FALSE
   )
-  print(class(plrmod0))
   summary0 <- plr_summary_VE(plrmod0, 0, selected_outcome)
 
   ## Model 1: adjusting for region/date of vaccination
@@ -330,18 +330,16 @@ for (i in 1) {
            outcome_clean = selected_outcome_clean)
   write_csv(model_tidy, here::here("output", "model", db, glue(paste0("modelplr_tidy_full_",selected_outcome,".csv"))))
 
-  #model_tidy = read_csv(here("output", "model", db, glue("modelplr_tidy_full_{selected_outcome}.csv")))
-  
   ## Import plrmod outputs for selected outcome
   plrmod0 <- read_rds(here("output", "model", db, glue("modelplr_model_{selected_outcome}_0.rds")))
   plrmod1 <- read_rds(here("output", "model", db, glue("modelplr_model_{selected_outcome}_1.rds")))
   plrmod2 <- read_rds(here("output", "model", db, glue("modelplr_model_{selected_outcome}_2.rds")))
-  
+
   ## Import vcov outputs for selected outcome
   vcov0 <- read_rds(here("output", "model", db, glue("modelplr_vcov_{selected_outcome}_0.rds")))
   vcov1 <- read_rds(here("output", "model", db, glue("modelplr_vcov_{selected_outcome}_1.rds")))
   vcov2 <- read_rds(here("output", "model", db, glue("modelplr_vcov_{selected_outcome}_2.rds")))
-  
+
   ## define term indices
   term_index0 <- str_detect(names(coef(plrmod0)), fixed("timesincevax")) | str_detect(names(coef(plrmod0)), fixed("vax2_az"))
   term_index1 <- str_detect(names(coef(plrmod1)), fixed("timesincevax")) | str_detect(names(coef(plrmod1)), fixed("vax2_az"))
@@ -352,7 +350,7 @@ for (i in 1) {
     bind_rows(
       get_HR(data_plr, plrmod0, vcov0, term_index=term_index0) %>% mutate(model=0, model_type="unadjusted"),
       get_HR(data_plr, plrmod1, vcov1, term_index=term_index1) %>% mutate(model=1, model_type="region/date adjusted"),
-      get_HR(data_plr, plrmod2, vcov2, term_index=term_index2) %>% mutate(model=2, model_type="fully adjusted"),
+      get_HR(data_plr, plrmod2, vcov2, term_index=term_index2) %>% mutate(model=2, model_type="fully adjusted")
     ) %>%
     select(model, everything()) %>%
     group_by(model) %>%
@@ -360,25 +358,26 @@ for (i in 1) {
       lag_tstop=lag(tstop, 1, 0),
       hr=exp(loghr),
       hr.ll=exp(loghr.ll),
-      hr.ul=exp(loghr.ul),
+      hr.ul=exp(loghr.ul)
     ) %>%
     ungroup() %>%
     left_join(
       model_tidy %>% group_by(model_name, model) %>% summarise() %>% ungroup(), by="model"
     )
-  
+
   ### extract estimates at midpoints of cuts
   cuts <-
     tibble(
       left = postvaxcuts[-length(postvaxcuts)],
       right = postvaxcuts[-1],
       midpoint = left + ((right - left ) / 2),
-      midpoint_rounded = as.integer(midpoint),
+      midpoint_rounded = as.integer(midpoint)
     )
+
   effectsplr_pw <- effectsplr %>%
     filter(tstop %in% cuts$midpoint_rounded) %>%
     left_join(cuts, by=c("tstop"="midpoint_rounded"))
-  
+
   write_rds(effectsplr_pw, path = here("output", "model", db, glue("modelplr_VE_estimates_{selected_outcome}.rds")))
   write_csv(effectsplr_pw, path = here("output", "model", db, glue("modelplr_VE_estimates_{selected_outcome}.csv")))
 }
