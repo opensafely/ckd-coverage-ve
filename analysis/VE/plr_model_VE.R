@@ -204,8 +204,8 @@ date_list = c("postvax_positive_test_date", "postvax_covid_emergency_date", "pos
 # read in incidence rate ratio table
 irr_table = read_rds(here::here("output", "tables", irr_name))
 
-#for (i in 1:length(outcome_list)) {
-for (i in 1) {
+for (i in 1:length(outcome_list)) {
+#for (i in 1) {
   selected_outcome = outcome_list[i]
   selected_outcome_clean = clean_list[i]
   irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
