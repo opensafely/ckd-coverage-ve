@@ -56,12 +56,14 @@ tidy_coxph <- function(x, conf.int = TRUE, conf.level = .95, exponentiate = TRUE
 }
 
 ### Redact vaccine frequency table
-redact_table = function(table_input) {
-  if (any(table_input$Freq<=100)) {
-    # Sum any combinations with less than or equal to 100 records
-    other = data.frame(Var1 = "other", Freq = sum(table_input$Freq[table_input$Freq<=100]))
-    table_input = rbind(table_input, other)
-    table_input = subset(table_input, Freq>100 | Var1=="other")
+redact_table = function(table_input, multiple=TRUE) {
+  if (multiple) {
+    if (any(table_input$Freq<=100)) {
+      # Sum any combinations with less than or equal to 100 records
+      other = data.frame(Var1 = "other", Freq = sum(table_input$Freq[table_input$Freq<=100]))
+      table_input = rbind(table_input, other)
+      table_input = subset(table_input, Freq>100 | Var1=="other")
+    }
   }
   
   # Round to nearest 5

@@ -25,9 +25,8 @@ fs::dir_create(here::here("output", "tables"))
 data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))
 
 ## vaccine initiation dates
-first_pfizer = as_date("2020-12-08")
 first_az = as_date("2021-01-04")
-first_moderna = as_date("2021-04-13")
+
 
 ## Set analysis end date
 data_processed$end_date = as_date("2021-11-30")
@@ -39,36 +38,10 @@ lastfupday <- max(postvaxcuts)
 ## Create cohort data with tte calculations ----
 data_processed <- data_processed %>%
   mutate(
-    # set censor date
+    # set censor date (last follow-up day, end date, deregistration, death, 3rd)
     censor_date = pmin(vax2_date - 1 + lastfupday, end_date, dereg_date, death_date, vax3_date, na.rm=TRUE),
-    ind_censor = dplyr::if_else((censor_date>censor_date) | is.na(censor_date), FALSE, TRUE),
-    
-    # time to last follow up day
-    # tte function format: origin date, event date, censor date
-    tte_enddate = tte(origin_date = vax2_date - 1, # day of vaccination = day 1 of tte
-                      event_date = end_date, 
-                      censor_date = end_date),
-    
-    # time to last follow up day or death or deregistration
-    tte_censor = tte(vax2_date - 1, censor_date, censor_date),
-    
-    # time to positive test
-    tte_covid_postest = tte(vax2_date - 1, postvax_positive_test_date, censor_date, na.censor=TRUE),
-    ind_covid_postest = dplyr::if_else((postvax_positive_test_date>censor_date) | is.na(postvax_positive_test_date), FALSE, TRUE),
-    
-    # time to COVID-19 A&E attendance
-    tte_covid_emergency = tte(vax2_date - 1, postvax_covid_emergency_date, censor_date, na.censor=TRUE),
-    ind_covid_emergency = dplyr::if_else((postvax_covid_emergency_date>censor_date) | is.na(postvax_covid_emergency_date), FALSE, TRUE),
-    
-    # time to COVID-19 hospitalisation
-    tte_covid_hosp = tte(vax2_date - 1, postvax_covid_hospitalisation_date, censor_date, na.censor=TRUE),
-    ind_covid_hosp = dplyr::if_else((postvax_covid_hospitalisation_date>censor_date) | is.na(postvax_covid_hospitalisation_date), FALSE, TRUE),
-    
-    # time to COVID-19 death
-    tte_covid_death = tte(vax2_date - 1, postvax_covid_death_date, censor_date, na.censor=TRUE),
-    ind_covid_death = dplyr::if_else((postvax_covid_death_date>censor_date) | is.na(postvax_covid_death_date), FALSE, TRUE)
-  )
-
+    tte_censor = tte(vax2_date - 1, censor_date, censor_date)  
+    )
 
 ###################################
 ### Unmatched data selection
@@ -103,20 +76,24 @@ data_criteria <- data_processed %>%
     
     # Population exclusions
     isnot_hscworker = !hscworker,
-    isnot_carehomeresident = !care_home,
+    #isnot_carehomeresident = !care_home,
     isnot_endoflife = !endoflife,
     isnot_housebound = !housebound,
     
     # not censored pre dose 2
     isnot_censored_early = tte_censor>0 | is.na(tte_censor),
     
+    # no COVID from 90 days pre dose 1 up to dose 2
+    noprevax_covid = prevax_covid_cat==0,
+    
     include = (
       has_age & has_ckd_any & has_ckd_strict & 
       has_sex & has_imd & has_ethnicity & has_region &
       vax_pfi_az & vax_date & vax_interval &
       positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check &
-      isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound &
-      isnot_censored_early
+      isnot_hscworker & isnot_endoflife & isnot_housebound & # isnot_carehomeresident
+      isnot_censored_early &
+      noprevax_covid
      )
   )
 
@@ -125,7 +102,7 @@ data_cohort <- data_criteria %>%
   filter(include) %>%
   select(patient_id) %>%
   left_join(data_processed, by="patient_id") %>%
-  select(-c(ckd_inclusion_any, ckd_inclusion_strict)) %>%
+  select(-c(ckd_inclusion_any, ckd_inclusion_strict_or_3to5, ckd_inclusion_strict)) %>%
   droplevels() %>%
   # additional vaccine/time covariates
   mutate(
@@ -150,8 +127,9 @@ data_flowchart <- data_criteria %>%
     c4 = c3 & (vax_date),
     c5 = c4 & (vax_interval),
     c6 = c5 & (positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check),
-    c7 = c6 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound),
-    c8 = c7 & isnot_censored_early
+    c7 = c6 & (isnot_hscworker & isnot_endoflife & isnot_housebound), # isnot_carehomeresident
+    c8 = c7 & isnot_censored_early,
+    c9 = c8 & noprevax_covid
   ) %>%
   summarise(
     across(.fns=sum)
@@ -175,8 +153,9 @@ data_flowchart <- data_criteria %>%
       crit == "c4" ~ "  received first dose after 04 January 2021",
       crit == "c5" ~ "  dose interval of 8-16 weeks",
       crit == "c6" ~ "  post-vaccination outcomes recorded after second dose",
-      crit == "c7" ~ "  not healthcare worker, care home resident, receiving end-of-life care, or housebound",
+      crit == "c7" ~ "  not healthcare worker, receiving end-of-life care, or housebound", # care home resident
       crit == "c8" ~ "  not censored before second dose",
+      crit == "c9" ~ "  no CODID from 90 days before dose 1 up to the date of dose 2",
       TRUE ~ NA_character_
     )
   )
@@ -192,9 +171,10 @@ write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE.csv"))
 exact_variables <- c(
   "jcvi_group",
   "region",
+  "care_home",
   "kidney_transplant",
   "dialysis",
-  "egfr_cat3",
+  "ckd_7cat",
   "prior_covid_cat",
   NULL #"cev",
 )

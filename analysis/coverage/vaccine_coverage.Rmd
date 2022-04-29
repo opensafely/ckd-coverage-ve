@@ -55,9 +55,9 @@ Vaccine recommendations for CKD patients in the UK have evolved over time (see [
 * Maximum of 4 COVID-19 doses recorded
 * No vaccines administered at an interval of <14 days
 
-A total of **`r prettyNum(rounded_n)`** (rounded to the nearest 5) met the inclusion criteria (see *output/data/flowchart.csv* for additional details), of which **`r prettyNum(rounded_n_uncensored)`** remained uncensored (alive and registered) throughout follow-up (01-Dec-2020 to 16-Feb-2022).
+A total of **`r prettyNum(rounded_n)`** (rounded to the nearest 5) met the inclusion criteria (see *output/data/flowchart.csv* for additional details), of which **`r prettyNum(rounded_n_uncensored)`** remained uncensored (alive and registered) throughout follow-up (01-Dec-2020 to 30-Mar-2022).
 
-Of the total population, **`r prettyNum(rounded_n_dose4)`** had a history of immunosuppression, haematologic cancer, or transplant on the index date. This population includes individuals eligible for an extended primary series and subsequent booster dose, and was therefore included in the dose 4 analysis subset. **`r prettyNum(rounded_n_dose4_uncensored)`** remained uncensored (alive and registered) throughout follow-up (01-Dec-2020 to 16-Feb-2022).
+Of the total population, **`r prettyNum(rounded_n_dose4)`** had a history of immunosuppression, haematologic cancer, or transplant on the index date. This population includes individuals eligible for an extended primary series and subsequent booster dose, and was therefore included in the dose 4 analysis subset. **`r prettyNum(rounded_n_dose4_uncensored)`** remained uncensored (alive and registered) throughout follow-up (01-Dec-2020 to 30-Mar-2022).
 
 `r if(flag=="present") { paste0("NB: Dummy data processing flag detected!") }`    
 <br/><br/><br/><br/>    
@@ -110,7 +110,7 @@ subset(table_1, Group!="Time between doses 1 and 2" & Group!="Time between doses
 ```{r, message=FALSE, fig.width=8, fig.height=8}
 # Create vector of dates between first and last recorded vaccines
 campaign_start <- as_date("2020-12-01")
-end_date <- as_date("2022-02-16")
+end_date <- as_date("2022-03-30")
 
 # create vector containing every other week
 date_vec <- seq(campaign_start, end_date, by="weeks")
@@ -203,7 +203,7 @@ data_km <- data_cohort %>%
     start_date = as.Date("2020-12-01", format = "%Y-%m-%d"),
     
     # End date
-    end_date = as.Date("2022-02-16", format = "%Y-%m-%d"),
+    end_date = as.Date("2022-03-30", format = "%Y-%m-%d"),
     
     # Censoring
     censor_date = pmin(death_date, 
@@ -257,12 +257,12 @@ palette = c("#3B9AB2","#78B7C5","#EBCC2A","#E1AF00","#B40F20")
 ggplot(km_collated, aes(x = date, y = cum.in_rounded, colour = factor(dose))) + geom_line() +
           theme_bw()+ scale_colour_manual(values = palette[c(1,2,4,5)]) +
           theme(legend.position="right") + 
-  ylim(0,1) + ylab("Vaccination probability") + labs(colour="dose") +
+  ylim(0,1) + ylab("cumulative coverage") + labs(colour="dose") +
   ggtitle("Any vaccine") +
   theme(legend.title = element_text(size=14), legend.text = element_text(size=12), axis.text = element_text(size=14), axis.title = element_text(size=14)) 
 ```
 
-#### Coverage as of 16-Feb-2022
+#### Coverage as of 30-Mar-2022
 ```{r}
 ## Calculate coverage in total and uncensored populations
 collated = data.frame(
@@ -283,7 +283,7 @@ collated = data.frame(
 names(collated) = c("Dose", "N (total)", "n vaccinated (total)", "Coverage (total), %",
                             "N (uncensored)", "n vaccinated (uncensored)", "Coverage (uncensored), %")
 
-collated$`Cumulative probability` = c(round(max(subset(km_collated, dose=="dose 1")$cum.in_rounded)*100,1),
+collated$`Cumulative coverage` = c(round(max(subset(km_collated, dose=="dose 1")$cum.in_rounded)*100,1),
                       round(max(subset(km_collated, dose=="dose 2")$cum.in_rounded)*100,1),
                       round(max(subset(km_collated, dose=="dose 3")$cum.in_rounded)*100,1),
                       round(max(subset(km_collated, dose=="dose 4")$cum.in_rounded)*100,1), "-")
@@ -300,31 +300,31 @@ gt(collated) %>%
   ) %>%
     tab_spanner(
     label = "KM",
-    columns = c("Cumulative probability")
+    columns = c("Cumulative coverage")
   )
 ```
-<br/>Dose 4 subset calculations restricted to individuals with a history of immunosuppression, haematologic cancer, or transplant on the index date (01-Dec-2020). Uncensored analyses restricted to individauls alive and registered throughout follow-up (01-Dec-2020 to 16-Feb-2022).<br/><br/>  
+<br/>Dose 4 subset calculations restricted to individuals with a history of immunosuppression, haematologic cancer, or transplant on the index date (01-Dec-2020). Uncensored analyses restricted to individauls alive and registered throughout follow-up (01-Dec-2020 to 30-Mar-2022).<br/><br/>  
 
 #### Product profile by dose
 ```{r}
 ## Dose 1
 t_dose_dose1 = data.frame(table(data_cohort$vax1_type_descr)) %>% 
-  redact_table() %>%
+  redact_table(multiple=FALSE) %>%
   mutate(Group = "Dose 1")
 
 ## Dose 2
 t_dose_dose2 = data.frame(table(data_cohort$vax2_type_descr)) %>% 
-  redact_table() %>%
+  redact_table(multiple=FALSE) %>%
   mutate(Group = "Dose 2")
 
 ## Dose 3
 t_dose_dose3 = data.frame(table(data_cohort$vax3_type_descr)) %>% 
-  redact_table() %>%
+  redact_table(multiple=FALSE) %>%
   mutate(Group = "Dose 3")
 
 ## Dose 4
 t_dose_dose4 = data.frame(table(data_cohort$vax4_type_descr)) %>% 
-  redact_table() %>%
+  redact_table(multiple=FALSE) %>%
   mutate(Group = "Dose 4")
 
 # Generate combined table
@@ -344,7 +344,7 @@ collated$Dose = str_replace(collated$Group, "Dose ", "")
 # Frequency plot
 g1 = ggplot(collated, aes(fill=Vaccine, y=as.numeric(Frequency)/1000, x=Dose)) + 
     geom_bar(position="stack", stat="identity") +
-    theme_bw() + ylab("N doses (thousands)") + scale_fill_manual(values = palette[c(4,2,1,3)]) +
+    theme_bw() + ylab("N doses (thousands)") + scale_fill_manual(values = palette[c(2,1,3)]) +
     theme(legend.position="right") + xlab("Dose") +
     ggtitle("Product profile by dose (frequency)") +
     theme(legend.title = element_text(size=14), legend.text = element_text(size=12), 
@@ -353,7 +353,7 @@ g1 = ggplot(collated, aes(fill=Vaccine, y=as.numeric(Frequency)/1000, x=Dose)) +
 # % plot
 g2 = ggplot(collated, aes(fill=Vaccine, y=as.numeric(Percent), x=Dose)) + 
     geom_bar(position="stack", stat="identity") +
-    theme_bw() + ylab("% doses") + scale_fill_manual(values = palette[c(4,2,1,3)]) +
+    theme_bw() + ylab("% doses") + scale_fill_manual(values = palette[c(2,1,3)]) +
     theme(legend.position="right") + xlab("Dose") +
     ggtitle("Product profile by dose (%)") +
     theme(legend.title = element_text(size=14), legend.text = element_text(size=12), 
@@ -400,11 +400,11 @@ Data for full cohort (censored/uncensored). All counts rounded to nearest 5; any
 
 
 
-#### Covariates associated with vaccine coverage: dose 2 by 01 July 2021
+#### Covariates associated with vaccine coverage: dose 3 by 30 March 2022
 
 ##### Approach (1): Cox proportional hazards
 ```{r}
-data_cox <- read_rds(here::here("output", "data", "data_cox_coverage_dose2.rds"))
+data_cox <- read_rds(here::here("output", "data", "data_cox_coverage_dose3.rds"))
 
 ## Censored populations
 total_vax = plyr::round_any(sum(data_cox$covid_vax),5)
@@ -417,18 +417,18 @@ total_N_uncensored = plyr::round_any(sum(data_cox$uncensored_at_cut_off),5)
 vax_perc_uncensored = round(total_vax_uncensored/total_N_uncensored*100,1)
 ```
 
-Cox proportional hazards models were used to explore factors associated with completion of a 2-dose series via any product combination between **08-Dec-2020** and **01-Jul-2021** (at which point 2nd-dose vaccination had plateaued based on the coverage plots above).  
+Cox proportional hazards models were used to explore factors associated with completion of a 2-dose series via any product combination between **08-Dec-2020** and **30-Mar-2022**.  
     
-Follow-up was censored on the date of death, deregistration, or the end of the study period (01-Jul-2021). Overall coverage among individuals uncensored on 01-Jul-2021 was `r vax_perc_uncensored`% (`r prettyNum(total_vax_uncensored)` / `r prettyNum(total_N_uncensored)`, rounded to nearest 5). 
+Follow-up was censored on the date of death, deregistration, or the end of the study period (30-Mar-2022). Overall coverage among individuals uncensored on 30-Mar-2022 was `r vax_perc_uncensored`% (`r prettyNum(total_vax_uncensored)` / `r prettyNum(total_N_uncensored)`, rounded to nearest 5). 
 <br/><br/>
    
-##### Model structure 
-* Univariate models stratified by region were used to explore associations for each covariate in turn.    
-* Partially adjusted stratified by region included the following covariates: age (5-cat), care home residence (1/0), healthcare worked status (1/0), end of life care (1/0), rurality (3-cat), sex (M/F), ethnicity (6-cat), IMD (5-cat), and prior COVID at baseline (1/0)    
-* Fuly adjusted models stratified by region included all other covariates.
+##### Sequential adjustment model structure 
+* Minimally adjusted models stratified by region included the following covariates: age (5-cat), care home residence (1/0), healthcare worked status (1/0).    
+* Partially adjusted models stratified by region included the following covariates: age (5-cat), care home residence (1/0), healthcare worked status (1/0), end of life care (1/0), rurality (3-cat), sex (M/F), ethnicity (6-cat), IMD (5-cat), and prior COVID at baseline (1/0)    
+* Fully adjusted models stratified by region included all covariates.
 <br/><br/>
 
-##### Univariate and multivariate model outputs (scroll left/right for full table)
+##### Multivariate model outputs (scroll left/right for full table)
 ```{r}
 ## Function to create clean table of dose-specific cox outputs
 create_reduced_tbl = function(input_tbl) {
@@ -441,13 +441,13 @@ create_reduced_tbl = function(input_tbl) {
   ## Select variables of interes
   tbl_reduced <- input_tbl %>%
     select(var_group, var_label, label, n_obs,  n_event, n_uncensored_at_cut_off, perc_unvac,
-           estimate_uni, conf.low_uni, conf.high_uni, p.value_uni,
+           estimate_minimal, conf.low_minimal, conf.high_minimal, p.value_minimal,
            estimate_partial, conf.low_partial, conf.high_partial, p.value_partial,
            estimate, conf.low, conf.high, p.value)
   
   ## Relabel columns
   names(tbl_reduced) = c("var_group", "group", "level", "n (total)", "n (vaccinated)", "n (uncensored)", "% unvaccinated",
-                              "HR (uni)", "lower CI (uni)", "upper CI (uni)", "p (uni)",
+                              "HR (min)", "lower CI (min)", "upper CI (min)", "p (min)",
                               "HR (multi)", "lower CI (multi)", "upper CI (multi)", "p (multi)",
                               "HR (full)", "lower CI (full)", "upper CI (full)", "p (full)")
   return(tbl_reduced)
@@ -458,8 +458,8 @@ tabulate_reduced_tbl = function(input_tbl) {
   input_tbl %>% 
     gt(rowname_col = "level", groupname_col = "group") %>%
     tab_spanner(
-      label = "univariate",
-      columns = c("HR (uni)", "lower CI (uni)", "upper CI (uni)", "p (uni)")
+      label = "minimally adjusted",
+      columns = c("HR (min)", "lower CI (min)", "upper CI (min)", "p (min)")
     ) %>%
       tab_spanner(
       label = "partially adjusted",
@@ -479,16 +479,16 @@ tabulate_reduced_tbl = function(input_tbl) {
           ),
         locations = list(
           cells_body(
-            columns = c("p (uni)", "p (multi)", "% unvaccinated")
+            columns = c("p (min)", "p (multi)", "% unvaccinated")
           )
         )
      ) %>%
     tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold")
 }
 
-dose2_tbl <- read_rds(here::here("output", "model", paste0("mod_strat_coxph_redacted_dose2_full.rds"))) %>%
+dose3_tbl <- read_rds(here::here("output", "model", paste0("mod_strat_coxph_redacted_dose3_full.rds"))) %>%
   create_reduced_tbl()
-tabulate_reduced_tbl(dose2_tbl)
+tabulate_reduced_tbl(dose3_tbl)
 ```
 All counts rounded to nearest 5; data redacted for any rows with rounded values of <=10 for n (total), n (vaccinated), or n (unvaccinated), where n (unvaccinated) is the difference between n (total) and n (vaccinated) after rounding. % unvaccinated calculated among individuals who were uncensored at cut-off.<br/><br/>    
 
@@ -546,7 +546,7 @@ plot_reduced_tbl = function(input_tbl, dose4=FALSE) {
   
   plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"), rel_widths = c(3,0.9))
 }
-plot_reduced_tbl(dose2_tbl)
+plot_reduced_tbl(dose3_tbl)
 ```
 <br/><br/> 
 
@@ -562,14 +562,14 @@ total_N = plyr::round_any(nrow(data_lr),5)
 vax_perc = round(total_vax/total_N*100,1)
 ```
 
-Logistic regression models were used to explore factors associated with completion of a 2-dose series via any product combination by **01 Jul 2021** as a binary outcome variable. Individuals were included if they were registered and alive up to the analysis cut-off (N = `r prettyNum(total_N)`, rounded to nearest 5).    
+Logistic regression models were used to explore factors associated with completion of a 2-dose series via any product combination by **30 Mar 2022** as a binary outcome variable. Individuals were included if they were registered and alive up to the analysis cut-off (N = `r prettyNum(total_N)`, rounded to nearest 5).    
     
-Overall coverage as of **01 Jul 2021** was `r vax_perc`% (`r prettyNum(total_vax)` / `r prettyNum(total_N)`, rounded to nearest 5).    
+Overall coverage as of **30 Mar 2022** was `r vax_perc`% (`r prettyNum(total_vax)` / `r prettyNum(total_N)`, rounded to nearest 5).    
     
-Univariate models were used to explore the potential influence of each covariate in turn. Multivariate models adjusting for all other covariates were used to explore the potential influence of each covariate after adjusting for the effect of others.
+Minimally adjusted, partially adjusted, and fully adjusted models were used to explore the potential influence of each covariate, reflecting the structure of the Cox proportional hazard models but with region as a covariate rather than a stratification factor.
 <br/><br/>    
 
-##### Univariate and multivariate model outputs (scroll left/right for full table)
+##### Multivariate model outputs (scroll left/right for full table)
 ```{r}
 ## Import logistic regression results
 tbl_summary <- read_rds(here::here("output", "model", "mod_strat_logistic_redacted.rds"))
@@ -580,13 +580,13 @@ tbl_summary$perc_unvac <- round(100 - (as.numeric(tbl_summary$n_event) / as.nume
 ## Select variables of interes
 tbl_reduced <- tbl_summary %>%
    select(var_group, var_label, label, n_obs, n_event, perc_unvac,
-         estimate_uni, conf.low_uni, conf.high_uni, p.value_uni,
+         estimate_minimal, conf.low_minimal, conf.high_minimal, p.value_minimal,
          estimate_partial, conf.low_partial, conf.high_partial, p.value_partial,
          estimate, conf.low, conf.high, p.value)
 
 ## Relabel columns
 names(tbl_reduced) = c("var_group", "group", "level", "n (total)", "n (vaccinated)", "% unvaccinated",
-                            "OR (uni)", "lower CI (uni)", "upper CI (uni)", "p (uni)",
+                            "OR (min)", "lower CI (min)", "upper CI (min)", "p (min)",
                             "OR (multi)", "lower CI (multi)", "upper CI (multi)", "p (multi)",
                             "OR (full)", "lower CI (full)", "upper CI (full)", "p (full)")
 
@@ -594,8 +594,8 @@ names(tbl_reduced) = c("var_group", "group", "level", "n (total)", "n (vaccinate
 tbl_reduced %>% 
   gt(rowname_col = "level", groupname_col = "group") %>%
   tab_spanner(
-    label = "univariate",
-    columns = c("OR (uni)", "lower CI (uni)", "upper CI (uni)", "p (uni)")
+    label = "minimally adjusted",
+    columns = c("OR (min)", "lower CI (min)", "upper CI (min)", "p (min)")
   ) %>%
     tab_spanner(
     label = "partially adjusted",
@@ -615,7 +615,7 @@ tbl_reduced %>%
         ),
       locations = list(
         cells_body(
-          columns = c("p (uni)", "p (multi)", "% unvaccinated")
+          columns = c("p (min)", "p (multi)", "% unvaccinated")
         )
       )
    ) %>%
@@ -690,45 +690,7 @@ plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"), rel_widths = c(3,0.9))
 
 
 
-#### Covariates associated with vaccine coverage: dose 3 by 16 Feb 2022
-
-##### Cox proportional hazards
-```{r}
-data_cox <- read_rds(here::here("output", "data", "data_cox_coverage_dose3.rds"))
-
-## Censored populations
-total_vax = plyr::round_any(sum(data_cox$covid_vax),5)
-total_N = plyr::round_any(nrow(data_cox),5)
-vax_perc = round(total_vax/total_N*100,1)
-
-## Uncensored population totals
-total_vax_uncensored = plyr::round_any(sum(data_cox$uncensored_at_cut_off==1 & data_cox$unvax_uncensored_at_cut_off==0),5)
-total_N_uncensored = plyr::round_any(sum(data_cox$uncensored_at_cut_off),5)
-vax_perc_uncensored = round(total_vax_uncensored/total_N_uncensored*100,1)
-```
-
-Follow-up was censored on the date of death, deregistration, or the end of the study period (16-Feb-2022). Overall coverage among individuals uncensored on 16-Feb-2022 was `r vax_perc_uncensored`% (`r prettyNum(total_vax_uncensored)` / `r prettyNum(total_N_uncensored)`, rounded to nearest 5). 
-<br/><br/>
-
-##### Univariate and multivariate model outputs (scroll left/right for full table)
-```{r}
-dose3_tbl <- read_rds(here::here("output", "model", paste0("mod_strat_coxph_redacted_dose3_full.rds"))) %>%
-  create_reduced_tbl()
-tabulate_reduced_tbl(dose3_tbl)
-```
-<br/><br/>    
-
-#### Plot of partially adjusted model outputs
-```{r, fig.width=8, fig.height=12}
-plot_reduced_tbl(dose3_tbl)
-```
-<br/><br/><br/><br/>
-
-
-
-
-
-#### Covariates associated with vaccine coverage: dose 4 by 16 Feb 2022 (full cohort)
+#### Covariates associated with vaccine coverage: dose 4 by 30 Mar 2022 (full cohort)
 
 ##### Cox proportional hazards
 ```{r}
@@ -745,10 +707,10 @@ total_N_uncensored = plyr::round_any(sum(data_cox$uncensored_at_cut_off),5)
 vax_perc_uncensored = round(total_vax_uncensored/total_N_uncensored*100,1)
 ```
 
-Follow-up was censored on the date of death, deregistration, or the end of the study period (16-Feb-2022). Overall coverage among individuals uncensored on 16-Feb-2022 was `r vax_perc_uncensored`% (`r prettyNum(total_vax_uncensored)` / `r prettyNum(total_N_uncensored)`, rounded to nearest 5). 
+Follow-up was censored on the date of death, deregistration, or the end of the study period (30-Mar-2022). Overall coverage among individuals uncensored on 30-Mar-2022 was `r vax_perc_uncensored`% (`r prettyNum(total_vax_uncensored)` / `r prettyNum(total_N_uncensored)`, rounded to nearest 5). 
 <br/><br/>
 
-##### Univariate and multivariate model outputs (scroll left/right for full table)
+##### Multivariate model outputs (scroll left/right for full table)
 ```{r}
 dose4full_tbl <- read_rds(here::here("output", "model", paste0("mod_strat_coxph_redacted_dose4full_full.rds"))) %>%
   create_reduced_tbl()
@@ -766,7 +728,7 @@ plot_reduced_tbl(dose4full_tbl, dose4=TRUE)
 
 
 
-#### Covariates associated with vaccine coverage: dose 4 by 16 Feb 2022 (subset)
+#### Covariates associated with vaccine coverage: dose 4 by 30 Mar 2022 (subset)
 
 **Same analyses  restricted to individuals with a history of immunosuppression, haematologic cancer, or transplant on the index date (01-Dec-2020).**
 
@@ -785,10 +747,10 @@ total_N_uncensored = plyr::round_any(sum(data_cox$uncensored_at_cut_off),5)
 vax_perc_uncensored = round(total_vax_uncensored/total_N_uncensored*100,1)
 ```
 
-Follow-up was censored on the date of death, deregistration, or the end of the study period (16-Feb-2022). Overall coverage among individuals uncensored on 16-Feb-2022 was `r vax_perc_uncensored`% (`r prettyNum(total_vax_uncensored)` / `r prettyNum(total_N_uncensored)`, rounded to nearest 5). 
+Follow-up was censored on the date of death, deregistration, or the end of the study period (30-Mar-2022). Overall coverage among individuals uncensored on 30-Mar-2022 was `r vax_perc_uncensored`% (`r prettyNum(total_vax_uncensored)` / `r prettyNum(total_N_uncensored)`, rounded to nearest 5). 
 <br/><br/>
 
-##### Univariate and multivariate model outputs (scroll left/right for full table)
+##### Multivariate model outputs (scroll left/right for full table)
 ```{r}
 dose4subset_tbl <- read_rds(here::here("output", "model", paste0("mod_strat_coxph_redacted_dose4subset_full.rds"))) %>%
   create_reduced_tbl()
@@ -810,10 +772,10 @@ plot_reduced_tbl(dose4subset_tbl, dose4=TRUE)
 
 #### Subgroup analyses
 
-##### Dose 2 summary
+##### Dose 3 summary
 ```{r}
 ## Function to create clean table of dose-specific cox subgroup outputs
-create_reduced_tbl_subgroup = function(selected_dose=c("dose2", "dose3", "dose4full", "dose4subset")) {
+create_reduced_tbl_subgroup = function(selected_dose=c("dose3", "dose4full", "dose4subset")) {
   # Example: selected_dose = "dose2"
   
   # Define strata
@@ -836,37 +798,37 @@ create_reduced_tbl_subgroup = function(selected_dose=c("dose2", "dose3", "dose4f
 }
 
 ## Function to create formatted gt output
-tabulate_reduced_tbl_subgroup = function(input_tbl, selected_dose=c("dose2", "dose3", "dose4full", "dose4subset")) { 
+tabulate_reduced_tbl_subgroup = function(input_tbl, selected_dose=c("dose3", "dose4full", "dose4subset")) { 
   # Example: input_tbl = tbl_summary
 
   ## Select variables of interes
   tbl_reduced <- input_tbl %>%
     mutate(
       # Collate summary outputs
-      HR_summary_uni = paste0(estimate_uni," (", conf.low,"-",conf.high,")"),
+      HR_summary_minimal = paste0(estimate_minimal," (", conf.low,"-",conf.high,")"),
       HR_summary_partial = paste0(estimate_partial," (", conf.low,"-",conf.high,")"),
-      HR_summary_full = paste0(estimate_uni," (", conf.low,"-",conf.high,")"),
+      HR_summary_full = paste0(estimate_minimal," (", conf.low,"-",conf.high,")"),
       
       # Clean summary outputs
-      HR_summary_uni = ifelse(HR_summary_uni=="[Redacted] ([Redacted]-[Redacted])", "[Redacted]", HR_summary_uni),
+      HR_summary_minimal = ifelse(HR_summary_minimal=="[Redacted] ([Redacted]-[Redacted])", "[Redacted]", HR_summary_minimal),
       HR_summary_partial = ifelse(HR_summary_partial=="[Redacted] ([Redacted]-[Redacted])", "[Redacted]", HR_summary_partial),
       HR_summary_full = ifelse(HR_summary_full=="[Redacted] ([Redacted]-[Redacted])", "[Redacted]", HR_summary_full),
       
-      HR_summary_uni = ifelse(HR_summary_uni=="1 (NA-NA)", "1", HR_summary_uni),
+      HR_summary_minimal = ifelse(HR_summary_minimal=="1 (NA-NA)", "1", HR_summary_minimal),
       HR_summary_partial = ifelse(HR_summary_partial=="1 (NA-NA)", "1", HR_summary_partial),
       HR_summary_full = ifelse(HR_summary_full=="1 (NA-NA)", "1", HR_summary_full)
     ) %>%
     select(subgroup, subgroup_id, var_group, var_label, label, n_obs, n_uncensored_at_cut_off, perc_unvac,
-           HR_summary_uni, HR_summary_partial, HR_summary_full)
+           HR_summary_minimal, HR_summary_partial, HR_summary_full)
   
   ## Relabel columns
-  names(tbl_reduced) = c("subgroup", "subgroup_id", "var_group", "group", "level", "n (total)", "n (uncen)", "% unvax", "HR uni", "HR partial", "HR full")
+  names(tbl_reduced) = c("subgroup", "subgroup_id", "var_group", "group", "level", "n (total)", "n (uncen)", "% unvax", "HR minimal", "HR partial", "HR full")
 
   ## Pivot to wide format based on subgroup
   tbl_wide = tbl_reduced %>% 
     pivot_wider(    
       names_from = c(subgroup, subgroup_id),
-      values_from = c(`n (total)`, `n (uncen)`, `% unvax`, `HR uni`, `HR partial`, `HR full`),
+      values_from = c(`n (total)`, `n (uncen)`, `% unvax`, `HR minimal`, `HR partial`, `HR full`),
       names_glue = "{.value} [{subgroup_id}]"
     ) 
   
@@ -875,19 +837,19 @@ tabulate_reduced_tbl_subgroup = function(input_tbl, selected_dose=c("dose2", "do
     gt(rowname_col = "level", groupname_col = "group") %>%
     tab_spanner(
       label = "CKD3a (D-T-)",
-      columns = paste0(c("n (total)", "n (uncen)", "% unvax", "HR uni", "HR partial", "HR full")," [1]")
+      columns = paste0(c("n (total)", "n (uncen)", "% unvax", "HR minimal", "HR partial", "HR full")," [1]")
     )  %>%
     tab_spanner(
       label = "CKD3b (D-T-)",
-      columns = paste0(c("n (total)", "n (uncen)", "% unvax", "HR uni", "HR partial", "HR full")," [2]")
+      columns = paste0(c("n (total)", "n (uncen)", "% unvax", "HR minimal", "HR partial", "HR full")," [2]")
     )  %>%
     tab_spanner(
       label = "CKD4-5 (D-T-)",
-      columns = paste0(c("n (total)", "n (uncen)", "% unvax", "HR uni", "HR partial", "HR full")," [3]")
+      columns = paste0(c("n (total)", "n (uncen)", "% unvax", "HR minimal", "HR partial", "HR full")," [3]")
     )  %>%
     tab_spanner(
       label = "CKD (T+)",
-      columns = paste0(c("n (total)", "n (uncen)", "% unvax", "HR uni", "HR partial", "HR full")," [4]")
+      columns = paste0(c("n (total)", "n (uncen)", "% unvax", "HR minimal", "HR partial", "HR full")," [4]")
     )  %>%
     cols_hide(columns = "var_group") %>%
     tab_options(table.font.size = pct(70)) %>%
@@ -909,20 +871,20 @@ tabulate_reduced_tbl_subgroup = function(input_tbl, selected_dose=c("dose2", "do
       tbl_wide = tbl_wide %>%
         tab_spanner(
           label = "CKD (D+T-)",
-          columns = paste0(c("n (total)", "n (uncen)", "% unvax", "HR uni", "HR partial", "HR full")," [5]")
+          columns = paste0(c("n (total)", "n (uncen)", "% unvax", "HR minimal", "HR partial", "HR full")," [5]")
         ) 
       } 
   return(tbl_wide)
 }
 
-## Create table for dose 2 data
-dose2_tbl_subgroup = create_reduced_tbl_subgroup("dose2")
-tabulate_reduced_tbl_subgroup(dose2_tbl_subgroup, "dose2")
+## Create table for dose 3 data
+dose3_tbl_subgroup = create_reduced_tbl_subgroup("dose3")
+tabulate_reduced_tbl_subgroup(dose3_tbl_subgroup, "dose3")
 ```
 <br/>All counts rounded to nearest 5; data redacted for any rows with rounded values of <=10 for n (total), n (vaccinated), or n (unvaccinated), where n (unvaccinated) is the difference between n (total) and n (vaccinated) after rounding. % unvaccinated calculated among individuals who were uncensored at cut-off.
 <br/><br/>
 
-##### Dose 2 plot
+##### Dose 3 plot
 ```{r, fig.width=13, fig.height=10}
 ## Function to create plot of cox subgroup outputs 
 plot_reduced_tbl_subgroup = function(input_tbl) {
@@ -967,23 +929,9 @@ plot_reduced_tbl_subgroup = function(input_tbl) {
     theme(axis.title = element_text(size=12), axis.text = element_text(size=12), strip.text.y = element_blank(), strip.text.x = element_text(size=12), 
           legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = c(-1.5,0.95))
 }
-plot_reduced_tbl_subgroup(dose2_tbl_subgroup)
+plot_reduced_tbl_subgroup(dose3_tbl_subgroup)
 ```
 <br/><br/><br/><br/>  
-
-##### Dose 3 summary
-```{r}
-tbl_subgroup = create_reduced_tbl_subgroup("dose3")
-tabulate_reduced_tbl_subgroup(tbl_subgroup, "dose3")
-```
-<br/>All counts rounded to nearest 5; data redacted for any rows with rounded values of <=10 for n (total), n (vaccinated), or n (unvaccinated), where n (unvaccinated) is the difference between n (total) and n (vaccinated) after rounding. % unvaccinated calculated among individuals who were uncensored at cut-off.
-<br/><br/>   
-
-##### Dose 3 plot
-```{r, fig.width=13, fig.height=10}
-plot_reduced_tbl_subgroup(tbl_subgroup)
-```
-<br/><br/><br/><br/>   
 
 
 
