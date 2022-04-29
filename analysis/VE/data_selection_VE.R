@@ -40,7 +40,24 @@ data_processed <- data_processed %>%
   mutate(
     # set censor date (last follow-up day, end date, deregistration, death, 3rd)
     censor_date = pmin(vax2_date - 1 + lastfupday, end_date, dereg_date, death_date, vax3_date, na.rm=TRUE),
-    tte_censor = tte(vax2_date - 1, censor_date, censor_date)  
+    tte_censor = tte(vax2_date - 1, censor_date, censor_date),
+    ind_censor = dplyr::if_else((censor_date>censor_date) | is.na(censor_date), FALSE, TRUE),
+    
+    # time to positive test
+    tte_covid_postest = tte(vax2_date - 1, postvax_positive_test_date, censor_date, na.censor=TRUE),
+    ind_covid_postest = dplyr::if_else((postvax_positive_test_date>censor_date) | is.na(postvax_positive_test_date), FALSE, TRUE),
+    
+    # time to COVID-19 A&E attendance
+    tte_covid_emergency = tte(vax2_date - 1, postvax_covid_emergency_date, censor_date, na.censor=TRUE),
+    ind_covid_emergency = dplyr::if_else((postvax_covid_emergency_date>censor_date) | is.na(postvax_covid_emergency_date), FALSE, TRUE),
+    
+    # time to COVID-19 hospitalisation
+    tte_covid_hosp = tte(vax2_date - 1, postvax_covid_hospitalisation_date, censor_date, na.censor=TRUE),
+    ind_covid_hosp = dplyr::if_else((postvax_covid_hospitalisation_date>censor_date) | is.na(postvax_covid_hospitalisation_date), FALSE, TRUE),
+    
+    # time to COVID-19 death
+    tte_covid_death = tte(vax2_date - 1, postvax_covid_death_date, censor_date, na.censor=TRUE),
+    ind_covid_death = dplyr::if_else((postvax_covid_death_date>censor_date) | is.na(postvax_covid_death_date), FALSE, TRUE)
     )
 
 ###################################

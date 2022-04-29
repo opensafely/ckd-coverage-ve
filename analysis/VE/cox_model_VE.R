@@ -97,18 +97,18 @@ postvax_time <- data_cohort %>%
 
 ####################################################### 
 ### formulae for unadjusted/adjusted models
-####################################################### 
-if (args[[1]]=="unmatched") {
+#######################################################
+if (db=="VE") {
   # cox models stratified by follow-up window
   formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(timesincevax_pw)
   formula1 <- formula0 %>% update(. ~ . + strata(region)*ns(vax2_day, 3))
-  formula2 <- formula1 %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + sex + imd + ethnicity + 
+  formula2 <- formula1 %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + care_home + sex + imd + ethnicity + 
                                     rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
   
   # cox models for full follow-up time
   formula0_full <- Surv(follow_up_time, ind_outcome) ~ vax2_az
   formula1_full <- formula0_full %>% update(. ~ . + strata(region)*ns(vax2_day, 3))
-  formula2_full <- formula1_full %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + sex + imd + ethnicity + 
+  formula2_full <- formula1_full %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + care_home + sex + imd + ethnicity + 
                                               rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
 
 } else {
@@ -145,13 +145,14 @@ cox_model_VE <- function(number, formula_cox, stratified=TRUE) {
       robust = TRUE, # compute robust variance
       id = patient_id, # required since multiple rows per subject
       na.action = "na.fail",
-      control = coxph.control(iter.max = 100)
+      control = coxph.control(iter.max = 50)
     )
   } else {
     # if stratified = FALSE, fit model on full dataset
     coxmod <- coxph(
       formula_cox, 
-      data = data_tte
+      data = data_tte,
+      control = coxph.control(iter.max = 50)
       )
   }
   # print warnings
@@ -221,10 +222,15 @@ for (i in 1:length(outcome_list)) {
       # select dates for outcome in question
       outcome_date = get(date_list[i]),
       
+      # censor date already defined in data_selection_VE.R script 
+      
       # calculate tte and ind for outcome in question
       tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=TRUE),
       ind_outcome = get(paste0("ind_",selected_outcome)),
-      tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE)
+      tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
+      
+      # calculate follow-up time (censor/event)
+      follow_up_time = tte(vax2_date-1, get(date_list[i]), censor_date) 
   )
   
   data_cox <- tmerge(
@@ -249,7 +255,7 @@ for (i in 1:length(outcome_list)) {
     glue(selected_outcome_clean, "\ndata_cox data size = ", nrow(data_cox)),
     glue("data_cox memory usage = ", format(object.size(data_cox), units="GB", standard="SI", digits=3L))
   )
-  
+
   # run unadjusted and adjusted models, stratified and unstratified
   #assign("last.warning", NULL, envir = baseenv()) # clear warnings
   summary0 <- cox_model_VE(0, formula0)
