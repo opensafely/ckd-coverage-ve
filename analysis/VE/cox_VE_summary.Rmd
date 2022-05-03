@@ -96,8 +96,8 @@ subset(table_1) %>%
 
 #### Date distribution of events
 ```{r, fig.width=12, fig.height=6}
+hist_data = data.frame(data_cohort)
 density_plot = function(outcome, title) {
-  hist_data = data.frame(data_cohort)
   hist_data$outcome_date = hist_data[,outcome]
   ggplot(hist_data, aes(x=outcome_date, y=..density..)) + 
     geom_density(alpha=0.8, bins = 120) +
@@ -111,6 +111,26 @@ plot_grid(density_plot("vax1_date", "dose 1 date"),
           density_plot("postvax_positive_test_date", "+ve test date"), 
           density_plot("postvax_covid_hospitalisation_date", "hosp. date"), 
           density_plot("censor_date", "censor date"), 
+          ncol=3,  align="v", axis = c("lr"))
+```
+<br/><br/>
+
+#### Follow-up time distribution
+```{r, fig.width=12, fig.height=6}
+hist_data$follow_up_pos_test = pmin(hist_data$tte_censor, hist_data$tte_covid_postest, na.rm=T)
+hist_data$follow_up_hosp = pmin(hist_data$tte_censor, hist_data$tte_covid_hosp, na.rm=T)
+density_plot = function(outcome, title) {
+  hist_data$outcome_date = hist_data[,outcome]
+  ggplot(hist_data, aes(x=outcome_date, y=..density..)) + 
+    geom_density(alpha=0.8, bins = 120) +
+    theme_bw() + xlab("N days") + ggtitle(title) +
+    theme(axis.text = element_text(size=15),axis.title = element_text(size=15),legend.text = element_text(size=15))
+}
+plot_grid(density_plot("tte_censor", "tte (censor)"), 
+          density_plot("tte_covid_postest", "tte (+ve test)"), 
+          density_plot("tte_covid_hosp", "tte (hosp.)"), 
+          density_plot("follow_up_pos_test", "follow-up time (+ve test)"), 
+          density_plot("follow_up_hosp", "follow-up time (hosp.)"), 
           ncol=3,  align="v", axis = c("lr"))
 ```
 <br/><br/>
