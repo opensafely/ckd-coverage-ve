@@ -27,6 +27,7 @@ library('cowplot')
 library('fs')
 library('survival')
 library('survminer')
+library('scales')
 
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
@@ -90,6 +91,27 @@ subset(table_1) %>%
     cols_width(
     starts_with("Variable") ~ px(350)
     )
+```
+<br/><br/>
+
+#### Date distribution of events
+```{r, fig.width=12, fig.height=6}
+density_plot = function(outcome, title) {
+  hist_data = data.frame(data_cohort)
+  hist_data$outcome_date = hist_data[,outcome]
+  ggplot(hist_data, aes(x=outcome_date, y=..density..)) + 
+    geom_density(alpha=0.8, bins = 120) +
+    scale_x_date(labels = date_format("%b %Y"),
+              limits = c(as.Date("2020-12-01"), as.Date("2022-03-30"))) +
+    theme_bw() + xlab("date") + ggtitle(title) +
+    theme(axis.text = element_text(size=15),axis.title = element_text(size=15),legend.text = element_text(size=15))
+}
+plot_grid(density_plot("vax1_date", "dose 1 date"), 
+          density_plot("vax2_date", "dose 2 date"), 
+          density_plot("postvax_positive_test_date", "+ve test date"), 
+          density_plot("postvax_covid_hospitalisation_date", "hosp. date"), 
+          density_plot("censor_date", "censor date"), 
+          ncol=3,  align="v", axis = c("lr"))
 ```
 <br/><br/>
 

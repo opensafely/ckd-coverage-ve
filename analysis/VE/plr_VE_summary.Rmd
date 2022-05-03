@@ -27,6 +27,7 @@ library('cowplot')
 library('fs')
 library('survival')
 library('survminer')
+library('scales')
 
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
@@ -43,8 +44,29 @@ rounded_n = plyr::round_any(nrow(data_cohort), 5)
 if (data_cohort$mock_data_flag[1]==1) { flag = "present" } else { flag = "absent" }
 ```
 
+#### Date distribution of events
+```{r, fig.width=12, fig.height=6}
+density_plot = function(outcome, title) {
+  hist_data = data.frame(data_cohort)
+  hist_data$outcome_date = hist_data[,outcome]
+  ggplot(hist_data, aes(x=outcome_date, y=..density..)) + 
+    geom_density(alpha=0.8, bins = 120) +
+    scale_x_date(labels = date_format("%b %Y"),
+              limits = c(as.Date("2020-12-01"), as.Date("2022-03-30"))) +
+    theme_bw() + xlab("date") + ggtitle(title) +
+    theme(axis.text = element_text(size=15),axis.title = element_text(size=15),legend.text = element_text(size=15))
+}
+plot_grid(density_plot("vax1_date", "dose 1 date"), 
+          density_plot("vax2_date", "dose 2 date"), 
+          density_plot("postvax_positive_test_date", "+ve test date"), 
+          density_plot("postvax_covid_hospitalisation_date", "hosp. date"), 
+          density_plot("censor_date", "censor date"), 
+          ncol=3,  align="v", axis = c("lr"))
+```
+<br/><br/>
+
 #### Cumulative incidence plots and hazard ratios over time (figure)
-```{r, fig.width=10, fig.height=10}
+```{r, fig.width=21, fig.height=10}
 ## Set list of outcomes and date variable names
 outcome_list = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death")
 clean_list = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death")
@@ -82,8 +104,8 @@ surv_table <- function(outcome_number) {
 }
 
 # collate across outcomes 1:4 (positive test, A&E, hosp, death)
-surv_collated = surv_table(1)
-#surv_collated = rbind(surv_table(1), surv_table(2), surv_table(3), surv_table(4))
+surv_collated = rbind(surv_table(1), surv_table(2), surv_table(3), surv_table(4))
+#surv_collated = surv_table(1)
 surv_collated$outcome_clean = factor(surv_collated$outcome_clean, levels = clean_list)
 
 ## Generate KM plot across 4 outcomes
@@ -122,18 +144,18 @@ g1 = surv_collated %>%
     )
 
 ### Generate plot of hazard ratios over time
-# model = rbind(
-#   read_rds(here::here("output", "model", db, paste0("modelplr_VE_estimates_",outcome_list[1],".rds"))) %>%
-#     mutate(outcome_clean = clean_list[1]),
-#   read_rds(here::here("output", "model", db, paste0("modelplr_VE_estimates_",outcome_list[2],".rds"))) %>%
-#     mutate(outcome_clean = clean_list[2]),
-#   read_rds(here::here("output", "model", db, paste0("modelplr_VE_estimates_",outcome_list[3],".rds"))) %>%
-#     mutate(outcome_clean = clean_list[3]),
-#   read_rds(here::here("output", "model", db, paste0("modelplr_VE_estimates_",outcome_list[4],".rds"))) %>%
-#     mutate(outcome_clean = clean_list[4])
-# )
-model = read_rds(here::here("output", "model", db, paste0("modelplr_VE_estimates_",outcome_list[1],".rds"))) %>%
-     mutate(outcome_clean = clean_list[1])
+ model = rbind(
+   read_rds(here::here("output", "model", db, paste0("modelplr_VE_estimates_",outcome_list[1],".rds"))) %>%
+     mutate(outcome_clean = clean_list[1]),
+   read_rds(here::here("output", "model", db, paste0("modelplr_VE_estimates_",outcome_list[2],".rds"))) %>%
+     mutate(outcome_clean = clean_list[2]),
+   read_rds(here::here("output", "model", db, paste0("modelplr_VE_estimates_",outcome_list[3],".rds"))) %>%
+     mutate(outcome_clean = clean_list[3]),
+   read_rds(here::here("output", "model", db, paste0("modelplr_VE_estimates_",outcome_list[4],".rds"))) %>%
+     mutate(outcome_clean = clean_list[4])
+ )
+#model = read_rds(here::here("output", "model", db, paste0("modelplr_VE_estimates_",outcome_list[1],".rds"))) %>%
+#     mutate(outcome_clean = clean_list[1])
   
 ## Set factor levels
 model$model_name = factor(model$model_name, levels = c("unadjusted", "region/date adjusted", "fully adjusted"))
@@ -215,8 +237,8 @@ if (matched) {
 }
 
 ## Update column names
-table_irr <- subset(table_irr, period!="All" & outcome_clean=="Positive SARS-CoV-2 test")%>%
-#table_irr <- table_irr %>%
+#table_irr <- subset(table_irr, period!="All" & outcome_clean=="Positive SARS-CoV-2 test")%>%
+table_irr <- table_irr %>%
   select(c(period, BNT_n, BNT_events, BNT_personyears, BNT_rate, AZ_n, AZ_events, AZ_personyears, AZ_rate, rr, outcome_clean))
 names(table_irr) <- c("Period (days)", "n, BNT (total)", "n, BNT (events)", "person-years, BNT", "rate, BNT", 
                       "n, AZ (total)", "n, AZ (events)", "person-years, AZ", "rate, AZ", 
