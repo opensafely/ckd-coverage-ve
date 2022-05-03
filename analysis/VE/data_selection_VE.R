@@ -27,7 +27,6 @@ data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))
 ## vaccine initiation dates
 first_az = as_date("2021-01-04")
 
-
 ## Set analysis end date
 data_processed$end_date = as_date("2021-11-30")
 
@@ -45,19 +44,26 @@ data_processed <- data_processed %>%
     
     # time to positive test
     tte_covid_postest = tte(vax2_date - 1, postvax_positive_test_date, censor_date, na.censor=TRUE),
+    tte_covid_postest_or_censor = tte(vax2_date - 1, postvax_positive_test_date, censor_date, na.censor=FALSE),
     ind_covid_postest = dplyr::if_else((postvax_positive_test_date>censor_date) | is.na(postvax_positive_test_date), FALSE, TRUE),
     
     # time to COVID-19 A&E attendance
     tte_covid_emergency = tte(vax2_date - 1, postvax_covid_emergency_date, censor_date, na.censor=TRUE),
+    tte_covid_emergency_or_censor = tte(vax2_date - 1, postvax_covid_emergency_date, censor_date, na.censor=FALSE),
     ind_covid_emergency = dplyr::if_else((postvax_covid_emergency_date>censor_date) | is.na(postvax_covid_emergency_date), FALSE, TRUE),
     
     # time to COVID-19 hospitalisation
     tte_covid_hosp = tte(vax2_date - 1, postvax_covid_hospitalisation_date, censor_date, na.censor=TRUE),
+    tte_covid_hosp_or_censor = tte(vax2_date - 1, postvax_covid_hospitalisation_date, censor_date, na.censor=FALSE),
     ind_covid_hosp = dplyr::if_else((postvax_covid_hospitalisation_date>censor_date) | is.na(postvax_covid_hospitalisation_date), FALSE, TRUE),
     
     # time to COVID-19 death
     tte_covid_death = tte(vax2_date - 1, postvax_covid_death_date, censor_date, na.censor=TRUE),
-    ind_covid_death = dplyr::if_else((postvax_covid_death_date>censor_date) | is.na(postvax_covid_death_date), FALSE, TRUE)
+    tte_covid_death_or_censor = tte(vax2_date - 1, postvax_covid_death_date, censor_date, na.censor=FALSE),
+    ind_covid_death = dplyr::if_else((postvax_covid_death_date>censor_date) | is.na(postvax_covid_death_date), FALSE, TRUE),
+    
+    # time dose 2 to cut-off
+    tte_dose2_to_cutoff = as.numeric(date(end_date)-date(vax2_date-1))
     )
 
 ###################################
