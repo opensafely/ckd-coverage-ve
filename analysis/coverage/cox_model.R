@@ -30,20 +30,20 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0) {
   outcome = "vax3_date"
   outcome_label = "dose3"
-  cutoff = as.Date("2022-03-30", format = "%Y-%m-%d")
+  cutoff = as.Date("2022-04-20", format = "%Y-%m-%d")
 } else {
   if (args[[1]]=="dose3") {
     outcome = "vax3_date"
     outcome_label = "dose3"
-    cutoff = as.Date("2022-03-30", format = "%Y-%m-%d")
+    cutoff = as.Date("2022-04-20", format = "%Y-%m-%d")
   } else if (args[[1]]=="dose4full") {
     outcome = "vax4_date"
     outcome_label = "dose4full"
-    cutoff = as.Date("2022-03-30", format = "%Y-%m-%d")
+    cutoff = as.Date("2022-04-20", format = "%Y-%m-%d")
   } else if (args[[1]]=="dose4subset") {
     outcome = "vax4_date"
     outcome_label = "dose4subset"
-    cutoff = as.Date("2022-03-30", format = "%Y-%m-%d")
+    cutoff = as.Date("2022-04-20", format = "%Y-%m-%d")
   } else {
     # print error if no argument specified
     stop("No outcome specified")

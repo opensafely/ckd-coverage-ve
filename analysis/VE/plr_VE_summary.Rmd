@@ -61,6 +61,25 @@ data.frame(summary_df) %>%
   gt(rownames_to_stub = TRUE) %>%
   tab_options(table.font.size = pct(85))
 ```
+
+```{r, fig.width=14, fig.height=3}
+fup_times = rbind(
+  data.frame(outcome = "+ve test", fups = hist_data$tte_covid_postest_or_censor),
+  data.frame(outcome = "COVID A&E", fups = hist_data$tte_covid_emergency_or_censor),
+  data.frame(outcome = "COVID hosp.", fups = hist_data$tte_covid_hosp_or_censor),
+  data.frame(outcome = "COVID death", fups = hist_data$tte_covid_death_or_censor)
+)
+fup_times$outcome = factor(fup_times$outcome, levels = c("+ve test", "COVID A&E", "COVID hosp.", "COVID death"))
+
+ggplot(fup_times, aes(x=fups, y=..density.., group=outcome, colour=outcome)) + 
+    geom_density(alpha=0.8, adjust = 1) +
+    theme_bw() + xlab("days") +  ylab("density (smoothed)") + 
+    scale_colour_brewer(palette="Dark2") +
+    theme(strip.background = element_blank(), strip.text = element_text(size=15),
+          axis.text = element_text(size=15), axis.title = element_text(size=15),
+          legend.position="none") +
+  facet_grid(.~outcome)
+```
 <br/><br/>
 
 #### Date distribution of events
@@ -84,27 +103,6 @@ ggplot(dose_dates, aes(x=dates, y=..density.., group=event, colour=event)) +
           axis.text = element_text(size=12), axis.title = element_text(size=12),
           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
   facet_grid(type~.)
-```
-<br/><br/>
-
-#### Follow-up time distribution
-```{r, fig.width=14, fig.height=3}
-fup_times = rbind(
-  data.frame(outcome = "+ve test", fups = hist_data$tte_covid_postest_or_censor),
-  data.frame(outcome = "COVID A&E", fups = hist_data$tte_covid_emergency_or_censor),
-  data.frame(outcome = "COVID hosp.", fups = hist_data$tte_covid_hosp_or_censor),
-  data.frame(outcome = "COVID death", fups = hist_data$tte_covid_death_or_censor)
-)
-fup_times$outcome = factor(fup_times$outcome, levels = c("+ve test", "COVID A&E", "COVID hosp.", "COVID death"))
-
-ggplot(fup_times, aes(x=fups, y=..density.., group=outcome, colour=outcome)) + 
-    geom_density(alpha=0.8, adjust = 1) +
-    theme_bw() + xlab("days") +  ylab("density (smoothed)") + 
-    scale_colour_brewer(palette="Dark2") +
-    theme(strip.background = element_blank(), strip.text = element_text(size=15),
-          axis.text = element_text(size=15), axis.title = element_text(size=15),
-          legend.position="none") +
-  facet_grid(.~outcome)
 ```
 <br/><br/>
 

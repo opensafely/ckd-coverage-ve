@@ -19,7 +19,7 @@ from codelists import *
 
 ### Set initial date parameters
 start_date = "2020-12-01"
-end_date = "2022-03-30" # date of most recent coverage report update (https://reports.opensafely.org/reports/vaccine-coverage/)
+end_date = "2022-04-20" # date of most recent coverage report update (https://reports.opensafely.org/reports/vaccine-coverage/)
 # if end_date updated, also update return_expectations in defined variables for consistency
 
 study = StudyDefinition(
@@ -954,7 +954,7 @@ study = StudyDefinition(
     returning = "date",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-03-30"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
       "rate": "uniform",
       "incidence": 0.15,
     },
@@ -968,7 +968,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-03-30"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -983,7 +983,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-03-30"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -996,7 +996,7 @@ study = StudyDefinition(
     between=["covid_vax_date_2",end_date],
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-03-30"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
       "rate": "uniform",
       "incidence": 0.02
     },
@@ -1016,7 +1016,7 @@ study = StudyDefinition(
     returning = "date",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-03-30"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
       "rate": "uniform",
       "incidence": 0.5,
     },
@@ -1029,7 +1029,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-03-30"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -1043,7 +1043,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-03-30"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -1055,7 +1055,7 @@ study = StudyDefinition(
     between=["covid_vax_date_2",end_date],
     date_format="YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-03-30"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
       "rate": "uniform",
       "incidence": 0.02
     },

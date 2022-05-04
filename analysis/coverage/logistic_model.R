@@ -26,7 +26,7 @@ library('fs')
 ## Import data
 data <- read_rds(here::here("output", "data", "data_cohort_coverage_logistic.rds")) %>%
   mutate(
-    end_date = as.Date("2022-03-30", format = "%Y-%m-%d"),
+    end_date = as.Date("2022-04-20", format = "%Y-%m-%d"),
     # COVID vaccination: 1 of vaccinated before end date, 0 otherwise
     covid_vax = dplyr::if_else(!is.na(vax3_date) & vax3_date<=end_date, 1, 0)
   )

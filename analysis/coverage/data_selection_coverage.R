@@ -44,7 +44,7 @@ data_criteria <- data_processed %>%
     has_region = !is.na(region),
 
     # Vaccine profile
-    has_max_5_vax = n_vax <= 5, # maximum of 4 recorded doses
+    has_max_5_vax = n_vax <= 5, # maximum of 5 recorded doses
     valid_vaxgap12 = tbv1_2 >= 14 | is.na(vax2_date), # at least 14 days between dose 1 and dose 2 if dose 2 given
     valid_vaxgap23 = tbv2_3 >= 14 | is.na(vax3_date), # at least 14 days between dose 2 and dose 3 if dose 3 given
     valid_vaxgap34 = tbv3_4 >= 14 | is.na(vax4_date), # at least 14 days between dose 3 and dose 4 f dose 3 given
