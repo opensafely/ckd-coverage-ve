@@ -61,6 +61,7 @@ data.frame(summary_df) %>%
   gt(rownames_to_stub = TRUE) %>%
   tab_options(table.font.size = pct(85))
 ```
+<br/><br/>
 
 ```{r, fig.width=14, fig.height=3}
 fup_times = rbind(

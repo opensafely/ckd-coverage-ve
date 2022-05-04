@@ -111,6 +111,7 @@ data.frame(summary_df) %>%
   gt(rownames_to_stub = TRUE) %>%
   tab_options(table.font.size = pct(85))
 ```
+<br/><br/>
 
 ```{r, fig.width=14, fig.height=3}
 fup_times = rbind(
@@ -165,9 +166,9 @@ date_list = c("postvax_positive_test_date", "postvax_covid_emergency_date", "pos
 
 ## Read in data for cumulative incidence curves
 if (matched) {
-  data_tte <- read_rds(here("output", "data", "data_cohort_VE_matched.rds"))
+  data_tte <- read_rds(here::here("output", "data", "data_cohort_VE_matched.rds"))
 } else {
-  data_tte <- read_rds(here("output", "data", "data_cohort_VE.rds"))
+  data_tte <- read_rds(here::here("output", "data", "data_cohort_VE.rds"))
   }
 data_tte <- data_tte %>%
   mutate(
@@ -258,7 +259,8 @@ model$term_right[model$level=="full"] = 336
 ## Add redaction text
 model$redaction = NA
 model$redaction[model$p.value=="[Redacted]" & model$model==0] = "[R]"
-model$redaction[model$n_event=="0"] = "[N]"
+model$n_event = as.numeric(model$AZ_events) + as.numeric(model$BNT_events)
+model$redaction[model$n_event==0] = "[N]"
 
 ## Generate HR plot for 4 ouctomes
 g2 = ggplot(data = model) +
