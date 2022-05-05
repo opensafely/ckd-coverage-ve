@@ -117,11 +117,10 @@ actions:
   # Coverage summaries ----
   vaccine_coverage:
     run: r:latest -e 'rmarkdown::render("analysis/coverage/vaccine_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [data_selection_coverage, table_1_coverage, cox_model_dose3, cox_model_dose4full, cox_model_dose4subset, logistic_model]
+    needs: [data_selection_coverage, table_1_coverage, cox_model_dose3, cox_model_dose4full, logistic_model]
     outputs:
       moderately_sensitive:
         html: output/markdown/vaccine_coverage.html
-        csv: output/tables/coverage_over_time_rounded.csv
         
   # Coverage summaries ----
   cox_model_check_coverage:

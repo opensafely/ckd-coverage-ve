@@ -588,6 +588,64 @@ plot_reduced_tbl(dose3_tbl)
 ```
 <br/><br/> 
 
+#### Plot of fully adjusted model outputs
+```{r, fig.width=8, fig.height=12}
+## Function to create plot of cox outputs
+plot_reduced_tbl = function(input_tbl, dose4=FALSE) {
+  ## Remove redacted components from plot
+  input_tbl$`HR (full)`[input_tbl$`HR (full)`=="[Redacted]"] = NA
+  input_tbl$`lower CI (full)`[input_tbl$`HR (full)`=="[Redacted]"] = NA
+  input_tbl$`upper CI (full)`[input_tbl$`HR (full)`=="[Redacted]"] = NA
+  
+  ## Recode HRs and CIs as numerics
+  input_tbl$`HR (full)` = as.numeric(input_tbl$`HR (full)`)
+  input_tbl$`lower CI (full)` = as.numeric(input_tbl$`lower CI (full)`)
+  input_tbl$`upper CI (full)` = as.numeric(input_tbl$`upper CI (full)`)
+  
+  ## Set plot min
+  plot_min = 0.5
+  if(min(input_tbl$`lower CI (full)`, na.rm=T) < plot_min) { plot_min = min(input_tbl$`lower CI (full)`, na.rm=T) }
+  
+  ## Set plot max
+  plot_max = 2
+  if(max(input_tbl$`upper CI (full)`, na.rm=T) > plot_max) { plot_max = max(input_tbl$`upper CI (full)`, na.rm=T) }
+  
+  ## Add redaction text variable
+  input_tbl$redaction = NA
+  input_tbl$redaction[input_tbl$`n (total)`=="[Redacted]"] = "[R]"
+  
+  ## Generate plot of HRs
+  g1 = ggplot(input_tbl, aes(y = `HR (full)`, x = level, colour = var_group)) + 
+    geom_point(size = 2, alpha=0.8) +
+    geom_text(aes(y = plot_min+0.02, label = redaction)) +
+    geom_errorbar(aes(ymin=as.numeric(`lower CI (full)`), ymax=as.numeric(`upper CI (full)`), colour = var_group), width=0) + 
+    coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
+    theme_bw() + theme(strip.background = element_blank()) + labs(colour = "Group") +
+    geom_hline(yintercept=1, linetype="dotted") + 
+    ylab("Hazard ratio") + xlab("") +
+    scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
+    scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2)) +
+    theme(axis.title = element_text(size=12), axis.text = element_text(size=12), strip.text = element_blank(), 
+          legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = c(-1.5,0.95))
+  
+  if (dose4==TRUE) { plot_min = min(input_tbl$`% unvaccinated`, na.rm=T)-10 } else { plot_min = 0 }
+  if (dose4==TRUE) { plot_max = 100 } else { plot_max = max(input_tbl$`% unvaccinated`, na.rm=T)+5 }
+  g2 = ggplot(input_tbl, aes(y = `% unvaccinated`, x = level,  colour = var_group)) + 
+    geom_point(size = 2, alpha=0.8) +
+    geom_segment(aes(xend=level), yend=0) +
+    ylim(plot_min,plot_max) + coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
+    theme_bw() + theme(strip.background = element_blank()) + 
+    ylab("% Unvaccinated") + xlab("") +
+    scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
+    theme(axis.title = element_text(size=12), axis.text.x = element_text(size=12), axis.text.y = element_blank(), strip.text = element_blank(), 
+          legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = "none")
+  
+  plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"), rel_widths = c(3,0.9))
+}
+plot_reduced_tbl(dose3_tbl)
+```
+<br/><br/> 
+
 
 
 
