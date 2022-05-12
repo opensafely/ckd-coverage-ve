@@ -101,6 +101,15 @@ study = StudyDefinition(
         returning="date",
         date_format="YYYY-MM-DD"
     ),
+    
+    # date of fifth COVID vaccination (extended primary series + two boosters
+    covid_vax_date_5=patients.with_tpp_vaccination_record(
+        target_disease_matches="SARS-2 CORONAVIRUS",
+        between=["covid_vax_date_4 + 1 day",end_date], # from day after previous dose
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD"
+    ),
 
 
 ###############################################################################
@@ -138,6 +147,15 @@ study = StudyDefinition(
     pfizer_date_4=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
         between=["pfizer_date_3 + 1 day",end_date], # from day after previous dose
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD"
+    ),
+    
+    # date of fifth COVID vaccination - pfizer
+    pfizer_date_5=patients.with_tpp_vaccination_record(
+        product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
+        between=["pfizer_date_4 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -183,6 +201,15 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
+    # date of fourth COVID vaccination - astrazeneca
+    az_date_5=patients.with_tpp_vaccination_record(
+        product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
+        between=["az_date_4 + 1 day",end_date], # from day after previous dose
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD"
+    ),
+    
 ###############################################################################
 # COVID VACCINATION - moderna
 ###############################################################################
@@ -218,6 +245,15 @@ study = StudyDefinition(
     moderna_date_4=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
         between=["moderna_date_3 + 1 day",end_date], # from day after previous dose
+        find_first_match_in_period=True,
+        returning="date",
+        date_format="YYYY-MM-DD"
+    ),
+    
+    # date of fifth COVID vaccination - moderna
+    moderna_date_5=patients.with_tpp_vaccination_record(
+        product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
+        between=["moderna_date_4 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -344,7 +380,7 @@ study = StudyDefinition(
     from_dataset="2019_prevalence",
     returning="treatment_modality_prevalence",
     return_expectations={
-      "category": {"ratios": {"ICHD": 0.5, "Tx": 0.5}},
+      "category": {"ratios": {"ICHD": 0.2, "HHD": 0.1, "HD": 0.1, "PD": 0.1, "Tx": 0.5}},
       "incidence": 0.25,
       },
     ),
@@ -363,7 +399,7 @@ study = StudyDefinition(
     from_dataset="2020_prevalence",
     returning="treatment_modality_prevalence",
     return_expectations={
-      "category": {"ratios": {"ICHD": 0.5, "Tx": 0.5}},
+      "category": {"ratios": {"ICHD": 0.2, "HHD": 0.1, "HD": 0.1, "PD": 0.1, "Tx": 0.5}},
       "incidence": 0.25,
       },
     ),
