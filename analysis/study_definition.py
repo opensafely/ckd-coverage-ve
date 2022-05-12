@@ -42,7 +42,8 @@ study = StudyDefinition(
         AND
         (age >= 16 AND age < 120)
         AND
-        (creatinine>0 OR dialysis OR kidney_transplant OR chronic_kidney_disease_diagnostic OR chronic_kidney_disease_stages_3_5)
+        (creatinine>0 OR dialysis OR kidney_transplant OR chronic_kidney_disease_diagnostic OR chronic_kidney_disease_stages_3_5 OR
+        ukrr_2019 OR ukrr_2020)
         """,
         # registered before vaccine campaign commenced
         registered = patients.registered_as_of(
@@ -255,6 +256,26 @@ study = StudyDefinition(
     },
   ),
   
+  ## Extract any operators associated with creatinine readings
+  creatinine_operator = patients.comparator_from(
+    "creatinine",
+     return_expectations={
+       "rate": "universal",
+        "category": {
+         "ratios": {  # ~, =, >= , > , < , <=
+            None: 0.10,
+            "~": 0.05,
+            "=": 0.65,
+            ">=": 0.05,
+            ">": 0.05,
+            "<": 0.05,
+            "<=": 0.05,
+            }
+        },
+        "incidence": 0.80,
+      },
+    ),
+    
   ## Age at creatinine test
   age_creatinine = patients.age_as_of(
     "creatinine_date",
@@ -304,6 +325,48 @@ study = StudyDefinition(
     find_last_match_in_period = True,
     on_or_before = "index_date - 1 day",
   ),
+
+###############################################################################
+# UKRR VARIABLES - adapted from https://github.com/opensafely/renal-short-data-report
+###############################################################################
+
+  ## Present in UKRR cohort at end of 2019
+  ukrr_2019 = patients.with_record_in_ukrr(
+    from_dataset="2019_prevalence",
+    returning="binary_flag",
+    return_expectations={
+      "incidence": 0.25
+      },
+    ),
+  
+  ## Modality at end of 2019
+  ukrr_2019_mod = patients.with_record_in_ukrr(
+    from_dataset="2019_prevalence",
+    returning="treatment_modality_prevalence",
+    return_expectations={
+      "category": {"ratios": {"ICHD": 0.5, "Tx": 0.5}},
+      "incidence": 0.25,
+      },
+    ),
+    
+  ## Present in UKRR cohort at end of 2020
+  ukrr_2020 = patients.with_record_in_ukrr(
+    from_dataset="2020_prevalence",
+    returning="binary_flag",
+    return_expectations={
+            "incidence": 0.25
+        },
+    ),
+    
+  ## Modality at end of 2020
+  ukrr_2020_mod = patients.with_record_in_ukrr(
+    from_dataset="2020_prevalence",
+    returning="treatment_modality_prevalence",
+    return_expectations={
+      "category": {"ratios": {"ICHD": 0.5, "Tx": 0.5}},
+      "incidence": 0.25,
+      },
+    ),
 
 ###############################################################################
 # CENSORING VARIABLES

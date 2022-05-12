@@ -92,6 +92,11 @@ data_extract <- read_csv(
     kidney_transplant = col_logical(), 
     chronic_kidney_disease_diagnostic = col_logical(), 
     chronic_kidney_disease_stages_3_5 = col_logical(), 
+    ukrr_2019 = col_logical(), 
+    ukrr_2019_mod = col_character(), 
+    ukrr_2020 = col_logical(), 
+    ukrr_2020_mod = col_character(), 
+    creatinine_operator = col_character(), 
     
     # Priority groups
     care_home_type =  col_character(),
@@ -192,11 +197,17 @@ data_extract <- data_extract %>%
   # Drop extra variables
   select(-c(min, max, SCR_adj))
 
-# Cross-tabulate creatinine measuresments with corresponding date recordings
+# Cross-tabulate creatinine measurements with corresponding date recordings
 print("Cross-tabulate !is.na for creatinine vs creatinine_date")
 print(table(!is.na(data_extract$creatinine), !is.na(data_extract$creatinine_date)))
 print("Cross-tabulate !is.na for creatinine vs age_creatinine")
 print(table(!is.na(data_extract$creatinine), !is.na(data_extract$age_creatinine)))
+print("Cross-tabulate operators")
+print(table(data_extract$creatinine_operator))
+print("Cross-tabulate 2019 modalities")
+print(table(data_extract$ukrr_2019_mod))
+print("Cross-tabulate 2020 modalities")
+print(table(data_extract$ukrr_2020_mod))
 
 # Replace NAs with 'No CKD' in new categories
 data_extract$egfr_cat5[is.na(data_extract$egfr_cat5)] = "No CKD"
