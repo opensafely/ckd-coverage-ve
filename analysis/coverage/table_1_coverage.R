@@ -18,56 +18,21 @@ library('gtsummary')
 library('plyr')
 library('reshape2')
 
-## Import command-line arguments
-args <- commandArgs(trailingOnly=TRUE)
-
-## Set input and output pathways for matched/unmatched data - default is unmatched
-if(length(args)==0) {
-  outcome_label = "dose3"
-} else {
-  if (args[[1]]=="dose3") {
-    outcome_label = "dose3"
-  } else if (args[[1]]=="dose4") {
-    outcome_label = "dose4"
-  } else {
-    # print error if no argument specified
-    stop("No outcome specified")
-  }
-}
-
 ## Create output directory
 fs::dir_create(here::here("output", "tables"))
 
 ## Import data
-if (outcome_label=="dose3") {
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
-} else {
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage_dose4.rds"))
-}
+data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
 
 ## Format data
 data_cohort <- data_cohort %>%
   mutate(
     N = 1,
     allpop = "All",
-    # Calculate time between vaccinations 1-2
-    time_between_vaccinations1_2 = as.character(cut(tbv1_2,
-                                                    breaks = c(0, 42, 56, 70, 84, 98, Inf),
-                                                    labels = c("6 weeks or less", "6-8 weeks", "8-10 weeks", "10-12 weeks", "12-14 weeks", "14+ weeks"),
-                                                    right = FALSE)),
-    # Calculate time between vaccinations 2-3
-    time_between_vaccinations2_3 = as.character(cut(tbv2_3,
-                                                    breaks = c(0, 84, 168, 252, Inf),
-                                                    labels = c("12 weeks or less", "12-24 weeks", "24-36 week", "36+ weeks"),
-                                                    right = FALSE)),
     smoking_status = ifelse(is.na(smoking_status), "N&M", smoking_status),
-    bpcat = ifelse(bpcat=="High" | bpcat=="Elevated", 1, 0)
-  ) %>%
-  mutate(
     smoking_status = ifelse(smoking_status=="S&E", 1, 0),
-    time_between_vaccinations1_2 = ifelse(is.na(vax2_date), "Not applicable (no dose given)", time_between_vaccinations1_2),
-    time_between_vaccinations2_3 = ifelse(is.na(vax3_date), "Not applicable (no dose given)", time_between_vaccinations2_3)
-  )
+    bpcat = ifelse(bpcat=="High" | bpcat=="Elevated", 1, 0)
+  ) 
 
 counts <- data_cohort %>% 
   select(
@@ -89,8 +54,7 @@ counts <- data_cohort %>%
          
          ## Clinical risk group (CKD-related)
          ckd_5cat,
-         ckd_7cat,
-         #removed: dialysis, kidney_transplant, chronic_kidney_disease_stages_3_5
+         #removed: ckd_6cat, dialysis, kidney_transplant, chronic_kidney_disease_stages_3_5
          
          ## Clinical risk group (non-CKD-related)
          immunosuppression, 
@@ -112,8 +76,8 @@ counts <- data_cohort %>%
          region,
          jcvi_group,
          chronic_kidney_disease_stages_3_5,
-         time_between_vaccinations1_2,
-         time_between_vaccinations2_3
+         dialysis,
+         kidney_transplant,
          #removed: any_ckd_flag
          ) 
 
@@ -140,6 +104,8 @@ clean_table_names = function(input_table) {
   input_table$Variable[input_table$Variable=="sev_mental_ill"] = "Severe mental illness"
   input_table$Variable[input_table$Variable=="cev_other"] = "Clinically extremely vulnerable (other)"
   input_table$Variable[input_table$Variable=="chronic_kidney_disease_stages_3_5"] = "CKD3-5 diagnostic code"
+  input_table$Variable[input_table$Variable=="dialysis"] = "Dialysis code"
+  input_table$Variable[input_table$Variable=="kidney_transplant"] = "Kidney transplant code"
   
   # Relabel groups for plotting
   # Demography
@@ -150,10 +116,8 @@ clean_table_names = function(input_table) {
   input_table$Group[input_table$Group=="region"] = "Region"
   input_table$Group[input_table$Group=="jcvi_group"] = "JCVI group"
   input_table$Group[input_table$Group=="rural_urban_group"] = "Setting"
-  input_table$Group[input_table$Group=="ckd_7cat"] = "CKD subgroup"
-  input_table$Group[input_table$Group=="time_between_vaccinations1_2"] = "Time between doses 1 and 2"
-  input_table$Group[input_table$Group=="time_between_vaccinations2_3"] = "Time between doses 2 and 3"
-  
+  input_table$Group[input_table$Group=="ckd_5cat"] = "CKD subgroup"
+
   # Other
   input_table$Group[!(input_table$Group %in% c("Age", "Sex", "Ethnicity", "IMD", "Region", "JCVI group", "Setting", "CKD subgroup", 
                                      "Time between doses 1 and 2", "Time between doses 2 and 3"))] = "Other"
@@ -163,7 +127,7 @@ clean_table_names = function(input_table) {
 
 ## Generate full table
 counts_summary = counts %>% 
-  select(-ckd_5cat) %>%
+  #select(-ckd_5cat) %>%
   tbl_summary(by = allpop)
 counts_summary$inputs$data <- NULL
 
@@ -194,23 +158,17 @@ table1_redacted$Percent[(table1_redacted$Count>0 & table1_redacted$Count<=10) | 
 table1_redacted <- table1_redacted %>% select(-Non_Count)
 
 # Save as html ----
-if (outcome_label=="dose3") {
-  gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_coverage_redacted.html"))
-  write_rds(table1_redacted, here::here("output", "tables", "table1_coverage_redacted.rds"), compress = "gz")
-} else {
-  gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_coverage_redacted_dose4.html"))
-  write_rds(table1_redacted, here::here("output", "tables", "table1_coverage_redacted_dose4.rds"), compress = "gz")
-}
-
+gt::gtsave(gt(table1_redacted), here::here("output","tables", "table1_coverage_redacted.html"))
+write_rds(table1_redacted, here::here("output", "tables", "table1_coverage_redacted.rds"), compress = "gz")
 
 ## Set CKD levels for stratified table
-ckd_levels = c( "CKD3a (D-T-)", "CKD3b (D-T-)",  "CKD4-5 (D-T-)", "CKD (T+)", "CKD (D+T-)")
+ckd_levels = c( "CKD3a", "CKD3b",  "CKD4-5", "RRT (dialysis)", "RRT (Tx)")
 
 ## Generate CKD-statified table
 for (i in 1:length(ckd_levels)) {
   data_subset = subset(counts, ckd_5cat==ckd_levels[i])
   counts_summary = data_subset %>% 
-    select(-ckd_5cat, -ckd_7cat) %>%
+    select(-ckd_5cat) %>% # removed , -ckd_6cat
     tbl_summary(by = allpop)
   counts_summary$inputs$data <- NULL
 
@@ -249,10 +207,5 @@ for (i in 1:length(ckd_levels)) {
 }
 
 # Save as html ----
-if (outcome_label=="dose3") {
-  gt::gtsave(gt(collated_table), here::here("output","tables", "table1_coverage_redacted_by_CKD.html"))
-  write_rds(collated_table, here::here("output", "tables", "table1_coverage_redacted_by_CKD.rds"), compress = "gz")
-} else {
-  gt::gtsave(gt(collated_table), here::here("output","tables", "table1_coverage_redacted_dose4_by_CKD.html"))
-  write_rds(collated_table, here::here("output", "tables", "table1_coverage_redacted_dose4_by_CKD.rds"), compress = "gz")
-}
+gt::gtsave(gt(collated_table), here::here("output","tables", "table1_coverage_redacted_by_CKD.html"))
+write_rds(collated_table, here::here("output", "tables", "table1_coverage_redacted_by_CKD.rds"), compress = "gz")

@@ -39,7 +39,7 @@ dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
 
 ## Set variable list
 var_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "rural_urban_group",
-              "sex", "ethnicity", "imd", "ckd_7cat", "chronic_kidney_disease_stages_3_5",
+              "sex", "ethnicity", "imd", "ckd_5cat", "chronic_kidney_disease_stages_3_5", "dialysis", "kidney_transplant",
               "prior_covid_cat", "immunosuppression", "mod_sev_obesity", "diabetes", "any_resp_dis", "chd", "cld", "asplenia", "cancer",
               "haem_cancer", "non_kidney_transplant", "chronic_neuro_dis_inc_sig_learn_dis","sev_mental_ill",
               "cev_other", "region") 
@@ -52,8 +52,8 @@ data <- data %>% select(all_of(var_list), covid_vax)
 data[,var_list] <- lapply(data[,var_list], factor)
 
 ## Set factor levels for CKD subgroup
-data$ckd_7cat <- factor(data$ckd_7cat, levels = c("CKD3a (D-T-)", "CKD3b (D-T-)", "CKD4 (D-T-)", "CKD5 (D-T-)",
-                                                          "CKD (D+T-)", "CKD (D-T+)", "CKD (D+T+)"))
+#data$ckd_6cat <- factor(data$ckd_6cat, levels = c("CKD3a", "CKD3b", "CKD4", "CKD5", "RRT (dialysis)", "RRT (Tx)"))
+data$ckd_5cat <- factor(data$ckd_5cat, levels = c("CKD3a", "CKD3b", "CKD4-5", "RRT (dialysis)", "RRT (Tx)"))
 
 ## Check all cases complete
 if (all(complete.cases(data))==FALSE) stop('incomplete data for one or more patients in model') 
@@ -188,6 +188,8 @@ tbl_summary$label[tbl_summary$var_label=="hscworker"] = "Health/social care work
 tbl_summary$label[tbl_summary$var_label=="housebound"] = "Housebound"
 tbl_summary$label[tbl_summary$var_label=="endoflife"] = "End of life care"
 tbl_summary$label[tbl_summary$var_label=="chronic_kidney_disease_stages_3_5"] = "CKD3-5 diagnostic code"
+tbl_summary$label[tbl_summary$var_label=="dialysis"] = "Dialysis code"
+tbl_summary$label[tbl_summary$var_label=="kidney_transplant"] = "Kidney transplant code"
 tbl_summary$label[tbl_summary$var_label=="prior_covid_cat"] = "Prior COVID"
 tbl_summary$label[tbl_summary$var_label=="immunosuppression"] = "Immunosuppression"
 tbl_summary$label[tbl_summary$var_label=="mod_sev_obesity"] = "Moderate/severe obesity"
@@ -205,8 +207,8 @@ tbl_summary$label[tbl_summary$var_label=="cev_other"] = "Clinically extremely vu
 
 ## Group variables for plotting
 # var_label
-tbl_summary$var_label[tbl_summary$var_label=="ckd_7cat"] = "CKD subgroup"
-tbl_summary$var_label[tbl_summary$label=="CKD3-5 diagnostic code"] = "CKD (other)"
+tbl_summary$var_label[tbl_summary$var_label=="ckd_5cat"] = "CKD subgroup"
+tbl_summary$var_label[tbl_summary$label %in% c("CKD3-5 diagnostic code", "Dialysis code", "Kidney transplant code")] = "CKD (primary care coding)"
 tbl_summary$var_label[tbl_summary$label %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care")] = "Risk group (occupation/access)"
 tbl_summary$var_label[tbl_summary$label %in% c("Prior COVID", "Immunosuppression", "Moderate/severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
                                                "Chronic heart disease", "Chronic liver disease","Asplenia", "Cancer (non-haematologic)", "Haematologic cancer", "Obesity", 
@@ -215,7 +217,7 @@ tbl_summary$var_label[tbl_summary$label %in% c("Prior COVID", "Immunosuppression
 
 # var_group
 tbl_summary$var_group = "Demography"
-tbl_summary$var_group[tbl_summary$var_label %in% c("CKD subgroup")] = "Risk group (CKD-related)"
+tbl_summary$var_group[tbl_summary$var_label %in% c("CKD subgroup", "CKD (primary care coding)")] = "Risk group (CKD-related)"
 tbl_summary$var_group[tbl_summary$var_label %in% c("Risk group (clinical, non-CKD)", "Prior exposure status")] = "Risk group (clinical, non-CKD)"
 
 # order factor levels for labels, var_label, and var_group

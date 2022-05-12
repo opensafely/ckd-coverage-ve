@@ -23,6 +23,9 @@ source(here::here("analysis", "functions.R"))
 ## Output processed data to rds
 dir.create(here::here("output", "data"), showWarnings = FALSE, recursive=TRUE)
 
+## Print session info
+sessionInfo()
+
 # Process data ----
 
 ## Print variable names
@@ -45,18 +48,22 @@ data_extract <- read_csv(
     covid_vax_date_2 = col_date(format="%Y-%m-%d"),
     covid_vax_date_3 = col_date(format="%Y-%m-%d"),
     covid_vax_date_4 = col_date(format="%Y-%m-%d"),
+    covid_vax_date_5 = col_date(format="%Y-%m-%d"),
     pfizer_date_1 = col_date(format="%Y-%m-%d"),
     pfizer_date_2 = col_date(format="%Y-%m-%d"),
     pfizer_date_3 = col_date(format="%Y-%m-%d"),
     pfizer_date_4 = col_date(format="%Y-%m-%d"),
+    pfizer_date_5 = col_date(format="%Y-%m-%d"),
     az_date_1 = col_date(format="%Y-%m-%d"),
     az_date_2 = col_date(format="%Y-%m-%d"),
     az_date_3 = col_date(format="%Y-%m-%d"),
     az_date_4 = col_date(format="%Y-%m-%d"),
+    az_date_5 = col_date(format="%Y-%m-%d"),
     moderna_date_1 = col_date(format="%Y-%m-%d"),
     moderna_date_2 = col_date(format="%Y-%m-%d"),
     moderna_date_3 = col_date(format="%Y-%m-%d"),
     moderna_date_4 = col_date(format="%Y-%m-%d"),
+    moderna_date_5 = col_date(format="%Y-%m-%d"),
     
     # Dates for clinical variables
     creatinine_date = col_date(format="%Y-%m-%d"),
@@ -192,10 +199,32 @@ data_extract <- data_extract %>%
       breaks = c(0, 30, 60, 5000),
       labels = c("Stage 4/5 eGFR<30", "Stage 3a/3b eGFR 30-60", "No CKD"),
       right = FALSE
-    ) 
+    ),
   ) %>%
   # Drop extra variables
   select(-c(min, max, SCR_adj))
+
+# Define UKRR groups
+data_extract <- data_extract %>%
+  mutate(
+    # add UKRR modality at index date - either 2020 modality, or 2019 modality if died between index date and end of 2020
+    ukrr_index_mod = if_else(!is.na(death_date) & death_date<=as_date("2020-12-31"), ukrr_2019_mod, ukrr_2020_mod),
+    
+    # 2019
+    ukrr_2019_group = "None",
+    ukrr_2019_group = ifelse(!is.na(ukrr_2019_mod) & ukrr_2019_mod == "Tx", "Tx", ukrr_2019_group),
+    ukrr_2019_group = ifelse(!is.na(ukrr_2019_mod) & (ukrr_2019_mod == "ICHD" | ukrr_2019_mod == "HHD" | ukrr_2019_mod == "HD" | ukrr_2019_mod == "PD"), "Dialysis", ukrr_2019_group),
+    
+    # 2020
+    ukrr_2020_group = "None",
+    ukrr_2020_group = ifelse(!is.na(ukrr_2020_mod) & ukrr_2020_mod == "Tx", "Tx", ukrr_2020_group),
+    ukrr_2020_group = ifelse(!is.na(ukrr_2020_mod) & (ukrr_2020_mod == "ICHD" | ukrr_2020_mod == "HHD" | ukrr_2020_mod == "HD" | ukrr_2020_mod == "PD"), "Dialysis", ukrr_2020_group),
+    
+    # index
+    ukrr_index_group = "None",
+    ukrr_index_group = ifelse(!is.na(ukrr_index_mod) & ukrr_index_mod == "Tx", "Tx", ukrr_index_group),
+    ukrr_index_group = ifelse(!is.na(ukrr_index_mod) & (ukrr_index_mod == "ICHD" | ukrr_index_mod == "HHD" | ukrr_index_mod == "HD" | ukrr_index_mod == "PD"), "Dialysis", ukrr_index_group),
+  )
 
 # Cross-tabulate creatinine measurements with corresponding date recordings
 print("Cross-tabulate !is.na for creatinine vs creatinine_date")
@@ -204,10 +233,16 @@ print("Cross-tabulate !is.na for creatinine vs age_creatinine")
 print(table(!is.na(data_extract$creatinine), !is.na(data_extract$age_creatinine)))
 print("Cross-tabulate operators")
 print(table(data_extract$creatinine_operator))
-print("Cross-tabulate 2019 modalities")
-print(table(data_extract$ukrr_2019_mod))
-print("Cross-tabulate 2020 modalities")
-print(table(data_extract$ukrr_2020_mod))
+print("Cross-tabulate 2019 vs 2020 modalities")
+print(table(data_extract$ukrr_2019_mod, data_extract$ukrr_2020_mod))
+print("Cross-tabulate index vs 2020 modalities")
+print(table(data_extract$ukrr_index_mod, data_extract$ukrr_2020_mod))
+print("Cross-tabulate index vs 2020 groups")
+print(table(data_extract$ukrr_index_group, data_extract$ukrr_2020_group))
+print("Cross-tabulate UKRR vs primary care dialysis")
+print(table(data_extract$ukrr_index_group=="Dialysis", data_extract$dialysis))
+print("Cross-tabulate UKRR vs primary care transplant")
+print(table(data_extract$ukrr_index_group=="Tx", data_extract$kidney_transplant))
 
 # Replace NAs with 'No CKD' in new categories
 data_extract$egfr_cat5[is.na(data_extract$egfr_cat5)] = "No CKD"
@@ -220,25 +255,23 @@ data_extract$egfr[is.na(data_extract$egfr)] = 300
 data_processed <- data_extract %>%
   mutate(
     # CKD inclusion criteria
-    ckd_inclusion_any = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_diagnostic==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
-    ckd_inclusion_strict_or_3to5 = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
-    ckd_inclusion_strict = ifelse(egfr < 60 | dialysis==1 | kidney_transplant==1, 1, 0),
-    any_ckd_flag = ifelse(chronic_kidney_disease_diagnostic==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
+    ckd_inclusion_egfr_ukrr_D_T_3to5_diagnostic = ifelse(egfr < 60 | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis" | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_stages_3_5==1 | chronic_kidney_disease_diagnostic==1, 1, 0),
+    ckd_inclusion_egfr_ukrr_D_T_3to5 = ifelse(egfr < 60 | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis" | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
+    ckd_inclusion_egfr_ukrr_D_T = ifelse(egfr < 60 | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis" | dialysis==1 | kidney_transplant==1, 1, 0),
+    ckd_inclusion_egfr_ukrr = ifelse(egfr < 60 | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis", 1, 0),
+
+    # CKD 6-levels
+    ckd_6cat = ifelse(egfr_cat5 == "Stage 3a" & ukrr_index_group=="None", "CKD3a", NA),
+    ckd_6cat = ifelse(egfr_cat5 == "Stage 3b" & ukrr_index_group=="None", "CKD3b", ckd_6cat),
+    ckd_6cat = ifelse(egfr_cat5 == "Stage 4" & ukrr_index_group=="None", "CKD4", ckd_6cat),
+    ckd_6cat = ifelse(egfr_cat5 == "Stage 5" & ukrr_index_group=="None", "CKD5", ckd_6cat),
+    ckd_6cat = ifelse(ukrr_index_group == "Dialysis", "RRT (dialysis)", ckd_6cat),
+    ckd_6cat = ifelse(ukrr_index_group == "Tx", "RRT (Tx)", ckd_6cat),
+    ckd_6cat = ifelse(is.na(ckd_6cat), "Unknown", ckd_6cat),
     
-    # CKD 7-levels
-    ckd_7cat = ifelse(egfr_cat5 == "Stage 3a" & dialysis == 0 & kidney_transplant== 0, "CKD3a (D-T-)", NA),
-    ckd_7cat = ifelse(egfr_cat5 == "Stage 3b" & dialysis == 0 & kidney_transplant== 0, "CKD3b (D-T-)", ckd_7cat),
-    ckd_7cat = ifelse(egfr_cat5 == "Stage 4" & dialysis == 0 & kidney_transplant== 0, "CKD4 (D-T-)", ckd_7cat),
-    ckd_7cat = ifelse(egfr_cat5 == "Stage 5" & dialysis == 0 & kidney_transplant== 0, "CKD5 (D-T-)", ckd_7cat),
-    ckd_7cat = ifelse(dialysis == 1 & kidney_transplant == 0, "CKD (D+T-)", ckd_7cat),
-    ckd_7cat = ifelse(dialysis == 0 & kidney_transplant == 1, "CKD (D-T+)", ckd_7cat),
-    ckd_7cat = ifelse(dialysis == 1 & kidney_transplant == 1, "CKD (D+T+)", ckd_7cat),
-    ckd_7cat = ifelse(is.na(ckd_7cat), "Unknown", ckd_7cat),
-    
-    # CKD 5-levels (merging kidney transplant and 4/5)
-    ckd_5cat = ckd_7cat,
-    ckd_5cat = ifelse(ckd_7cat == "CKD (D-T+)" | ckd_7cat == "CKD (D+T+)", "CKD (T+)", ckd_5cat),
-    ckd_5cat = ifelse(ckd_7cat == "CKD4 (D-T-)" | ckd_7cat == "CKD5 (D-T-)", "CKD4-5 (D-T-)", ckd_5cat),
+    # CKD 5-levels (merging 4/5)
+    ckd_5cat = ckd_6cat,
+    ckd_5cat = ifelse(ckd_6cat == "CKD4" | ckd_6cat == "CKD5", "CKD4-5", ckd_5cat),
     
     # Age
     ageband = cut(
@@ -475,6 +508,7 @@ data_processed_updated <- data_processed %>%
     vax2_type = covid_vax_2_type,
     vax3_type = covid_vax_3_type,
     vax4_type = covid_vax_4_type,
+    vax5_type = covid_vax_5_type,
     
     vax12_type = paste0(vax1_type, "-", vax2_type),
     vax123_type = paste0(vax12_type, "-", vax3_type),
@@ -504,17 +538,24 @@ data_processed_updated <- data_processed %>%
       vax4_type == "moderna" ~ "Moderna",
       TRUE ~ NA_character_
     ),
+    vax5_type_descr = fct_case_when(
+      vax5_type == "pfizer" ~ "BNT162b2",
+      vax5_type == "az" ~ "ChAdOx1",
+      vax5_type == "moderna" ~ "Moderna",
+      TRUE ~ NA_character_
+    ),
     
     vax1_date = covid_vax_1_date,
     vax2_date = covid_vax_2_date,
     vax3_date = covid_vax_3_date,
     vax4_date = covid_vax_4_date, 
+    vax5_date = covid_vax_5_date, 
     
     # Calculate time between vaccinations
     tbv1_2 = as.numeric(vax2_date - vax1_date),
     tbv2_3 = as.numeric(vax3_date - vax2_date),
-    tbv3_4 = as.numeric(vax4_date - vax3_date) 
-
+    tbv3_4 = as.numeric(vax4_date - vax3_date),
+    tbv4_5 = as.numeric(vax5_date - vax4_date) 
   ) %>%
   # Remove unnecessary variables including overall and product-specific dates (now replaced by vax{N}_date)
   select(

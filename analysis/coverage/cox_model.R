@@ -26,7 +26,7 @@ library('fs')
 ## Import command-line arguments
 args <- commandArgs(trailingOnly=TRUE)
 
-## Set input and output pathways - default is dose 3 uptake by 30th March 2022
+## Set input and output pathways - default is dose 3 uptake by 20th April 2022
 if(length(args)==0) {
   outcome = "vax3_date"
   outcome_label = "dose3"
@@ -36,13 +36,9 @@ if(length(args)==0) {
     outcome = "vax3_date"
     outcome_label = "dose3"
     cutoff = as.Date("2022-04-20", format = "%Y-%m-%d")
-  } else if (args[[1]]=="dose4full") {
+  } else if (args[[1]]=="dose4") {
     outcome = "vax4_date"
-    outcome_label = "dose4full"
-    cutoff = as.Date("2022-04-20", format = "%Y-%m-%d")
-  } else if (args[[1]]=="dose4subset") {
-    outcome = "vax4_date"
-    outcome_label = "dose4subset"
+    outcome_label = "dose4"
     cutoff = as.Date("2022-04-20", format = "%Y-%m-%d")
   } else {
     # print error if no argument specified
@@ -51,11 +47,7 @@ if(length(args)==0) {
 }
 
 ## Import data
-if (outcome_label == "dose4subset") {
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage_dose4.rds"))
-} else {
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
-}
+data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
 
 ## Import custom user functions and packages
 source(here::here("analysis", "functions.R"))
@@ -99,7 +91,7 @@ dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
 
 ## Set variable list
 var_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "rural_urban_group",
-              "sex", "ethnicity", "imd", "ckd_7cat", "chronic_kidney_disease_stages_3_5",
+              "sex", "ethnicity", "imd", "ckd_5cat", "chronic_kidney_disease_stages_3_5", "dialysis", "kidney_transplant",
               "prior_covid_cat", "immunosuppression", "mod_sev_obesity", "diabetes", "any_resp_dis", "chd", "cld", "asplenia", "cancer",
               "haem_cancer", "non_kidney_transplant", "chronic_neuro_dis_inc_sig_learn_dis","sev_mental_ill",
               "cev_other") 
@@ -112,13 +104,12 @@ adj_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "
               "sex", "ethnicity", "imd", "prior_covid_cat")
 
 ## Pick out variables and recode list as factors
-data_cox <- data_cox %>% select(all_of(var_list), follow_up_time, covid_vax, region, uncensored_at_cut_off, unvax_uncensored_at_cut_off, ckd_5cat)
+data_cox <- data_cox %>% select(all_of(var_list), follow_up_time, covid_vax, region, uncensored_at_cut_off, unvax_uncensored_at_cut_off) # removed ckd_5cat from end as now in var_list
 data_cox[,var_list] <- lapply(data_cox[,var_list], factor)
 
 ## Set factor levels for CKD subgroup
-data_cox$ckd_7cat <- factor(data_cox$ckd_7cat, levels = c("CKD3a (D-T-)", "CKD3b (D-T-)", "CKD4 (D-T-)", "CKD5 (D-T-)",
-                                                           "CKD (D+T-)", "CKD (D-T+)", "CKD (D+T+)"))
-data_cox$ckd_5cat <- factor(data_cox$ckd_5cat, levels = c("CKD3a (D-T-)", "CKD3b (D-T-)", "CKD4-5 (D-T-)", "CKD (D+T-)", "CKD (T+)"))
+#data_cox$ckd_6cat <- factor(data_cox$ckd_6cat, levels = c("CKD3a", "CKD3b", "CKD4", "CKD5", "RRT (dialysis)", "RRT (Tx)"))
+data_cox$ckd_5cat <- factor(data_cox$ckd_5cat, levels = c("CKD3a", "CKD3b", "CKD4-5", "RRT (dialysis)", "RRT (Tx)"))
 
 ## Check all cases complete
 if (all(complete.cases(data_cox))==FALSE) stop('incomplete data for one or more patients in model') 
@@ -135,12 +126,6 @@ write_rds(data_cox, here::here("output", "data", paste0("data_cox_coverage_",out
 ## Define strata for full and stratified analyses
 strata = c("full", levels(data_cox$ckd_5cat))
 
-## Remove CKD (D+T-) subset in dose 4 subset (n < 2000)
-if (outcome_label == "dose4subset") {
-  strata = strata[strata!="CKD (D+T-)"]
-} 
-
-
 ## Run model in loop over each srtatum
 for (s in 1:length(strata)) {
   ckd_group = strata[s]
@@ -151,18 +136,8 @@ for (s in 1:length(strata)) {
     var_list_subset = var_list
     } else { 
     data_subset = subset(data_cox, ckd_5cat==ckd_group) 
-    var_list_subset = var_list[var_list!="ckd_7cat"]
+    var_list_subset = var_list[var_list!="ckd_5cat"]
     }
-  
-  ## Remove cev_other from dose4 subset analyses as all individuals will have at least one other flag
-  if (outcome_label == "dose4subset") {
-    var_list_subset = var_list_subset[var_list_subset!="cev_other"]
-  }
-  ## Remove any_ckd_flag from dose4 CKD T+ subset due to unstable estimates
-  # if ( (outcome_label == "dose4subset" | outcome_label == "dose4full") & ckd_group == "CKD (T+)") {
-  #   var_list_subset = var_list_subset[var_list_subset!="any_ckd_flag"]
-  # }
-  
   
   ## Fit stratified univariate models in loop
   # for (i in 1:length(var_list_subset)) {
@@ -296,6 +271,8 @@ for (s in 1:length(strata)) {
   tbl_summary$label[tbl_summary$var_label=="housebound"] = "Housebound"
   tbl_summary$label[tbl_summary$var_label=="endoflife"] = "End of life care"
   tbl_summary$label[tbl_summary$var_label=="chronic_kidney_disease_stages_3_5"] = "CKD3-5 diagnostic code"
+  tbl_summary$label[tbl_summary$var_label=="dialysis"] = "Dialysis code"
+  tbl_summary$label[tbl_summary$var_label=="kidney_transplant"] = "Kidney transplant code"
   tbl_summary$label[tbl_summary$var_label=="prior_covid_cat"] = "Prior COVID"
   tbl_summary$label[tbl_summary$var_label=="immunosuppression"] = "Immunosuppression"
   tbl_summary$label[tbl_summary$var_label=="mod_sev_obesity"] = "Moderate/severe obesity"
@@ -313,8 +290,8 @@ for (s in 1:length(strata)) {
     
   ## Group variables for plotting
   # var_label
-  tbl_summary$var_label[tbl_summary$var_label=="ckd_7cat"] = "CKD subgroup"
-  tbl_summary$var_label[tbl_summary$label=="CKD3-5 diagnostic code"] = "CKD (other)"
+  tbl_summary$var_label[tbl_summary$var_label=="ckd_5cat"] = "CKD subgroup"
+  tbl_summary$var_label[tbl_summary$label %in% c("CKD3-5 diagnostic code", "Dialysis code", "Kidney transplant code")] = "CKD (primary care coding)"
   tbl_summary$var_label[tbl_summary$label %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care")] = "Risk group (occupation/access)"
   tbl_summary$var_label[tbl_summary$label %in% c("Prior COVID", "Immunosuppression", "Moderate/severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
                                                    "Chronic heart disease", "Chronic liver disease","Asplenia", "Cancer (non-haematologic)", "Haematologic cancer", "Obesity", 
@@ -323,7 +300,7 @@ for (s in 1:length(strata)) {
     
   # var_group
   tbl_summary$var_group = "Demography"
-  tbl_summary$var_group[tbl_summary$var_label %in% c("CKD subgroup", "CKD (other)")] = "Risk group (CKD-related)"
+  tbl_summary$var_group[tbl_summary$var_label %in% c("CKD subgroup", "CKD (primary care coding)")] = "Risk group (CKD-related)"
   tbl_summary$var_group[tbl_summary$var_label %in% c("Risk group (clinical, non-CKD)")] = "Risk group (clinical, non-CKD)"
 
   # order factor levels for labels, var_label, and var_group
