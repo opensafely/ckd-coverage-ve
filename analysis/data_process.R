@@ -208,7 +208,8 @@ data_extract <- data_extract %>%
 data_extract <- data_extract %>%
   mutate(
     # add UKRR modality at index date - either 2020 modality, or 2019 modality if died between index date and end of 2020
-    ukrr_index_mod = if_else(!is.na(death_date) & death_date<=as_date("2020-12-31"), ukrr_2019_mod, ukrr_2020_mod),
+    ukrr_index_mod = if_else((!is.na(death_date) & death_date>=as_date("2020-12-01") & death_date<=as_date("2020-12-31")) |
+                             (!is.na(dereg_date) & dereg_date>=as_date("2020-12-01") & dereg_date<=as_date("2020-12-31")), ukrr_2019_mod, ukrr_2020_mod),
     
     # 2019
     ukrr_2019_group = "None",
@@ -235,14 +236,25 @@ print("Cross-tabulate operators")
 print(table(data_extract$creatinine_operator))
 print("Cross-tabulate 2019 vs 2020 modalities")
 print(table(data_extract$ukrr_2019_mod, data_extract$ukrr_2020_mod))
+print("Cross-tabulate 2020 modalities")
+print(table(data_extract$ukrr_2020_mod))
+print("Cross-tabulate index modalities")
+print(table(data_extract$ukrr_index_mod))
 print("Cross-tabulate index vs 2020 modalities")
 print(table(data_extract$ukrr_index_mod, data_extract$ukrr_2020_mod))
+rint("Cross-tabulate 2020 groups")
+print(table(data_extract$ukrr_2020_group))
+print("Cross-tabulate index modalities")
+print(table(data_extract$ukrr_index_group))
 print("Cross-tabulate index vs 2020 groups")
 print(table(data_extract$ukrr_index_group, data_extract$ukrr_2020_group))
 print("Cross-tabulate UKRR vs primary care dialysis")
 print(table(data_extract$ukrr_index_group=="Dialysis", data_extract$dialysis))
 print("Cross-tabulate UKRR vs primary care transplant")
 print(table(data_extract$ukrr_index_group=="Tx", data_extract$kidney_transplant))
+print("Sum dereg/death in Dec 2021")
+print(sum((!is.na(data_extract$death_date) & data_extract$death_date>=as_date("2020-12-01") & data_extract$death_date<=as_date("2020-12-31")) |
+            (!is.na(data_extract$dereg_date) & data_extract$dereg_date>=as_date("2020-12-01") & data_extract$dereg_date<=as_date("2020-12-31"))))
 
 # Replace NAs with 'No CKD' in new categories
 data_extract$egfr_cat5[is.na(data_extract$egfr_cat5)] = "No CKD"

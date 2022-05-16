@@ -33,7 +33,7 @@ data_criteria <- data_processed %>%
     
     # Age
     has_age = !is.na(age) & age >=16 & age<120,
-    has_creatinine_age = !is.na(age_creatinine) | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis",
+    has_creatinine_age = !is.na(age_creatinine) | dialysis==1 | kidney_transplant==1 | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis",
     
     # Sequential CKD
     has_ckd_egfr_ukrr_D_T_3to5_diagnostic = ckd_inclusion_egfr_ukrr_D_T_3to5_diagnostic==1,
