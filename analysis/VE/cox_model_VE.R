@@ -102,13 +102,13 @@ if (db=="VE") {
   # cox models stratified by follow-up window
   formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(timesincevax_pw)
   formula1 <- formula0 %>% update(. ~ . + strata(region)*ns(vax2_day, 3))
-  formula2 <- formula1 %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + ckd_7cat + immunosuppression + care_home + sex + imd + ethnicity + 
+  formula2 <- formula1 %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + ckd_5cat + immunosuppression + care_home + sex + imd + ethnicity + 
                                     rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
   
   # cox models for full follow-up time
   formula0_full <- Surv(follow_up_time, ind_outcome) ~ vax2_az
   formula1_full <- formula0_full %>% update(. ~ . + strata(region)*ns(vax2_day, 3))
-  formula2_full <- formula1_full %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + ckd_7cat + immunosuppression + care_home + sex + imd + ethnicity + 
+  formula2_full <- formula1_full %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + ckd_5cat + immunosuppression + care_home + sex + imd + ethnicity + 
                                               rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
 
 } else {
@@ -311,7 +311,7 @@ for (i in 1:length(outcome_list)) {
   for (i in 1:nrow(model_tidy_reduced)) {
     if (model_tidy_reduced$BNT_events[i]=="[Redacted]" | model_tidy_reduced$AZ_events[i]=="[Redacted]") { model_tidy_reduced[i,names(model_tidy_reduced)%in%redaction_columns] = "[Redacted]" }
     if (model_tidy_reduced$BNT_events[i]=="0" & model_tidy_reduced$AZ_events[i]=="0") { model_tidy_reduced[i,names(model_tidy_reduced)%in%redaction_columns] = "[No events]" }
-  
+  }
   
   write_csv(model_tidy_reduced, here::here("output", "model", db, glue(paste0("modelcox_tidy_reduced_",selected_outcome,".csv"))))
   write_rds(model_tidy_reduced, here::here("output", "model", db, glue(paste0("modelcox_tidy_reduced_",selected_outcome,".rds"))), compress="gz")

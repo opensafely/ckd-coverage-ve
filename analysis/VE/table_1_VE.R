@@ -94,7 +94,7 @@ counts0 <- data_cohort %>%
          
          ## Clinical risk group (CKD-related)
          ckd_5cat,
-         ckd_7cat,
+         #ckd_7cat,
          #removed: dialysis, kidney_transplant
          
          ## Clinical risk group (non-CKD-related)
@@ -172,7 +172,7 @@ table1$Group[table1$Group=="imd"] = "IMD"
 table1$Group[table1$Group=="region"] = "Region"
 table1$Group[table1$Group=="jcvi_group"] = "JCVI group"
 table1$Group[table1$Group=="rural_urban_group"] = "Setting"
-table1$Group[table1$Group=="ckd_7cat"] = "CKD subgroup"
+table1$Group[table1$Group=="ckd_5cat"] = "CKD subgroup"
 table1$Group[table1$Group=="time_between_vaccinations1_2"] = "Time between doses 1 and 2"
 table1$Group[table1$Group=="time_between_vaccinations2_3"] = "Time between doses 2 and 3"
 
