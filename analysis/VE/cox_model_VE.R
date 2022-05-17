@@ -225,7 +225,7 @@ for (i in 1:length(outcome_list)) {
       # censor date already defined in data_selection_VE.R script 
       
       # calculate tte and ind for outcome in question
-      tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=FALSE),
+      tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=TRUE),
       ind_outcome = get(paste0("ind_",selected_outcome)),
       tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
       
