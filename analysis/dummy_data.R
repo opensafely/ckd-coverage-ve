@@ -32,6 +32,7 @@ data_processed <- data_processed %>%
   mutate(
     ckd_5cat = ckd_6cat,
     ckd_5cat = ifelse(ckd_6cat == "CKD4" | ckd_6cat == "CKD5", "CKD4-5", ckd_5cat),
+    rrt_mismatch = ifelse((ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b" | ckd_5cat=="CKD4-5") & (dialysis==1 | kidney_transplant==1), 1, 0)
   )
   
 # set vaccine coverage for primary doses, third, and fourth dose

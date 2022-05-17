@@ -225,36 +225,46 @@ data_extract <- data_extract %>%
     ukrr_index_group = "None",
     ukrr_index_group = ifelse(!is.na(ukrr_index_mod) & ukrr_index_mod == "Tx", "Tx", ukrr_index_group),
     ukrr_index_group = ifelse(!is.na(ukrr_index_mod) & (ukrr_index_mod == "ICHD" | ukrr_index_mod == "HHD" | ukrr_index_mod == "HD" | ukrr_index_mod == "PD"), "Dialysis", ukrr_index_group),
+    
+    # set modalities as 'None' instead of NA
+    ukrr_2019_mod = ifelse(is.na(ukrr_2019_mod), "None", ukrr_2019_mod), 
+    ukrr_2020_mod = ifelse(is.na(ukrr_2020_mod), "None", ukrr_2020_mod), 
+    ukrr_index_mod = ifelse(is.na(ukrr_index_mod), "None", ukrr_index_mod), 
+
+    # flag issues with ambiguous creatinine entries - either no creatinine-associated age valid date or operator
+    creatinine_date_issue = ifelse(!is.na(creatinine) & is.na(age_creatinine),1,0),
+    creatinine_operator_issue = ifelse(!is.na(creatinine_operator) & creatinine_operator %in% c("~", ">=", ">", "<", "<="),1,0)
   )
 
 # Cross-tabulate creatinine measurements with corresponding date recordings
-print("Cross-tabulate !is.na for creatinine vs creatinine_date")
-print(table(!is.na(data_extract$creatinine), !is.na(data_extract$creatinine_date)))
-print("Cross-tabulate !is.na for creatinine vs age_creatinine")
-print(table(!is.na(data_extract$creatinine), !is.na(data_extract$age_creatinine)))
-print("Cross-tabulate operators")
-print(table(data_extract$creatinine_operator))
-print("Cross-tabulate 2019 vs 2020 modalities")
-print(table(data_extract$ukrr_2019_mod, data_extract$ukrr_2020_mod))
+print("Number of creatinine records with no associated date")
+print(sum(data_extract$creatinine_date_issue))
+print("Number of creatinine records with operator")
+print(sum(data_extract$creatinine_operator_issue))
+
 print("Cross-tabulate 2020 modalities")
 print(table(data_extract$ukrr_2020_mod))
 print("Cross-tabulate index modalities")
 print(table(data_extract$ukrr_index_mod))
 print("Cross-tabulate index vs 2020 modalities")
 print(table(data_extract$ukrr_index_mod, data_extract$ukrr_2020_mod))
+
 print("Cross-tabulate 2020 groups")
 print(table(data_extract$ukrr_2020_group))
-print("Cross-tabulate index modalities")
+print("Cross-tabulate index groups")
 print(table(data_extract$ukrr_index_group))
 print("Cross-tabulate index vs 2020 groups")
 print(table(data_extract$ukrr_index_group, data_extract$ukrr_2020_group))
+
 print("Cross-tabulate UKRR vs primary care dialysis")
 print(table(data_extract$ukrr_index_group=="Dialysis", data_extract$dialysis))
 print("Cross-tabulate UKRR vs primary care transplant")
 print(table(data_extract$ukrr_index_group=="Tx", data_extract$kidney_transplant))
-print("Sum dereg/death in Dec 2021")
-print(sum((!is.na(data_extract$death_date) & data_extract$death_date>=as_date("2020-12-01") & data_extract$death_date<=as_date("2020-12-31")) |
-            (!is.na(data_extract$dereg_date) & data_extract$dereg_date>=as_date("2020-12-01") & data_extract$dereg_date<=as_date("2020-12-31"))))
+
+print("Sum UKRR 2019 population with dereg/death between 01-Dec-2021 and 31-Dec-2021")
+print(sum(data_extract$ukrr_2019==1 &
+  ((!is.na(data_extract$death_date) & data_extract$death_date>=as_date("2020-12-01") & data_extract$death_date<=as_date("2020-12-31")) |
+            (!is.na(data_extract$dereg_date) & data_extract$dereg_date>=as_date("2020-12-01") & data_extract$dereg_date<=as_date("2020-12-31")))))
 
 # Replace NAs with 'No CKD' in new categories
 data_extract$egfr_cat5[is.na(data_extract$egfr_cat5)] = "No CKD"
@@ -284,6 +294,9 @@ data_processed <- data_extract %>%
     # CKD 5-levels (merging 4/5)
     ckd_5cat = ckd_6cat,
     ckd_5cat = ifelse(ckd_6cat == "CKD4" | ckd_6cat == "CKD5", "CKD4-5", ckd_5cat),
+    
+    # flag individuals with mismatch between UKRR and primary care data
+    rrt_mismatch = ifelse((ckd_5cat=="CKD3a" | ckd_5cat=="CDK3b" | ckd_5cat=="CDK4-5") & (dialysis==1 | kidney_transplant==1), 1, 0),
     
     # Age
     ageband = cut(
@@ -436,6 +449,9 @@ data_processed <- data_extract %>%
   select(-c(care_home_code, care_home_tpp, ethnicity_6, ethnicity_filled, 
             immunosuppression_diagnosis_date, immunosuppression_medication_date)) %>%
   droplevels() 
+
+print("Number of individuals with dialysis/transplant primary care flag but not in UKRR at index")
+print(sum(data_extract$rrt_mismatch))
 
 # apply dummy data script if not running in the server
 #Sys.getenv()
