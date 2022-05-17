@@ -107,54 +107,37 @@ summary_df = t(
   )
 )
 colnames(summary_df) = c("min", "q1", "median", "q3", "max") 
-data.frame(summary_df) %>% 
+data.frame(summary_df[,c("q1", "median", "q3")]) %>% 
   gt(rownames_to_stub = TRUE) %>%
   tab_options(table.font.size = pct(85))
 ```
 <br/><br/>
 
-```{r, fig.width=14, fig.height=3}
-fup_times = rbind(
-  data.frame(outcome = "+ve test", fups = hist_data$tte_covid_postest_or_censor),
-  data.frame(outcome = "COVID A&E", fups = hist_data$tte_covid_emergency_or_censor),
-  data.frame(outcome = "COVID hosp.", fups = hist_data$tte_covid_hosp_or_censor),
-  data.frame(outcome = "COVID death", fups = hist_data$tte_covid_death_or_censor)
-)
-fup_times$outcome = factor(fup_times$outcome, levels = c("+ve test", "COVID A&E", "COVID hosp.", "COVID death"))
-
-ggplot(fup_times, aes(x=fups, y=..density.., group=outcome, colour=outcome)) + 
-    geom_density(alpha=0.8, adjust = 1) +
-    theme_bw() + xlab("days") +  ylab("density (smoothed)") + 
-    scale_colour_brewer(palette="Dark2") +
-    theme(strip.background = element_blank(), strip.text = element_text(size=15),
-          axis.text = element_text(size=15), axis.title = element_text(size=15),
-          legend.position="none") +
-  facet_grid(.~outcome)
-```
-<br/><br/>
-
 #### Date distribution of events
-```{r, fig.width=6, fig.height=4}
+```{r, fig.width=14, fig.height=3, message=FALSE}
 dose_dates = rbind(
-  data.frame(event = "dose 1", dates = hist_data$vax1_date, type = "dose"),
-  data.frame(event = "dose 2", dates = hist_data$vax2_date, type = "dose"),
-  data.frame(event = "dose 3", dates = hist_data$vax3_date, type = "dose"),
-  data.frame(event = "+ve test", dates = hist_data$postvax_positive_test_date, type = "outcome"),
-  data.frame(event = "hosp.", dates = hist_data$postvax_covid_hospitalisation_date, type = "outcome"),
-  data.frame(event = "censor", dates = hist_data$censor_date, type = "outcome")
-)
+   #data.frame(event = "dose 1", dates = hist_data$vax1_date, type = "dose"),
+   data.frame(event = "dose 2", dates = hist_data$vax2_date, type = "dose"),
+   data.frame(event = "dose 3", dates = hist_data$vax3_date, type = "dose"),
+   data.frame(event = "+ve test", dates = hist_data$postvax_positive_test_date, type = "outcome"),
+   data.frame(event = "hosp.", dates = hist_data$postvax_covid_hospitalisation_date, type = "outcome"),
+   data.frame(event = "censor", dates = hist_data$censor_date, type = "outcome")
+ )
+dose_dates$event = factor(dose_dates$event, levels = c("dose 2", "dose 3", "+ve test", "hosp.", "censor")) 
 
-ggplot(dose_dates, aes(x=dates, y=..density.., group=event, colour=event)) + 
-    geom_density(alpha=0.8, adjust = 1) +
-    scale_x_date(labels = date_format("%b %Y"),
-              limits = c(as.Date("2021-01-01"), as.Date("2021-11-30"))) +
-    theme_bw() + xlab("date") + ylab("density (smoothed)") + 
-    scale_colour_brewer(palette="Dark2") +
-    theme(strip.background = element_blank(), strip.text = element_text(size=12),
-          axis.text = element_text(size=12), axis.title = element_text(size=12),
-          legend.title = element_text(size=12), legend.text = element_text(size=12)) +
-  facet_grid(type~.)
+ggplot(dose_dates, aes(x=dates, group=event, fill=event)) + 
+     geom_histogram(alpha=0.8, adjust = 1.5) +
+     scale_x_date(labels = date_format("%b %y"),
+               limits = c(as.Date("2021-01-01"), as.Date("2021-12-31"))) +
+     theme_bw() + xlab("date") + ylab("density (smoothed)") + 
+     scale_fill_brewer(palette="Dark2") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(.~event, scales="free") + 
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), ymin = 0, ymax = 10, alpha = 1, colour="grey")
 ```
+<br/>Histograms display raw event counts. A grey rectangle with y axis limits 0 and 10 redacts any bars with values <=10.
 <br/><br/>
 
 #### Cumulative incidence plots and hazard ratios over time (figure)
@@ -176,36 +159,283 @@ data_tte <- data_tte %>%
   )
 
 ## Set rounding factor for estimates and confidence intervals
-threshold = 5
+threshold = 10
+  # mutate(
+  #   tte_outcome = tte(vax2_date-1, postvax_positive_test_date, censor_date, na.censor=FALSE),
+  #   ind_outcome = censor_indicator(postvax_positive_test_date, censor_date),
+  # ) 
 
-## Function to extract cumulative incidence data for outcome of interest
-surv_table <- function(outcome_number) {
-  survfit(Surv(tte(vax2_date - 1, get(date_list[outcome_number]), censor_date), get(paste0("ind_",outcome_list[outcome_number]))) ~ vax2_type_descr, data = data_tte) %>% 
-  broom::tidy() %>% 
-  filter(estimate > 0) %>%
-  mutate(
-    outcome_clean = clean_list[outcome_number],
-    strata = str_replace(strata, pattern=fixed("vax2_type_descr="), ""),
-    estimate = pmin(1,plyr::round_any(estimate, threshold/max(n.risk)), na.rm=TRUE),
-    conf.low = pmin(1, plyr::round_any(conf.low, threshold/max(n.risk)), na.rm=TRUE),
-    conf.high = pmin(1, plyr::round_any(conf.high, threshold/max(n.risk)), na.rm=TRUE),
-    cum.in = 1 - estimate,
-    lci = 1- conf.high,
-    uci = 1 - conf.low
-  )
+create_rounded_surv_table = function(outcome_number) {
+  data_surv <-
+    data_tte %>%
+    mutate(
+      ind_outcome = get(paste0("ind_",outcome_list[outcome_number])),
+      tte_outcome = get(paste0("tte_",outcome_list[outcome_number],"_or_censor"))
+    ) %>%
+    group_by(vax2_type_descr) %>%
+    nest() %>%
+    mutate(
+      n_events = map_int(data, ~sum(.x$ind_outcome, na.rm=TRUE)),
+      surv_obj = map(data, ~{
+        survfit(Surv(tte_outcome, ind_outcome) ~ 1, data = .x, conf.type="log-log")
+      }),
+      surv_obj_tidy = map(surv_obj, ~tidy_surv(.x, times=seq_len(280))), # return survival table for each day of follow up
+    ) %>%
+    select(vax2_type_descr, n_events, surv_obj_tidy) %>%
+    unnest(surv_obj_tidy)
+  #write.csv(data_surv, "data_surv.csv")
+
+  data_surv_rounded <-
+    data_surv %>%
+    mutate(
+      # Use ceiling not round. This is slightly biased upwards,
+      # but means there's no disclosure risk at the boundaries (0 and 1) where masking would otherwise be threshold/2
+      #
+      # Explanation:
+      # ensure every "step" in the KM survival curve is based on no fewer than `threshold` outcome+censoring events
+      # N = max(n.risk, na.rm=TRUE) is the number at risk at time zero.
+      # N/threshold is the inverse of the minimum `step` size on the survival scale (0-1)
+      # floor(N/threshold) rounds down to nearest integer.
+      # 1/floor(N) is the minimum step size on the survival scale (0-1), ensuring increments no fewer than `threshold` on the events scale
+      # ceiling_any(x, min_increment) rounds up values of x on the survival scale, so that they lie on the grid of width `min_increment`.
+  
+      N = max(n.risk, na.rm=TRUE),
+      cml.event = plyr::round_any(cumsum(replace_na(n.event, 0)), threshold),
+      cml.censor = plyr::round_any(cumsum(replace_na(n.censor, 0)), threshold),
+      n.event = diff(c(0,cml.event)),
+      n.censor = diff(c(0,cml.censor)),
+      n.risk = plyr::round_any(N, threshold) - lag(cml.event + cml.censor,1,0),
+      summand = n.event / ((n.risk - n.event) * n.risk),
+  
+      ## calculate surv based on rounded event counts
+      surv = cumprod(1 - n.event / n.risk),
+      surv.se = surv * sqrt(cumsum(replace_na(summand, 0))),
+      llsurv = log(-log(surv)),
+      llsurv.se = sqrt((1 / log(surv)^2) * cumsum(summand)),
+      surv.ll = exp(-exp(llsurv + qnorm(0.025)*llsurv.se)),
+      surv.ul = exp(-exp(llsurv + qnorm(0.975)*llsurv.se)),
+  
+      # Or round surv based on a grid of values representing increments of `threshold`
+      #surv = ceiling_any(surv, 1/floor(N/threshold)),
+      #surv.ll = ceiling_any(surv.ll, 1/floor(N/threshold)),
+      #surv.ul = ceiling_any(surv.ul, 1/floor(N/threshold)),
+  
+      haz = -(surv-lag(surv, 1, 1))/lag(surv, 1, 1), # n.event / (n.risk * interval),
+      haz.se = haz * sqrt((n.risk - n.event) / (n.risk * n.event)),
+      cml.haz = cumsum(haz),
+      cmlhaz.se = surv.se/surv,
+    ) %>%
+    select(
+      vax2_type_descr, time, lagtime, leadtime, interval,
+      n.risk, n.event, n.censor, summand,
+      surv, surv.se, surv.ll, surv.ul,
+      haz, haz.se,
+      cml.haz, cml.haz.se
+    )
+  #write.csv(data_surv_rounded, "data_surv_rounded.csv")
+  data_surv_rounded
 }
 
+# kmcontrast <- function(data, cuts=NULL){
+# 
+#   if(is.null(cuts)){cuts <- unique(c(0,data$time))}
+# 
+#    data %>%
+#     filter(time!=0) %>%
+#     transmute(
+#       vax2_type_descr,
+# 
+#       time, lagtime, interval,
+#       period_start = as.integer(as.character(cut(time, cuts, right=TRUE, label=cuts[-length(cuts)]))),
+#       period_end = as.integer(as.character(cut(time, cuts, right=TRUE, label=cuts[-1]))),
+#       period = cut(time, cuts, right=TRUE, label=paste0(cuts[-length(cuts)]+1, " - ", cuts[-1])),
+# 
+#       n.atrisk = n.risk,
+#       n.event, n.censor, summand,
+# 
+#       cml.persontime = cumsum(n.atrisk*interval),
+#       cml.event = cumsum(replace_na(n.event, 0)),
+#       cml.censor = cumsum(replace_na(n.censor, 0)),
+#       cml.summand = cumsum(summand),
+# 
+#       rate = n.event / n.atrisk,
+#       cml.rate = cml.event / cml.persontime,
+# 
+#       surv, surv.se, surv.ll, surv.ul,
+# 
+#       risk = 1 - surv,
+#       risk.se = surv.se,
+#       risk.ll = 1 - surv.ul,
+#       risk.ul = 1 - surv.ll,
+# 
+#       haz, haz.se,
+#       cml.haz, cml.haz.se
+# 
+#     ) %>%
+#     group_by(vax2_type_descr, period_start, period_end, period) %>%
+#     summarise(
+# 
+#       ## time-period-specific quantities
+# 
+#       persontime = sum(n.atrisk*interval), # total person-time at risk within time period
+# 
+#       n.atrisk = first(n.atrisk), # number at risk at start of time period
+#       n.event = sum(n.event, na.rm=TRUE), # number of events within time period
+#       n.censor = sum(n.censor, na.rm=TRUE), # number censored within time period
+# 
+#       rate = n.event/persontime, # = weighted.mean(haz, n.atrisk*interval), incidence rate. this is equivalent to a weighted average of the hazard ratio, with time-exposed as the weights
+# 
+#       interval = sum(interval), # width of time period
+# 
+#       ## quantities calculated from time zero until end of time period
+#       # these should be the same as the daily values as at the end of the time period
+# 
+#       surv = last(surv),
+#       surv.se = last(surv.se),
+#       surv.ll = last(surv.ll),
+#       surv.ul = last(surv.ul),
+# 
+#       risk = last(risk),
+#       risk.se = last(risk.se),
+#       risk.ll = last(risk.ul),
+#       risk.ul = last(risk.ll),
+# 
+#       cml.haz = last(cml.haz),  # cumulative hazard from time zero to end of time period
+# 
+#       cml.rate = last(cml.rate), # event rate from time zero to end of time period
+# 
+#       # cml.persontime = last(cml.persontime), # total person-time at risk from time zero to end of time period
+#        cml.event = last(cml.event), # number of events from time zero to end of time period
+#       # cml.censor = last(cml.censor), # number censored from time zero to end of time period
+# 
+#       # cml.summand = last(cml.summand), # summand used for estimation of SE of survival
+# 
+#       .groups="drop"
+#     ) %>%
+#     ungroup() %>%
+#     pivot_wider(
+#       id_cols= c("period_start", "period_end", "period",  "interval"),
+#       names_from=vax2_type_descr,
+#       names_glue="{.value}_{vax2_type_descr}",
+#       values_from=c(
+# 
+#         persontime, n.atrisk, n.event, n.censor,
+#         rate,
+# 
+#         cml.haz,
+#         surv, surv.se, surv.ll, surv.ul,
+#         risk, risk.se, risk.ll, risk.ul,
+# 
+#         cml.event, cml.rate
+#         )
+#     ) %>%
+#     mutate(
+#       n.nonevent_BNT = n.atrisk_BNT - n.event_BNT,
+#       n.nonevent_AZ = n.atrisk_AZ - n.event_AZ,
+# 
+# 
+#       ## time-period-specific quantities
+# 
+#       # hazard ratio, standard error and confidence limits
+# 
+#       # incidence rate ratio
+#       irr = rate_AZ / rate_BNT,
+#       irr.ln.se = sqrt((1/n.event_AZ) + (1/n.event_BNT)),
+#       irr.ll = exp(log(irr) + qnorm(0.025)*irr.ln.se),
+#       irr.ul = exp(log(irr) + qnorm(0.975)*irr.ln.se),
+# 
+#       # incidence rate difference
+#       #ird = rate_1 - rate_0,
+# 
+#       ## quantities calculated from time zero until end of time period
+#       # these should be the same as values calculated on each day of follow up
+# 
+#       # survival ratio, standard error, and confidence limits
+#       kmsr = surv_AZ / surv_BNT,
+#       #kmsr.ln = log(kmsr),
+#       kmsr.ln.se = (surv.se_BNT/surv_BNT) + (surv.se_AZ/surv_AZ), #because cmlhaz = -log(surv) and cmlhaz.se = surv.se/surv
+#       kmsr.ll = exp(log(kmsr) + qnorm(0.025)*kmsr.ln.se),
+#       kmsr.ul = exp(log(kmsr) + qnorm(0.975)*kmsr.ln.se),
+# 
+#       # risk ratio, standard error, and confidence limits, using delta method
+#       kmrr = risk_AZ / risk_BNT,
+#       #kmrr.ln = log(kmrr),
+#       kmrr.ln.se = (risk.se_AZ/risk_AZ)^2 + (risk.se_BNT/risk_BNT)^2,
+#       kmrr.ll = exp(log(kmrr) + qnorm(0.025)*kmrr.ln.se),
+#       kmrr.ul = exp(log(kmrr) + qnorm(0.975)*kmrr.ln.se),
+# 
+#       #kmrr.se = (kmrr^2)*((risk.se_1/risk_1)^2 + (risk.se_0/risk_0)^2),
+#       #kmrr.ll2 = kmrr + qnorm(0.025)*kmrr.se,
+#       #kmrr.ul2 = kmrr + qnorm(0.975)*kmrr.se,
+# 
+# 
+#       # risk difference, standard error and confidence limits
+#       kmrd = risk_AZ - risk_BNT,
+#       #kmrd.se = sqrt( ((n.event_1*n.nonevent_1)/(n.atrisk_1^3)) + ((n.event_0*n.nonevent_0)/(n.atrisk_0^3)) ), # ignores censoring
+#       kmrd.se = sqrt( (risk.se_BNT^2) + (risk.se_AZ^2) ), # combining SEs from greenwood's formula
+#       kmrd.ll = kmrd + qnorm(0.025)*kmrd.se,
+#       kmrd.ul = kmrd + qnorm(0.975)*kmrd.se,
+# 
+# 
+#       # cumulative incidence rate ratio
+#       cmlirr = cml.rate_AZ / cml.rate_BNT,
+#       cmlirr.ln.se = sqrt((1/cml.event_BNT) + (1/cml.event_AZ)),
+#       cmlirr.ll = exp(log(cmlirr) + qnorm(0.025)*cmlirr.ln.se),
+#       cmlirr.ul = exp(log(cmlirr) + qnorm(0.975)*cmlirr.ln.se),
+# 
+#       # cumulative incidence rate difference
+#       #cmlird = cml.rate_1 - cml.rate_0
+#     )
+# }
+
+#km_contrasts_daily <- kmcontrast(data_surv)
+#km_contrasts_cuts <- kmcontrast(data_surv, postbaselinecuts)
+#km_contrasts_overall <- kmcontrast(data_surv, c(0,maxfup))
+surv_covid_postest = create_rounded_surv_table(1) %>% mutate(outcome_clean = clean_list[1])
+surv_covid_emergency = create_rounded_surv_table(2) %>% mutate(outcome_clean = clean_list[2])
+surv_covid_hosp = create_rounded_surv_table(3) %>% mutate(outcome_clean = clean_list[3])
+surv_covid_death = create_rounded_surv_table(4) %>% mutate(outcome_clean = clean_list[4])
+
 # collate across outcomes 1:4 (positive test, A&E, hosp, death)
-surv_collated = rbind(surv_table(1), surv_table(2), surv_table(3), surv_table(4))
+surv_collated = rbind(surv_covid_postest, surv_covid_emergency, surv_covid_hosp, surv_covid_death)
 surv_collated$outcome_clean = factor(surv_collated$outcome_clean, levels = clean_list)
+#write.csv(subset(surv_collated, outcome_clean==clean_list[1]), "surv_collated.csv")
+
+
+# #km_contrasts_rounded_daily <- kmcontrast(surv_covid_postest)
+# km_contrasts_covid_postest <- rbind(kmcontrast(surv_covid_postest, 56*0:5), 
+#                                    kmcontrast(surv_covid_postest, c(0,max(56*0:5)))) %>% mutate(outcome_clean = clean_list[1])
+# km_contrasts_covid_emergency <- rbind(kmcontrast(surv_covid_emergency, 56*0:5), 
+#                                    kmcontrast(surv_covid_emergency, c(0,max(56*0:5)))) %>% mutate(outcome_clean = clean_list[2])
+# km_contrasts_covid_hosp <- rbind(kmcontrast(surv_covid_hosp, 56*0:5), 
+#                                    kmcontrast(surv_covid_hosp, c(0,max(56*0:5)))) %>% mutate(outcome_clean = clean_list[3])
+# km_contrasts_covid_death <- rbind(kmcontrast(surv_covid_death, 56*0:5), 
+#                                    kmcontrast(surv_covid_death, c(0,max(56*0:5)))) %>% mutate(outcome_clean = clean_list[4])
+
+## Function to extract cumulative incidence data for outcome of interest
+# surv_table <- function(outcome_number) {
+#   survfit(Surv(tte(vax2_date - 1, get(date_list[outcome_number]), censor_date), get(paste0("ind_",outcome_list[outcome_number]))) ~ vax2_type_descr, data = data_tte) %>% 
+#   broom::tidy() %>% 
+#   filter(estimate > 0) %>%
+#   mutate(
+#     outcome_clean = clean_list[outcome_number],
+#     strata = str_replace(strata, pattern=fixed("vax2_type_descr="), ""),
+#     estimate = pmin(1,plyr::round_any(estimate, threshold/max(n.risk)), na.rm=TRUE),
+#     conf.low = pmin(1, plyr::round_any(conf.low, threshold/max(n.risk)), na.rm=TRUE),
+#     conf.high = pmin(1, plyr::round_any(conf.high, threshold/max(n.risk)), na.rm=TRUE),
+#     cum.in = 1 - estimate,
+#     lci = 1- conf.high,
+#     uci = 1 - conf.low
+#   )
+# }
 
 ## Generate KM plot across 4 outcomes
 g1 = surv_collated %>%
-  ggplot(aes(x = time, y = cum.in, colour = strata)) + geom_step(size = 0.8) +
-  geom_ribbon(aes(ymin = lci, ymax = uci, fill = strata), alpha = 0.1, colour=NA) +
+  ggplot(aes(x = time, y = 1-surv, colour = vax2_type_descr, fill = vax2_type_descr)) + geom_step(size = 0.8) +
+  facet_wrap(.~outcome_clean, nrow=1) +
+  geom_rect(aes(xmin=lagtime, xmax=time, ymin=1-surv.ll, ymax=1-surv.ul), alpha=0.1, colour="transparent") +
   scale_x_continuous(breaks=56*0:5, limits=c(0, 56*6), expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(mult=c(0,0.01))) +
-  facet_wrap(.~outcome_clean, nrow=1) +
   labs(
     x = "",
     y = "cumulative incidence",
@@ -214,6 +444,7 @@ g1 = surv_collated %>%
   theme_bw() +
   guides(fill="none") +
   scale_colour_manual(values = c("#CC79A7", "#0072B2")) +
+  scale_fill_manual(values = c("#CC79A7", "#0072B2")) +
   theme(
     strip.text = element_text(size=20),
     axis.text = element_text(size=20),
@@ -244,7 +475,7 @@ model = rbind(
 
 ## Set factor levels
 model$model_name = factor(model$model_name, levels = c("unadjusted", "region/date adjusted", "fully adjusted"))
-
+write.csv(model, "model.csv")
 ## Remove redacted components from plot
 model$estimate = as.numeric(model$estimate)
 model$conf.low = as.numeric(model$conf.low)
@@ -310,7 +541,7 @@ g2 = ggplot(data = model) +
 ## Generate aligned plot
 plot_grid(g1, g2, ncol=1,  align="v", axis = c("lr"))
 ```
-Cumulative incidence = 1 - Kaplan-Meier estimate for probability of survival in unadjusted models. [R] = redacted (between 1 and 5 events in either vaccine group); [N] = 0 events in both vaccine groups. 
+Cumulative incidence = 1 - Kaplan-Meier estimate for probability of survival in unadjusted models. Steps occur every 10 events for disclosure control. [R] = redacted (rounded count <=10 in either vaccine group); [N] = rounded count of 0 events in both vaccine groups. 
 <br/><br/>
 
 #### Crude incidence rate ratios and hazard ratios over time (table)
@@ -334,7 +565,7 @@ HR_summary <- model %>% select(model_name, term, estimate, conf.low, conf.high, 
   mutate(
     `HR (95% CI)` = paste0(round(exp(estimate),2)," (",round(exp(conf.low),2),"-",round(exp(conf.high),2),")"),
     `HR (95% CI)` = if_else(`HR (95% CI)`=="NA (NA-NA)", "--", `HR (95% CI)`),
-    term = recode(term, "vax2_az"="All")
+    term = recode(term, "vax2_az"="1-280")
   ) %>%
   select(-c(estimate, conf.low, conf.high)) %>%
   pivot_wider(
@@ -361,7 +592,7 @@ left_join(table_irr, HR_summary, by = c("Period (days)", "outcome_clean")) %>%
    tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
    tab_options(table.font.size = pct(80)) %>% #table.width = pct(80) 
    tab_footnote(
-     footnote = "IRR = incidence rate ratio. Data redacted for any rounded counts of >0 and <=5",
+     footnote = "IRR = incidence rate ratio.",
      locations = cells_column_labels(columns = c("IRR"))
    ) %>%
    cols_width(
@@ -370,3 +601,4 @@ left_join(table_irr, HR_summary, by = c("Period (days)", "outcome_clean")) %>%
     ends_with("adjusted") ~ px(200)
     )
 ```
+<br/>Frequencies are rounded to the nearest 5. Rounded counts of <=10 are redacted. Total event counts are removed to prevent back-calculation of redacted values.

@@ -269,3 +269,155 @@ tidy_plr <- function(model, conf.int=TRUE, conf.level=0.95, exponentiate=FALSE, 
     )
   
 }
+
+
+ceiling_any <- function(x, to=1){
+  # round to nearest 100 millionth to avoid floating point errors
+  ceiling(plyr::round_any(x/to, 1/100000000))*to
+}
+
+floor_any <- function(x, to=1){
+  # round to nearest 100 millionth to avoid floating point errors
+  floor(plyr::round_any(x/to, 1/100000000))*to
+}
+
+
+
+tidy_surv <-
+  function(
+    survfit,
+    times = NULL,
+    addtimezero=FALSE
+  ) {
+    
+    # tidy post-fit survival dataset, with extra estimates than provided by broom::tidy.coxph
+    
+    mintime <- min(survfit$time)
+    timezero <- min(0, mintime-1)
+    
+    
+    if (is.null(times)) {
+      output <-
+        survfit %>%
+        broom::tidy() %>%
+        transmute(
+          time,
+          lagtime = lag(time, 1L, default=timezero),
+          leadtime = lead(time),
+          interval = time - lagtime,
+          
+          n.risk,
+          n.event,
+          n.censor,
+          
+          summand = n.event / ((n.risk - n.event) * n.risk),
+          
+          surv=cumprod(1 - n.event / n.risk),
+          #surv.ll = conf.low,
+          #surv.ul = conf.high,
+          surv.se = surv * sqrt(cumsum(summand)), #greenwood's formula
+          
+          lsurv = log(surv),
+          lsurv.se = sqrt(cumsum(summand)),
+          
+          # kaplan meier hazard estimates
+          haz = n.event / (n.risk * interval), # =-(surv-lag(surv))/lag(surv)
+          cml.haz = cumsum(haz),
+          cml.haz.se = std.error, # = surv.se/surv,
+          haz.se = haz * sqrt((n.risk - n.event) / (n.risk * n.event)),
+          
+          
+          # actuarial hazard estimates
+          haz_ac = n.event / ((n.risk - (n.censor / 2) - (n.event / 2)) * interval), # =(cml.haz-lag(cml.haz))/interval
+          cml.haz_ac = -log(surv), #=cumsum(haz_ac)
+          haz_ac.se = (haz_ac * sqrt(1 - (haz_ac * interval / 2)^2)) / sqrt(n.event),
+          
+          # log(-log()) scale
+          
+          llsurv = log(-log(surv)),
+          llsurv.se = sqrt((1 / log(surv)^2) * cumsum(summand)),
+          
+          surv.ll = exp(-exp(llsurv + qnorm(0.025)*llsurv.se)),
+          surv.ul = exp(-exp(llsurv + qnorm(0.975)*llsurv.se)),
+          
+        )
+    }
+    
+    else {
+      
+      output <-
+        survfit %>%
+        broom::tidy() %>%
+        complete(
+          time = times,
+          fill = list(n.event = 0, n.censor = 0)
+        ) %>%
+        fill(n.risk, .direction = c("up")) %>%
+        transmute(
+          time,
+          lagtime = lag(time, 1L, default = timezero),
+          leadtime = lead(time),
+          interval = time - lagtime,
+          
+          n.risk,
+          n.event,
+          n.censor,
+          
+          summand = n.event / ((n.risk - n.event) * n.risk),
+          
+          surv=cumprod(1 - n.event / n.risk),
+          
+          #surv.ll = conf.low,
+          #surv.ul = conf.high,
+          surv.se = surv * sqrt(cumsum(summand)), #greenwood's formula
+          
+          lsurv = log(surv),
+          lsurv.se = sqrt(cumsum(summand)),
+          
+          # kaplan meier hazard estimates
+          haz = n.event / (n.risk * interval), # =-(surv-lag(surv))/lag(surv)
+          cml.haz.se = std.error, #  = surv.se/surv
+          cml.haz = cumsum(haz), # =cumsum(haz_km)
+          haz.se = haz * sqrt((n.risk - n.event) / (n.risk * n.event)),
+          
+          # actuarial hazard estimates
+          haz_ac = n.event / ((n.risk - (n.censor / 2) - (n.event / 2)) * interval), # =(cml.haz-lag(cml.haz))/interval
+          cml.haz_ac = -log(surv), #=cumsum(haz_ac)
+          haz_ac.se = (haz_ac * sqrt(1 - (haz_ac * interval / 2)^2)) / sqrt(n.event),
+          
+          # log(-log()) scale
+          
+          llsurv = log(-log(surv)),
+          llsurv.se = sqrt((1 / log(surv)^2) * cumsum(summand)),
+          
+          
+          surv.ll = exp(-exp(llsurv + qnorm(0.025)*llsurv.se)),
+          surv.ul = exp(-exp(llsurv + qnorm(0.975)*llsurv.se)),
+        )
+    }
+    
+    if(addtimezero){
+      output <- output %>%
+        add_row(
+          time = timezero,
+          lagtime = NA_real_,
+          leadtime = mintime,
+          interval = leadtime-time,
+          summand=0,
+          
+          #estimate=1, std.error=0, conf.high=1, conf.low=1,
+          
+          surv=1,
+          surv.se = 0,
+          surv.ll=1,
+          surv.ul=1,
+          surv.se=0,
+          
+          haz_km=0, haz_km.se=0, cml.haz_km=0,
+          haz_ac=0, haz_ac.se=0, cml.haz_ac=0,
+          .before=1
+        )
+    }
+    
+    return(output)
+  }

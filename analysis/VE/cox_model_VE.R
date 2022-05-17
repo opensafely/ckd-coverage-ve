@@ -225,7 +225,7 @@ for (i in 1:length(outcome_list)) {
       # censor date already defined in data_selection_VE.R script 
       
       # calculate tte and ind for outcome in question
-      tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=TRUE),
+      tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=FALSE),
       ind_outcome = get(paste0("ind_",selected_outcome)),
       tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
       
@@ -274,11 +274,11 @@ for (i in 1:length(outcome_list)) {
            outcome_clean = selected_outcome_clean)
   )
   
-  ## Redact statistical outputs if <=5 events
+  ## Redact statistical outputs if <=10 events
   redaction_columns = c("nevent", "statistic.log", "p.value.log", "statistic.sc", "p.value.sc", "statistic.wald", "p.value.wald", 
                         "statistic.robust", "p.value.robust", "r.squared", "r.squared.max", "concordance", "std.error.concordance", "logLik", "AIC", "BIC")
   for (i in 1:nrow(model_glance)) {
-    if (model_glance$nevent[i]>0 & model_glance$nevent[i]<=5) { model_glance[i,names(model_glance)%in%redaction_columns] = "[Redacted]" }
+    if (model_glance$nevent[i]>0 & model_glance$nevent[i]<=10) { model_glance[i,names(model_glance)%in%redaction_columns] = "[Redacted]" }
   }
   write_csv(model_glance, here::here("output", "model", db, glue(paste0("modelcox_glance_",selected_outcome,".csv"))))
   
@@ -303,7 +303,6 @@ for (i in 1:length(outcome_list)) {
     )
   
   # add event counts from IRR table to unadjusted model
-  model_tidy_reduced$BNT_n = model_tidy_reduced$BNT_events =  model_tidy_reduced$AZ_n =  model_tidy_reduced$AZ_events = NA
   model_tidy_reduced$BNT_n = irr_sub$BNT_n
   model_tidy_reduced$BNT_events = irr_sub$BNT_events
   model_tidy_reduced$AZ_n = irr_sub$AZ_n
@@ -311,7 +310,8 @@ for (i in 1:length(outcome_list)) {
   redaction_columns = c("n_event", "exposure", "estimate", "std.error", "robust.se", "statistic", "p.value", "conf.low", "conf.high")
   for (i in 1:nrow(model_tidy_reduced)) {
     if (model_tidy_reduced$BNT_events[i]=="[Redacted]" | model_tidy_reduced$AZ_events[i]=="[Redacted]") { model_tidy_reduced[i,names(model_tidy_reduced)%in%redaction_columns] = "[Redacted]" }
-  }
+    if (model_tidy_reduced$BNT_events[i]=="0" & model_tidy_reduced$AZ_events[i]=="0") { model_tidy_reduced[i,names(model_tidy_reduced)%in%redaction_columns] = "[No events]" }
+  
   
   write_csv(model_tidy_reduced, here::here("output", "model", db, glue(paste0("modelcox_tidy_reduced_",selected_outcome,".csv"))))
   write_rds(model_tidy_reduced, here::here("output", "model", db, glue(paste0("modelcox_tidy_reduced_",selected_outcome,".rds"))), compress="gz")

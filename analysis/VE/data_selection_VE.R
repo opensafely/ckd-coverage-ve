@@ -77,8 +77,7 @@ data_criteria <- data_processed %>%
     
     # Age + CKD
     has_age = !is.na(age) & age >=16 & age<120,
-    has_ckd_any = ckd_inclusion_any==1,
-    has_ckd_strict = ckd_inclusion_strict==1,
+    has_ckd_egfr_ukrr = ckd_inclusion_egfr_ukrr==1,
     
     # Demography
     has_sex = !is.na(sex),
@@ -110,7 +109,7 @@ data_criteria <- data_processed %>%
     noprevax_covid = prevax_covid_cat==0,
     
     include = (
-      has_age & has_ckd_any & has_ckd_strict & 
+      has_age & has_ckd_egfr_ukrr & 
       has_sex & has_imd & has_ethnicity & has_region &
       vax_pfi_az & vax_date & vax_interval &
       positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check &
@@ -125,7 +124,7 @@ data_cohort <- data_criteria %>%
   filter(include) %>%
   select(patient_id) %>%
   left_join(data_processed, by="patient_id") %>%
-  select(-c(ckd_inclusion_any, ckd_inclusion_strict_or_3to5, ckd_inclusion_strict)) %>%
+  select(-starts_with("ckd_inclusion_")) %>%
   droplevels() %>%
   # additional vaccine/time covariates
   mutate(
@@ -143,8 +142,8 @@ write_csv(data_cohort, here::here("output", "data", "data_cohort_VE.csv"))
 ## Create and save flow chart
 data_flowchart <- data_criteria %>%
   transmute(
-    c0 = has_age & has_ckd_any,
-    c1 = c0 & has_ckd_strict,
+    c0 = has_age,
+    c1 = c0 & has_ckd_egfr_ukrr,
     c2 = c1 & (has_sex & has_imd & has_ethnicity & has_region),
     c3 = c2 & (vax_pfi_az),
     c4 = c3 & (vax_date),
@@ -196,7 +195,7 @@ exact_variables <- c(
   "region",
   "immunosuppression",
   "care_home",
-  "ckd_7cat",
+  "ckd_5cat",
   "prior_covid_cat",
   NULL #"cev",
 )

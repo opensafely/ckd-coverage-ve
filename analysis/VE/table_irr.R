@@ -14,8 +14,10 @@ library('gtsummary')
 library('scales')
 library('lubridate')
 
-## Set whether or not to round event counts to nearest 5
-round_5=FALSE
+## Set rounding (TRUE/FALSE) and threshold
+round_logical = TRUE
+round_threshold = 5
+redaction_threshold = 10
 
 ## Import command-line arguments (specifying whether or not to run matched analysis)
 args <- commandArgs(trailingOnly=TRUE)
@@ -92,7 +94,7 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
       persondays_window5 = ifelse(tte_exclusion>postvaxcuts[5] & tte_exclusion<=postvaxcuts[6], tte_exclusion-postvaxcuts[5], 56),
       persondays_window5 = ifelse(tte_exclusion<=postvaxcuts[5], 0, persondays_window5),
       
-      # person-days contributed to window 56 (all)
+      # person-days contributed to window 6 (all follow-up)
       persondays_window6 = tte_exclusion
     )
   
@@ -102,7 +104,7 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
   
   # Create IRR dataframe to fill in
   postvax_irr <- data.frame(
-    period = c("1-56", "57-112", "113-168", "169-224", "225-280", "All"),
+    period = c("1-56", "57-112", "113-168", "169-224", "225-280", "1-280"),
     period_start = c(postvaxcuts[1:5]+1,1),
     period_end = c(postvaxcuts[2:6], 280)
   )
@@ -120,11 +122,13 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
     postvax_irr$AZ_rate[i] = round(postvax_irr$AZ_events[i]/postvax_irr$AZ_personyears[i]*1000,2)
   } 
   
-  if (round_5==TRUE) {
-    postvax_irr$BNT_n = plyr::round_any(postvax_irr$BNT_n,5)
-    postvax_irr$BNT_events = plyr::round_any(postvax_irr$BNT_events,5)
-    postvax_irr$AZ_n = plyr::round_any(postvax_irr$AZ_n,5)
-    postvax_irr$AZ_events = plyr::round_any(postvax_irr$AZ_events,5)
+  if (round_logical==TRUE) {
+    postvax_irr$BNT_n = plyr::round_any(postvax_irr$BNT_n,round_threshold)
+    postvax_irr$BNT_events = plyr::round_any(postvax_irr$BNT_events,round_threshold)
+    postvax_irr$BNT_rate[i] = round(postvax_irr$BNT_events[i]/postvax_irr$BNT_personyears[i]*1000,2)
+    postvax_irr$AZ_n = plyr::round_any(postvax_irr$AZ_n,round_threshold)
+    postvax_irr$AZ_events = plyr::round_any(postvax_irr$AZ_events,round_threshold)
+    postvax_irr$AZ_rate[i] = round(postvax_irr$AZ_events[i]/postvax_irr$AZ_personyears[i]*1000,2)
   }
   
   # Calculate comparative IRRs
@@ -137,13 +141,12 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
     select(-rrE, -rrCI)
   
   #Redact values <=5 and corresponding IRRs
-  threshold = 5
   for (i in 1:nrow(postvax_irr)) {
-     if (as.numeric(postvax_irr$AZ_n[i])>0 & as.numeric(postvax_irr$AZ_n[i])<=threshold) { postvax_irr[i,c("AZ_n", "AZ_rate")] = "[Redacted]" }
-     if (as.numeric(postvax_irr$BNT_n[i])>0 & as.numeric(postvax_irr$BNT_n[i])<=threshold) { postvax_irr[i,c("BNT_n", "BNT_rate")] = "[Redacted]" }
+     if (as.numeric(postvax_irr$AZ_n[i])>0 & as.numeric(postvax_irr$AZ_n[i])<=redaction_threshold) { postvax_irr[i,c("AZ_n", "AZ_rate")] = "[Redacted]" }
+     if (as.numeric(postvax_irr$BNT_n[i])>0 & as.numeric(postvax_irr$BNT_n[i])<=redaction_threshold) { postvax_irr[i,c("BNT_n", "BNT_rate")] = "[Redacted]" }
 
-     if (as.numeric(postvax_irr$AZ_events[i])>0 & as.numeric(postvax_irr$AZ_events[i])<=threshold) { postvax_irr[i,c("AZ_events", "AZ_rate")] = "[Redacted]" }
-     if (as.numeric(postvax_irr$BNT_events[i])>0 & as.numeric(postvax_irr$BNT_events[i])<=threshold) { postvax_irr[i,c("BNT_events", "BNT_rate")] = "[Redacted]" }
+     if (as.numeric(postvax_irr$AZ_events[i])>0 & as.numeric(postvax_irr$AZ_events[i])<=redaction_threshold) { postvax_irr[i,c("AZ_events", "AZ_rate")] = "[Redacted]" }
+     if (as.numeric(postvax_irr$BNT_events[i])>0 & as.numeric(postvax_irr$BNT_events[i])<=redaction_threshold) { postvax_irr[i,c("BNT_events", "BNT_rate")] = "[Redacted]" }
 
      if (postvax_irr$AZ_rate[i]=="[Redacted]" | postvax_irr$BNT_rate[i]=="[Redacted]" ) { postvax_irr[i,c("rr")] = "--" }
      if (postvax_irr$AZ_events[i]==0 & postvax_irr$BNT_events[i]==0 ) { postvax_irr[i,c("rr")] = "--" }
@@ -169,10 +172,10 @@ irr_collated$outcome_clean[irr_collated$outcome=="tte_covid_hosp"] = "COVID-rela
 irr_collated$outcome_clean[irr_collated$outcome=="tte_covid_death"] = "COVID-related death"
 
 # Remove event counts and person-years for summary metric so that redacted counts cannot be back-calculated
-irr_collated$BNT_events[irr_collated$period=="All"] = "--"
-irr_collated$BNT_personyears[irr_collated$period=="All"] = "--"
-irr_collated$AZ_events[irr_collated$period=="All"] = "--"
-irr_collated$AZ_personyears[irr_collated$period=="All"] = "--"
+irr_collated$BNT_events[irr_collated$period=="1-280"] = "--"
+irr_collated$BNT_personyears[irr_collated$period=="1-280"] = "--"
+irr_collated$AZ_events[irr_collated$period=="1-280"] = "--"
+irr_collated$AZ_personyears[irr_collated$period=="1-280"] = "--"
 
 # Save output
 write_csv(irr_collated, here::here("output", "tables", output_csv))
