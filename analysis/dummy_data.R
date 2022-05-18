@@ -1,11 +1,12 @@
 ######################################
 
 # This script:
+# - redefines CKD subgroups to approximate expected distribution
 # - redefines vaccination dates according as follows:
-# - (1) 4 sequential vaccination dates are assigned at intervals of 12-20 weeks
-# - (2) dates are then assigned to products according to approximate product distribution from OpenSAFELY coverage reports
+# - (1) 5 sequential vaccination dates are assigned at intervals of 10-20 weeks
+# - (2) Dates are then assigned to products according to approximate product distribution from OpenSAFELY coverage reports
 
-# simplifications for purposes of dummy data:
+# Simplifications for purposes of dummy data:
 # - (1) all products used from 08/12/2020 onwards
 # - (2) first and second dose are always of same product
 
@@ -17,17 +18,16 @@ rcat <- function(n, levels, p){
 }
 
 ## Import data
-#data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))
 nsamples <- nrow(data_processed)
 
-# set product-specific start dates
+# Set vaccination start date
 start_date <- date("2020-12-08")
 end_date <- date("2022-04-20")
 
-# set distribution of CKD groups
+# Set distribution of CKD groups
 data_processed$ckd_6cat <- rcat(n=nsamples, c("CKD3a", "CKD3b", "CKD4", "CKD5",
                                               "RRT (dialysis)", "RRT (Tx)"), c(0.60,0.25,0.06,0.03,0.03,0.03))
-# recalculate CKD5 categories based on random assignments above
+# Recalculate CKD5 categories and RRT mismatch based on random assignments above
 data_processed <- data_processed %>%
   mutate(
     ckd_5cat = ckd_6cat,
@@ -63,7 +63,7 @@ for (i in 1:nsamples) {
 # dose 2: 2021-04-27 #as_date("2021-01-12") + 105
 # dose 3: 2021-08-10 #as_date("2021-04-27") + 105
 # dose 4: 2022-04-26 #as_date("2020-08-10") + 105
-# dose 4: 2022-03-08 #as_date("2020-11-23") + 105
+# dose 5: 2022-03-08 #as_date("2020-11-23") + 105
 
 # set any dates above end date to NA
 data_processed$covid_vax_date_1[data_processed$covid_vax_date_1>end_date] = NA
@@ -103,5 +103,3 @@ data_processed$moderna_date_2[primary_vax_type=="moderna"] = data_processed$covi
 data_processed$moderna_date_3[third_vax_type=="moderna"] = data_processed$covid_vax_date_3[third_vax_type=="moderna"]
 data_processed$moderna_date_4[fourth_vax_type=="moderna"] = data_processed$covid_vax_date_4[fourth_vax_type=="moderna"]
 data_processed$moderna_date_5[fifth_vax_type=="moderna"] = data_processed$covid_vax_date_5[fifth_vax_type=="moderna"]
-
-

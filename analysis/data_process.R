@@ -2,31 +2,25 @@
 
 # This script:
 # - imports data extracted by the cohort extractor
-# - combines ethnicity columns
-# - standardises some variables (eg convert to factor) and derives some new ones
+# - sets variable types (e.g. factors, dates, characters) and derives new variables (eGFR, CKD subgroup, etc)
 # - applies additional dummy data processing steps via dummy_data.R script if being run locally (skipped if being run on OpenSAFELY server)
-# - saves processed dataset
+# - saves processed data as data_processed.csv/data_processed.rds
 
 ######################################
 
-
-# Preliminaries ----
-
-## packages
+## Packages
 library('tidyverse')
 library('lubridate')
 library('here')
 
-## Import custom user functions and packages
+## Import custom user functions
 source(here::here("analysis", "functions.R"))
 
-## Output processed data to rds
+## Create directory for processed data
 dir.create(here::here("output", "data"), showWarnings = FALSE, recursive=TRUE)
 
-## Print session info
+## Print session info to metadata log file
 sessionInfo()
-
-# Process data ----
 
 ## Print variable names
 read_csv(here::here("output", "data", "input.csv"),
@@ -35,7 +29,7 @@ read_csv(here::here("output", "data", "input.csv"),
   names() %>%
   print()
 
-## Read in data (don't rely on defaults)
+## Read in data and set variable types
 data_extract <- read_csv(
   here::here("output", "data", "input.csv"),
   col_types = cols_only(
@@ -154,12 +148,12 @@ data_extract <- data_extract %>%
     .cols = where(is.character),
     .fns = ~na_if(.x, "")
   )) %>%
-  # convert numerics and integers but not id variables to NAs if 0
+  # Convert numerics and integers but not id variables to NAs if 0
   mutate(across(
     .cols = c(where(is.numeric), -ends_with("_id")), 
     .fns = ~na_if(.x, 0)
   )) %>%
-  # converts TRUE/FALSE to 1/0
+  # Converts TRUE/FALSE to 1/0
   mutate(across(
       where(is.logical),
       ~.x*1L 
@@ -167,8 +161,8 @@ data_extract <- data_extract %>%
   arrange(patient_id) 
 
 
-### eGFR calculations: adapted from cr_create_analysis_dataset.do in risk factor analysis repo
-# https://github.com/opensafely/risk-factors-research/
+### eGFR calculations: adapted from COVID-19-vaccine-breakthrough Feb 2022 branch
+# https://github.com/opensafely/COVID-19-vaccine-breakthrough/blob/updates-feb/analysis/data_process.R
 
 data_extract <- data_extract %>%
   mutate(
@@ -178,7 +172,7 @@ data_extract <- data_extract %>%
   ) %>%
   rowwise() %>%
   mutate(
-    min = case_when(sex == "M" ~ min((SCR_adj/0.9), 1, na.rm = F)^-0.411, 
+    min = case_when(sex == "M" ~ min(SCR_adj/0.9, 1, na.rm = F)^-0.411, 
                     sex == "F" ~ min(SCR_adj/0.7, 1, na.rm = F)^-0.329),
     max = case_when(sex == "M" ~ max(SCR_adj/0.9, 1, na.rm = F)^-1.209, 
                     sex == "F" ~ max(SCR_adj/0.7, 1, na.rm = F)^-1.209)) %>%
@@ -187,27 +181,25 @@ data_extract <- data_extract %>%
     egfr = (min*max*141)*(0.993^age_creatinine),
     egfr = case_when(sex == "F" ~ egfr*1.018, TRUE ~ egfr),
     
+    # For purpose of inclusion/exclusion criteria, replace egfr NAs with arbitrary high value
+    egfr = replace_na(egfr, 300),
+    
     egfr_cat5 = cut(
       egfr,
       breaks = c(0, 15, 30, 45, 60, 5000),
       labels = c("Stage 5", "Stage 4", "Stage 3b", "Stage 3a", "No CKD"),
       right = FALSE
     ),
-    
-    egfr_cat3 = cut(
-      egfr,
-      breaks = c(0, 30, 60, 5000),
-      labels = c("Stage 4/5 eGFR<30", "Stage 3a/3b eGFR 30-60", "No CKD"),
-      right = FALSE
-    ),
+    # Replace NAs with 'No CKD'
+    egfr_cat5 = replace_na(egfr_cat5, "No CKD"), 
   ) %>%
   # Drop extra variables
   select(-c(min, max, SCR_adj))
 
-# Define UKRR groups
+## Define UKRR groups
 data_extract <- data_extract %>%
   mutate(
-    # add UKRR modality at index date - either 2020 modality, or 2019 modality if died between index date and end of 2020
+    # Add UKRR modality at index date - either 2020 modality, or 2019 modality if died between index date and end of 2020
     ukrr_index_mod = if_else((!is.na(death_date) & death_date>=as_date("2020-12-01") & death_date<=as_date("2020-12-31")) |
                              (!is.na(dereg_date) & dereg_date>=as_date("2020-12-01") & dereg_date<=as_date("2020-12-31")), ukrr_2019_mod, ukrr_2020_mod),
     
@@ -221,22 +213,22 @@ data_extract <- data_extract %>%
     ukrr_2020_group = ifelse(!is.na(ukrr_2020_mod) & ukrr_2020_mod == "Tx", "Tx", ukrr_2020_group),
     ukrr_2020_group = ifelse(!is.na(ukrr_2020_mod) & (ukrr_2020_mod == "ICHD" | ukrr_2020_mod == "HHD" | ukrr_2020_mod == "HD" | ukrr_2020_mod == "PD"), "Dialysis", ukrr_2020_group),
     
-    # index
+    # Index (01-Dec-2020)
     ukrr_index_group = "None",
     ukrr_index_group = ifelse(!is.na(ukrr_index_mod) & ukrr_index_mod == "Tx", "Tx", ukrr_index_group),
     ukrr_index_group = ifelse(!is.na(ukrr_index_mod) & (ukrr_index_mod == "ICHD" | ukrr_index_mod == "HHD" | ukrr_index_mod == "HD" | ukrr_index_mod == "PD"), "Dialysis", ukrr_index_group),
     
-    # set modalities as 'None' instead of NA
+    # Set modalities as 'None' instead of NA
     ukrr_2019_mod = ifelse(is.na(ukrr_2019_mod), "None", ukrr_2019_mod), 
     ukrr_2020_mod = ifelse(is.na(ukrr_2020_mod), "None", ukrr_2020_mod), 
     ukrr_index_mod = ifelse(is.na(ukrr_index_mod), "None", ukrr_index_mod), 
 
-    # flag issues with ambiguous creatinine entries - either no creatinine-associated age valid date or operator
+    # Flag issues with ambiguous creatinine entries - either no creatinine-associated age or creatinine-linked operator (impacting interpretation of numeric values)
     creatinine_date_issue = ifelse(!is.na(creatinine) & is.na(age_creatinine),1,0),
     creatinine_operator_issue = ifelse(!is.na(creatinine_operator) & creatinine_operator %in% c("~", ">=", ">", "<", "<="),1,0)
   )
 
-# Cross-tabulate creatinine measurements with corresponding date recordings
+## Print key processing metrics to log file
 print("Number of creatinine records with no associated date")
 print(sum(data_extract$creatinine_date_issue))
 print("Number of creatinine records with operator")
@@ -261,17 +253,10 @@ print(table(data_extract$ukrr_index_group=="Dialysis", data_extract$dialysis))
 print("Cross-tabulate UKRR vs primary care transplant")
 print(table(data_extract$ukrr_index_group=="Tx", data_extract$kidney_transplant))
 
-print("Sum UKRR 2019 population with dereg/death between 01-Dec-2021 and 31-Dec-2021")
+print("Sum UKRR 2019 population with dereg/death between 01-Dec-2020 and 31-Dec-2020")
 print(sum(data_extract$ukrr_2019==1 &
   ((!is.na(data_extract$death_date) & data_extract$death_date>=as_date("2020-12-01") & data_extract$death_date<=as_date("2020-12-31")) |
             (!is.na(data_extract$dereg_date) & data_extract$dereg_date>=as_date("2020-12-01") & data_extract$dereg_date<=as_date("2020-12-31")))))
-
-# Replace NAs with 'No CKD' in new categories
-data_extract$egfr_cat5[is.na(data_extract$egfr_cat5)] = "No CKD"
-data_extract$egfr_cat3[is.na(data_extract$egfr_cat3)] = "No CKD"
-
-# Set NA egfr readings to arbitrary value of 300 to enable inclusion criteria to be applied
-data_extract$egfr[is.na(data_extract$egfr)] = 300
 
 ## Format columns (i.e, set factor levels)
 data_processed <- data_extract %>%
@@ -296,7 +281,7 @@ data_processed <- data_extract %>%
     ckd_5cat = ifelse(ckd_6cat == "CKD4" | ckd_6cat == "CKD5", "CKD4-5", ckd_5cat),
     
     # flag individuals with mismatch between UKRR and primary care data
-    rrt_mismatch = ifelse((ckd_5cat=="CKD3a" | ckd_5cat=="CDK3b" | ckd_5cat=="CDK4-5") & (dialysis==1 | kidney_transplant==1), 1, 0),
+    rrt_mismatch = ifelse((ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b" | ckd_5cat=="CKD4-5") & (dialysis==1 | kidney_transplant==1), 1, 0),
     
     # Age
     ageband = cut(
@@ -313,16 +298,10 @@ data_processed <- data_extract %>%
       right = FALSE
     ),
     
-    ageband3 = cut(
-      age,
-      breaks = c(16, 65, 70, 75, 80, 85, 90, Inf),
-      labels = c("16-64", "65-69", "70-74", "75-79", "80-84", "85-89", "90+"),
-      right = FALSE
-    ),
-    
-    # any care home flag
+    # Any care home flag
     care_home = ifelse(care_home_tpp==1 | care_home_code==1, 1, 0), 
     
+    # JCVI group
     # https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1007737/Greenbook_chapter_14a_30July2021.pdf#page=12
     jcvi_group = fct_case_when(
       care_home==1 ~ "1 (care home resident)",
@@ -351,7 +330,6 @@ data_processed <- data_extract %>%
     # Ethnicity
     ethnicity_filled = ifelse(is.na(ethnicity_6), ethnicity_6_sus, ethnicity_6),
     ethnicity = ifelse(is.na(ethnicity_filled), 6, ethnicity_filled),
-    
     ethnicity = fct_case_when(
       ethnicity == "1" ~ "White",
       ethnicity == "2" ~ "Mixed",
@@ -392,12 +370,11 @@ data_processed <- data_extract %>%
       TRUE ~ "Unknown"
     ),
     
-    ## Blood pressure
+    # Blood pressure
     bpcat = ifelse(bp_sys < 120 & bp_dias < 80, 1, NA),
     bpcat = ifelse(bp_sys >= 120 & bp_sys < 130 & bp_dias < 80, 2, bpcat),
     bpcat = ifelse(bp_sys >= 130 & bp_dias >= 90, 3, bpcat),
     bpcat = ifelse(is.na(bpcat), 4, bpcat),
-    
     bpcat = fct_case_when(
       bpcat == 1 ~ "Normal",
       bpcat == 2 ~ "Elevated",
@@ -450,23 +427,20 @@ data_processed <- data_extract %>%
             immunosuppression_diagnosis_date, immunosuppression_medication_date)) %>%
   droplevels() 
 
+## Print number of RRT mismatches to log file
 print("Number of individuals with dialysis/transplant primary care flag but not in UKRR at index")
-print(sum(data_extract$rrt_mismatch))
+print(sum(data_processed$rrt_mismatch))
 
-# apply dummy data script if not running in the server
-#Sys.getenv()
-#Sys.getenv("USER")
-#Sys.getenv("OPENSAFELY_BACKEND")
-
+## Apply dummy data script if not running in the server
 if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")){
   source(here::here("analysis", "dummy_data.R"))
-  # add binary flag to signal whether dummy data processing steps have been applied
+  # Add binary flag to signal whether dummy data processing steps have been applied
   data_processed$mock_data_flag=1
 } else {
   data_processed$mock_data_flag=0
 }
 
-# linearise the vaccination dates of each individual, then determine the product and index for each dose
+# Linearise the vaccination dates of each individual, then determine the product and index for each dose
 data_vax <- local({
   
   data_vax_pfizer <- data_processed %>%
@@ -515,33 +489,41 @@ data_vax <- local({
   
 })
 
-# pivot to wide-form table that lists dates and products for up to 4 sequential doses
+## Pivot to wide-form table that lists dates and products for up to 5 sequential doses
 data_vax_wide = data_vax %>%
   pivot_wider(
     id_cols= patient_id,
     names_from = c("vax_index"),
     values_from = c("date", "type"),
-    names_glue = "covid_vax_{vax_index}_{.value}"
+    names_glue = "covid_vax_derived_{vax_index}_{.value}"
   )
 
-# pick out vaccine count for each individual, then merge
+## Pick out vaccine count for each individual, then merge
 data_vax_count = data_vax[!duplicated(data_vax$patient_id),c("patient_id", "n_vax")]
 data_vax_wide = data_vax_wide %>% left_join(data_vax_count, by ="patient_id")
 
-# merge with full data-set
+## Merge with full data-set
 data_processed_updated <- data_processed %>%
   left_join(data_vax_wide, by ="patient_id") %>%
   mutate(
-    vax1_type = covid_vax_1_type,
-    vax2_type = covid_vax_2_type,
-    vax3_type = covid_vax_3_type,
-    vax4_type = covid_vax_4_type,
-    vax5_type = covid_vax_5_type,
+    vax1_type = covid_vax_derived_1_type,
+    vax2_type = covid_vax_derived_2_type,
+    vax3_type = covid_vax_derived_3_type,
+    vax4_type = covid_vax_derived_4_type,
+    vax5_type = covid_vax_derived_5_type,
     
+    # Derive vaccine combinations for doses 2 and 3
     vax12_type = paste0(vax1_type, "-", vax2_type),
     vax123_type = paste0(vax12_type, "-", vax3_type),
-
-    # add new descriptor variables with formal product names
+    
+    # Set combinations to NA if latter dose not administered
+    vax12_type = ifelse(is.na(vax2_type), NA_character_, vax12_type),
+    vax123_type = ifelse(is.na(vax3_type), NA_character_, vax123_type),
+    
+    # Set n_vax to 0 if none recorded
+    n_vax = ifelse(is.na(n_vax), 0, n_vax),
+    
+    # Add new descriptor variables with formal product names
     vax1_type_descr = fct_case_when(
       vax1_type == "pfizer" ~ "BNT162b2",
       vax1_type == "az" ~ "ChAdOx1",
@@ -573,11 +555,12 @@ data_processed_updated <- data_processed %>%
       TRUE ~ NA_character_
     ),
     
-    vax1_date = covid_vax_1_date,
-    vax2_date = covid_vax_2_date,
-    vax3_date = covid_vax_3_date,
-    vax4_date = covid_vax_4_date, 
-    vax5_date = covid_vax_5_date, 
+    # Add new date variables
+    vax1_date = covid_vax_derived_1_date,
+    vax2_date = covid_vax_derived_2_date,
+    vax3_date = covid_vax_derived_3_date,
+    vax4_date = covid_vax_derived_4_date, 
+    vax5_date = covid_vax_derived_5_date, 
     
     # Calculate time between vaccinations
     tbv1_2 = as.numeric(vax2_date - vax1_date),
@@ -590,12 +573,18 @@ data_processed_updated <- data_processed %>%
     -starts_with(c("covid_vax_", "pfizer_date_", "az_date_", "moderna_date_"))
   )
 
-# remove type combinations if latter vaccine not administered
-data_processed_updated$vax12_type[is.na(data_processed_updated$vax2_type)] = NA_character_
-data_processed_updated$vax123_type[is.na(data_processed_updated$vax3_type)] = NA_character_
-
-# set n_vax to 0 if none recorded
-data_processed_updated$n_vax[is.na(data_processed_updated$n_vax)]=0
+# Set factor levels for relevant derived variables
+data_processed_updated <- data_processed_updated %>%
+  mutate(
+    ukrr_2019_mod = factor(ukrr_2019_mod, levels = c("None", "HD", "ICHD", "HHD", "PD", "Tx")),
+    ukrr_2020_mod = factor(ukrr_2020_mod, levels = c("None", "HD", "ICHD", "HHD", "PD", "Tx")),
+    ukrr_index_mod = factor(ukrr_index_mod, levels = c("None", "HD", "ICHD", "HHD", "PD", "Tx")),
+    ukrr_2019_group = factor(ukrr_2019_group, levels = c("None", "Dialysis", "Tx")),
+    ukrr_2020_group = factor(ukrr_2020_group, levels = c("None", "Dialysis", "Tx")),
+    ukrr_index_group = factor(ukrr_index_group, levels = c("None", "Dialysis", "Tx")),
+    ckd_6cat = factor(ckd_6cat, levels = c("CKD3a", "CKD3b", "CKD4", "CKD5", "RRT (dialysis)", "RRT (Tx)")),
+    ckd_5cat = factor(ckd_5cat, levels = c("CKD3a", "CKD3b", "CKD4-5", "RRT (dialysis)", "RRT (Tx)")),
+  )
 
 # Save dataset as .rds files ----
 write_rds(data_processed_updated, here::here("output", "data", "data_processed.rds"), compress = "gz")

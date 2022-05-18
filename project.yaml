@@ -16,7 +16,7 @@ actions:
       highly_sensitive:
         cohort: output/data/input.csv
   
-# Process data ----
+  # Process data ----
   data_process:
     run: r:latest analysis/data_process.R
     needs: [generate_study_population]
@@ -24,8 +24,17 @@ actions:
       highly_sensitive:
         data: output/data/data_processed.rds
         csv: output/data/data_processed.csv
-        
-# Select cohort ----
+       
+  # Data properties ----
+  data_properties_process:
+    run: r:latest analysis/data_properties.R output/data/data_processed.rds output/data_properties
+    needs:
+    - data_process
+    outputs:
+      moderately_sensitive:
+        cohort: output/data_properties/data_processed*.txt
+
+  # Select cohort ----
   data_selection_coverage:
     run: r:latest analysis/coverage/data_selection_coverage.R
     needs: [data_process]
@@ -36,14 +45,6 @@ actions:
         data2: output/data/data_cohort_coverage_logistic.rds
       moderately_sensitive:
         csv: output/tables/flowchart_coverage.csv
-
-  #Data properties ----
-  #data_properties:
-  #  run: r:latest analysis/data_properties.R output/data/data_cohort_coverage.rds output/data_properties
-  #  needs: [data_selection_coverage]
-  #  outputs:
-  #    moderately_sensitive:
-  #      cohort: output/data_properties/data_cohort*.txt
         
   # Table 1 primary cohort----
   table_1_coverage:

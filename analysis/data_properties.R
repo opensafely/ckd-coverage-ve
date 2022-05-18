@@ -1,9 +1,9 @@
 #################
 
 # This script takes a dataset, summarises the variables using:
-#   * skimr::skim(),
+#   * skimr::skim() -- UNREDACTED,
 #   * class(),
-#   * and ,
+#   * and redacted tabulate functions
 # and saves the output to a .txt file
 # The script should only be run via an action in the project.yaml only
 # The script must be accompanied by two arguments
@@ -12,39 +12,42 @@
 
 #################
 
-# Preliminaries ----
 
-## Import libraries
+# import libraries
 library('tidyverse')
 library('here')
-source(here("analysis", "redaction_functions.R"))
 
-## Import command-line arguments
+source(here("analysis", "redaction.R"))
+
+# import command-line arguments ----
+
 args <- commandArgs(trailingOnly=TRUE)
 
 if(length(args)==0){
   # use for interactive testing
-  rds_file <- "output/data/data_properties.rds"
+  rds_file <- "output/data/data_processed.rds"
   output_dir <- "output/data_properties"
 } else {
   rds_file <- args[[1]]
   output_dir <- args[[2]]
 }
 
+
 stopifnot("must pass an .rds file" = fs::path_ext(rds_file)=="rds")
 
 filenamebase <- fs::path_ext_remove(fs::path_file(rds_file))
 
-## Import processed data
+# Import processed data ----
+
 data <- readr::read_rds(here(rds_file))
 
-# Output summary .txt
+# Output summary .txt ----
+
 options(width=200) # set output width for capture.output
 
 dir.create(here(output_dir), showWarnings = FALSE, recursive=TRUE)
 
-
-## High-level variable overview ----
+## high-level variable overview ----
 capture.output(
   skimr::skim_without_charts(data),
   file = here(output_dir, paste0(filenamebase, "_skim", ".txt")),
