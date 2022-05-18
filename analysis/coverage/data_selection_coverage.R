@@ -20,25 +20,20 @@ source(here::here("analysis", "functions.R"))
 ## Create output directory
 fs::dir_create(here::here("output", "tables"))
 
-## Import processed data ----
+## Import processed data
 data_processed <- read_rds(here::here("output", "data", "data_processed.rds")) 
 
-# Define selection criteria ----
+## Define selection criteria
 data_criteria <- data_processed %>%
   transmute(
     patient_id,
     
-    # Made it into into study population
+    # Made it into into study population with valid age
     study_definition = TRUE,
-    
-    # Age
     has_age = !is.na(age) & age >=16 & age<120,
-    has_valid_creatinine_or_other_code = (creatinine_date_issue==0 & creatinine_operator_issue==0) | dialysis==1 | kidney_transplant==1 | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis",
     
-    # Sequential CKD
-    has_ckd_egfr_ukrr_D_T_3to5_diagnostic = ckd_inclusion_egfr_ukrr_D_T_3to5_diagnostic==1,
-    has_ckd_egfr_ukrr_D_T_3to5 = ckd_inclusion_egfr_ukrr_D_T_3to5==1,
-    has_ckd_egfr_ukrr_D_T = ckd_inclusion_egfr_ukrr_D_T==1,
+    # CKD inclusion criteria 
+    has_valid_creatinine_or_ukrr = (creatinine_date_issue==0 & creatinine_operator_issue==0) | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis",
     has_ckd_egfr_ukrr = ckd_inclusion_egfr_ukrr==1,
     has_no_rrt_mismatch = rrt_mismatch==0,
     
@@ -59,8 +54,8 @@ data_criteria <- data_processed %>%
     registered_throughout = is.na(dereg_date),
     
     include = (
-      has_age & has_valid_creatinine_or_other_code &
-      has_ckd_egfr_ukrr_D_T_3to5_diagnostic & has_ckd_egfr_ukrr_D_T_3to5 & has_ckd_egfr_ukrr_D_T & has_ckd_egfr_ukrr & has_no_rrt_mismatch &
+      has_age & 
+      has_valid_creatinine_or_ukrr & has_ckd_egfr_ukrr & has_no_rrt_mismatch &
       has_sex & has_imd & has_ethnicity & has_region &
       has_max_5_vax & valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34
     ),
@@ -78,6 +73,7 @@ data_cohort <- data_criteria %>%
   select(-starts_with("ckd_inclusion_")) %>%
   droplevels()
 
+## Save dataset
 write_rds(data_cohort, here::here("output", "data", "data_cohort_coverage.rds"), compress="gz")
 write_csv(data_cohort, here::here("output", "data", "data_cohort_coverage.csv"))
 
@@ -89,23 +85,22 @@ data_cohort_logistic <- data_criteria %>%
   select(-starts_with("ckd_inclusion_")) %>%
   droplevels()
 
+## Save dataset
 write_rds(data_cohort_logistic, here::here("output", "data", "data_cohort_coverage_logistic.rds"), compress="gz")
 
 data_flowchart <- data_criteria %>%
   transmute(
+    # Primary analysis cohort
     c0 = study_definition & has_age,
-    c1 = c0 & has_valid_creatinine_or_other_code,
-    c2 = c1 & has_ckd_egfr_ukrr_D_T_3to5_diagnostic,
-    c3 = c2 & has_ckd_egfr_ukrr_D_T_3to5,
-    c4 = c3 & has_ckd_egfr_ukrr_D_T,
-    c5 = c4 & has_ckd_egfr_ukrr,
-    c6 = c5 & has_no_rrt_mismatch,
-    c7 = c6 & (has_sex & has_imd & has_ethnicity & has_region),
-    c8 = c7 & (has_max_5_vax),
-    c9 = c8 & (valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34),
+    c1 = c0 & has_valid_creatinine_or_ukrr,
+    c2 = c1 & has_ckd_egfr_ukrr,
+    c3 = c2 & has_no_rrt_mismatch,
+    c4 = c3 & (has_sex & has_imd & has_ethnicity & has_region),
+    c5 = c4 & (has_max_5_vax),
+    c6 = c5 & (valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34),
     # Logistic regression analysis cohort
-    c10 = c9 & alive_throughout,
-    c11 = c10 & registered_throughout
+    c7 = c6 & alive_throughout,
+    c8 = c7 & registered_throughout
   ) %>%
   summarise(
     across(.fns=sum)
@@ -119,21 +114,17 @@ data_flowchart <- data_criteria %>%
     n_exclude = lag(n) - n,
     pct_exclude = n_exclude/lag(n),
     pct_all = n / first(n),
-    pct_step = n / lag(n),
     crit = str_extract(criteria, "^c\\d+"),
     criteria = fct_case_when(
-      crit == "c0" ~ "Aged 16+ with serum creatinine record in 2y before 01 Dec 2020, or UKRR 2019/2020, dialysis code, kidney transplant code, CKD diagnostic code, or CKD3-5 code",
-      crit == "c1" ~ "  with valid creatinine record (with age and no linked operatirs) or UKRR at index or any CKD-related code (diagnostic/CDK3-5/dialysis/kidney transplant)", 
-      crit == "c2" ~ "  with eGFR<60 or UKRR at index or any CKD-related code (diagnostic/CDK3-5/dialysis/kidney transplant)", 
-      crit == "c3" ~ "  with eGFR<60 or UKRR at index or CDK3-5/dialysis/kidney transplant code", 
-      crit == "c4" ~ "  with eGFR<60 or UKRR at index or dialysis/kidney transplant code", 
-      crit == "c5" ~ "  with eGFR<60 or UKRR at index", 
-      crit == "c6" ~ "  with no RRT mismatch (primary care dialysis/kidney transplant code but absent from UKRR at index)", 
-      crit == "c7" ~ "  with no missing demographic information",
-      crit == "c8" ~ "  with maximum of 5 doses recorded up to 20 April 2022",
-      crit == "c9" ~ "  with no vaccines administered at an interval of <14 days (primary analysis subset)",
-      crit == "c10" ~ "  alive throughout follow-up period (logistic regression sensitivity subset only)",
-      crit == "c11" ~ "  registered throughout follow-up period (logistic regression sensitivity subset only)",
+      crit == "c0" ~ "Aged 16+ with serum creatinine record in 2y before index (01-Dec-2020) or in UKRR population at index",
+      crit == "c1" ~ "  with valid creatinine record (with associated age and no linked operators) or in UKRR population at index", 
+      crit == "c2" ~ "  with eGFR<60 or UKRR at index", 
+      crit == "c3" ~ "  with no RRT mismatch (primary care dialysis/Tx code but absent from UKRR at index)", 
+      crit == "c4" ~ "  with no missing demographic information",
+      crit == "c5" ~ "  with maximum of 5 doses recorded up to 20 April 2022",
+      crit == "c6" ~ "  with no vaccines administered at an interval of <14 days (primary analysis subset)",
+      crit == "c7" ~ "  alive throughout follow-up period (logistic regression sensitivity subset only)",
+      crit == "c8" ~ "  registered throughout follow-up period (logistic regression sensitivity subset only)",
       TRUE ~ NA_character_
     )
   )
