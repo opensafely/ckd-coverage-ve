@@ -25,8 +25,8 @@ start_date <- date("2020-12-08")
 end_date <- date("2022-04-20")
 
 # Set distribution of CKD groups
-data_processed$ckd_6cat <- rcat(n=nsamples, c("CKD3a", "CKD3b", "CKD4", "CKD5",
-                                              "RRT (dialysis)", "RRT (Tx)"), c(0.60,0.25,0.06,0.03,0.03,0.03))
+data_processed$ckd_6cat <- rcat(n=nsamples, c("No CKD", "CKD3a", "CKD3b", "CKD4", "CKD5",
+                                              "RRT (dialysis)", "RRT (Tx)"), c(0.10,0.50,0.25,0.06,0.03,0.03,0.03))
 # Recalculate CKD5 categories and RRT mismatch based on random assignments above
 data_processed <- data_processed %>%
   mutate(

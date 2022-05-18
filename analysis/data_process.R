@@ -200,9 +200,9 @@ data_extract <- data_extract %>%
 data_extract <- data_extract %>%
   mutate(
     # Add UKRR modality at index date - either 2020 modality, or 2019 modality if died between index date and end of 2020
-    ukrr_index_mod = if_else((!is.na(death_date) & death_date>=as_date("2020-12-01") & death_date<=as_date("2020-12-31")) |
+    ukrr_index_mod = ifelse((!is.na(death_date) & death_date>=as_date("2020-12-01") & death_date<=as_date("2020-12-31")) |
                              (!is.na(dereg_date) & dereg_date>=as_date("2020-12-01") & dereg_date<=as_date("2020-12-31")), ukrr_2019_mod, ukrr_2020_mod),
-    
+
     # 2019
     ukrr_2019_group = "None",
     ukrr_2019_group = ifelse(!is.na(ukrr_2019_mod) & ukrr_2019_mod == "Tx", "Tx", ukrr_2019_group),
@@ -217,7 +217,7 @@ data_extract <- data_extract %>%
     ukrr_index_group = "None",
     ukrr_index_group = ifelse(!is.na(ukrr_index_mod) & ukrr_index_mod == "Tx", "Tx", ukrr_index_group),
     ukrr_index_group = ifelse(!is.na(ukrr_index_mod) & (ukrr_index_mod == "ICHD" | ukrr_index_mod == "HHD" | ukrr_index_mod == "HD" | ukrr_index_mod == "PD"), "Dialysis", ukrr_index_group),
-    
+
     # Set modalities as 'None' instead of NA
     ukrr_2019_mod = ifelse(is.na(ukrr_2019_mod), "None", ukrr_2019_mod), 
     ukrr_2020_mod = ifelse(is.na(ukrr_2020_mod), "None", ukrr_2020_mod), 
@@ -248,17 +248,15 @@ print(table(data_extract$ukrr_index_group))
 print("Cross-tabulate index vs 2020 groups")
 print(table(data_extract$ukrr_index_group, data_extract$ukrr_2020_group))
 
-print("Cross-tabulate UKRR vs primary care dialysis")
-print(table(data_extract$ukrr_index_group=="Dialysis", data_extract$dialysis))
-print("Cross-tabulate UKRR vs primary care transplant")
-print(table(data_extract$ukrr_index_group=="Tx", data_extract$kidney_transplant))
+print("Cross-tabulate UKRR at index (dialysis/Tx) vs primary care dialysis/Tx flag")
+print(table((data_extract$ukrr_index_group=="Dialysis" | data_extract$ukrr_index_group=="Tx"), (data_extract$dialysis==1 | data_extract$kidney_transplant)))
 
 print("Sum UKRR 2019 population with dereg/death between 01-Dec-2020 and 31-Dec-2020")
 print(sum(data_extract$ukrr_2019==1 &
   ((!is.na(data_extract$death_date) & data_extract$death_date>=as_date("2020-12-01") & data_extract$death_date<=as_date("2020-12-31")) |
             (!is.na(data_extract$dereg_date) & data_extract$dereg_date>=as_date("2020-12-01") & data_extract$dereg_date<=as_date("2020-12-31")))))
 
-## Format columns (i.e, set factor levels)
+## Add derived variables
 data_processed <- data_extract %>%
   mutate(
     # CKD inclusion criteria
@@ -268,14 +266,14 @@ data_processed <- data_extract %>%
     ckd_inclusion_egfr_ukrr = ifelse(egfr < 60 | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis", 1, 0),
 
     # CKD 6-levels
-    ckd_6cat = ifelse(egfr_cat5 == "Stage 3a" & ukrr_index_group=="None", "CKD3a", NA),
+    ckd_6cat = "No CKD",
+    ckd_6cat = ifelse(egfr_cat5 == "Stage 3a" & ukrr_index_group=="None", "CKD3a", ckd_6cat),
     ckd_6cat = ifelse(egfr_cat5 == "Stage 3b" & ukrr_index_group=="None", "CKD3b", ckd_6cat),
     ckd_6cat = ifelse(egfr_cat5 == "Stage 4" & ukrr_index_group=="None", "CKD4", ckd_6cat),
     ckd_6cat = ifelse(egfr_cat5 == "Stage 5" & ukrr_index_group=="None", "CKD5", ckd_6cat),
     ckd_6cat = ifelse(ukrr_index_group == "Dialysis", "RRT (dialysis)", ckd_6cat),
     ckd_6cat = ifelse(ukrr_index_group == "Tx", "RRT (Tx)", ckd_6cat),
-    ckd_6cat = ifelse(is.na(ckd_6cat), "Unknown", ckd_6cat),
-    
+
     # CKD 5-levels (merging 4/5)
     ckd_5cat = ckd_6cat,
     ckd_5cat = ifelse(ckd_6cat == "CKD4" | ckd_6cat == "CKD5", "CKD4-5", ckd_5cat),
@@ -301,8 +299,7 @@ data_processed <- data_extract %>%
     # Any care home flag
     care_home = ifelse(care_home_tpp==1 | care_home_code==1, 1, 0), 
     
-    # JCVI group
-    # https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1007737/Greenbook_chapter_14a_30July2021.pdf#page=12
+    # JCVI group - https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1007737/Greenbook_chapter_14a_30July2021.pdf#page=12
     jcvi_group = fct_case_when(
       care_home==1 ~ "1 (care home resident)",
       care_home==0 & (age>=80 | hscworker==1) ~ "2 (80+ or health/social care worker)",
@@ -326,6 +323,8 @@ data_processed <- data_extract %>%
     # Smoking status
     smoking_status = ifelse(smoking_status == "E" | smoking_status == "S","S&E", smoking_status),
     smoking_status = ifelse(smoking_status == "S&E", "S&E", "N&M"),
+    smoking_status = ifelse(is.na(smoking_status), "N&M", smoking_status),
+    smoking_status = ifelse(smoking_status=="S&E", 1, 0),
     
     # Ethnicity
     ethnicity_filled = ifelse(is.na(ethnicity_6), ethnicity_6_sus, ethnicity_6),
@@ -428,8 +427,13 @@ data_processed <- data_extract %>%
   droplevels() 
 
 ## Print number of RRT mismatches to log file
-print("Number of individuals with dialysis/transplant primary care flag but not in UKRR at index")
+print("Number of individuals with CDK3-5 based on eGFR<60 and dialysis/Tx primary care flag but not in UKRR at index")
 print(sum(data_processed$rrt_mismatch))
+
+## Summarise CKD subgroup
+print("Cross-tabulate CKD subgroup")
+print(table(data_processed$ckd_5cat))
+
 
 ## Apply dummy data script if not running in the server
 if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")){
@@ -440,7 +444,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")){
   data_processed$mock_data_flag=0
 }
 
-# Linearise the vaccination dates of each individual, then determine the product and index for each dose
+## Linearise the vaccination dates of each individual, then determine the product and index for each dose
 data_vax <- local({
   
   data_vax_pfizer <- data_processed %>%
@@ -573,7 +577,7 @@ data_processed_updated <- data_processed %>%
     -starts_with(c("covid_vax_", "pfizer_date_", "az_date_", "moderna_date_"))
   )
 
-# Set factor levels for relevant derived variables
+## Set factor levels for derived variables
 data_processed_updated <- data_processed_updated %>%
   mutate(
     ukrr_2019_mod = factor(ukrr_2019_mod, levels = c("None", "HD", "ICHD", "HHD", "PD", "Tx")),
@@ -582,10 +586,10 @@ data_processed_updated <- data_processed_updated %>%
     ukrr_2019_group = factor(ukrr_2019_group, levels = c("None", "Dialysis", "Tx")),
     ukrr_2020_group = factor(ukrr_2020_group, levels = c("None", "Dialysis", "Tx")),
     ukrr_index_group = factor(ukrr_index_group, levels = c("None", "Dialysis", "Tx")),
-    ckd_6cat = factor(ckd_6cat, levels = c("CKD3a", "CKD3b", "CKD4", "CKD5", "RRT (dialysis)", "RRT (Tx)")),
-    ckd_5cat = factor(ckd_5cat, levels = c("CKD3a", "CKD3b", "CKD4-5", "RRT (dialysis)", "RRT (Tx)")),
+    ckd_6cat = factor(ckd_6cat, levels = c("No CKD", "CKD3a", "CKD3b", "CKD4", "CKD5", "RRT (dialysis)", "RRT (Tx)")),
+    ckd_5cat = factor(ckd_5cat, levels = c("No CKD", "CKD3a", "CKD3b", "CKD4-5", "RRT (dialysis)", "RRT (Tx)")),
   )
 
-# Save dataset as .rds files ----
+## Save dataset
 write_rds(data_processed_updated, here::here("output", "data", "data_processed.rds"), compress = "gz")
 write_csv(data_processed_updated, here::here("output", "data", "data_processed.csv"))
