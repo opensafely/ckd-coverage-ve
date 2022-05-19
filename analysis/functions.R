@@ -67,14 +67,14 @@ redact_table = function(table_input, multiple=TRUE) {
   }
   
   # Round to nearest 5
-  rounded_n = round_any(sum(table_input$Freq),5)
-  table_input$Freq = round_any(table_input$Freq,5)
+  rounded_n = plyr::round_any(sum(table_input$Freq),5)
+  table_input$Freq = plyr::round_any(table_input$Freq,5)
   table_input$Prop = round(table_input$Freq/rounded_n*100,1)
   table_input$Non_Freq = rounded_n - table_input$Freq
   
   # Redact any remaining cell counts <=10
-  table_input$Freq[table_input$Freq<=10 | table_input$Non_Freq<=10] = "[Redacted]"
-  table_input$Prop[table_input$Freq<=10  | table_input$Non_Freq<=10] = "[Redacted]"
+  table_input$Freq[(table_input$Freq>0 & table_input$Freq<=10) | (table_input$Non_Freq>0 & table_input$Non_Freq<=10)] = "[Redacted]"
+  table_input$Prop[(table_input$Freq>0 & table_input$Freq<=10) | (table_input$Non_Freq>0 &table_input$Non_Freq<=10)] = "[Redacted]"
   table_input <- table_input %>% select(-Non_Freq)
   
   names(table_input) = c("Combination", "Frequency", "Percent")

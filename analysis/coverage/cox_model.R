@@ -123,7 +123,7 @@ write_rds(data_cox, here::here("output", "data", paste0("data_cox_coverage_",out
 ## Define strata for full and stratified analyses
 strata = c("full", levels(data_cox$ckd_5cat))
 
-## Run model in loop over each srtatum
+## Run model in loop over each stratum
 for (s in 1:length(strata)) {
   ckd_group = strata[s]
   
@@ -135,6 +135,12 @@ for (s in 1:length(strata)) {
     data_subset = subset(data_cox, ckd_5cat==ckd_group) 
     var_list_subset = var_list[var_list!="ckd_5cat"]
     }
+  
+  ## Exclude dialysis and Tx codes from CKD groups given that these were exclusion criteria
+  if (ckd_group %in% c("CKD3a", "CKD3b", "CKD4-5")) {
+    var_list_subset = var_list_subset[var_list_subset!="dialysis" & var_list_subset!="kidney_transplant"]
+  }
+    
   
   ## Fit stratified minimally adjusted models in loop
   for (i in 1:length(var_list_subset)) {
@@ -275,7 +281,7 @@ for (s in 1:length(strata)) {
   ## Group variables for plotting
   # var_label
   tbl_summary$var_label[tbl_summary$var_label=="ckd_5cat"] = "CKD subgroup"
-  tbl_summary$var_label[tbl_summary$label %in% c("CKD3-5 diagnostic code", "Dialysis primary care code", "Kidney transplant primary care code")] = "CKD (primary care coding)"
+  tbl_summary$var_label[tbl_summary$label %in% c("CKD3-5 primary care code", "Dialysis primary care code", "Kidney transplant primary care code")] = "CKD (primary care coding)"
   tbl_summary$var_label[tbl_summary$label %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care")] = "Risk group (occupation/access)"
   tbl_summary$var_label[tbl_summary$label %in% c("Prior COVID", "Immunosuppression", "Moderate/severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
                                                    "Chronic heart disease", "Chronic liver disease","Asplenia", "Cancer (non-haematologic)", "Haematologic cancer", "Obesity", 
@@ -316,7 +322,7 @@ for (s in 1:length(strata)) {
   
   ## Redact all model outputs if events/non-events <= redaction threshold
   for (i in 1:nrow(tbl_reduced)) {
-    if (min(as.numeric(tbl_reduced[i,7:10]), na.rm=T)<=redaction_threshold) { tbl_reduced[i,5:26] = "[Redacted]" }
+    if (min(as.numeric(tbl_reduced[i,7:10]), na.rm=T)<=redaction_threshold) { tbl_reduced[i,5:24] = "[Redacted]" }
   }
   
   ## Save outputs
