@@ -33,7 +33,7 @@ data_criteria <- data_processed %>%
     has_age = !is.na(age) & age >=16 & age<120,
     
     # CKD inclusion criteria 
-    has_valid_creatinine_or_ukrr = (creatinine_date_issue==0 & creatinine_operator_issue==0) | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis",
+    has_valid_creatinine_or_ukrr = (creatinine_date_issue==0 & creatinine_operator_issue==0) | ukrr_2020_group=="Tx" | ukrr_2020_group=="Dialysis",
     has_ckd_egfr_ukrr = ckd_inclusion_egfr_ukrr==1,
     has_no_rrt_mismatch = rrt_mismatch==0,
     
@@ -116,10 +116,10 @@ data_flowchart <- data_criteria %>%
     pct_all = n / first(n),
     crit = str_extract(criteria, "^c\\d+"),
     criteria = fct_case_when(
-      crit == "c0" ~ "Aged 16+ with serum creatinine record in 2y before index (01-Dec-2020) or in UKRR population at index",
-      crit == "c1" ~ "  with valid creatinine record (with associated age and no linked operators) or in UKRR population at index", 
-      crit == "c2" ~ "  with eGFR<60 or UKRR at index", 
-      crit == "c3" ~ "  with no RRT mismatch (primary care dialysis/Tx code but absent from UKRR at index)", 
+      crit == "c0" ~ "Aged 16+ with serum creatinine record in 2y before index (01-Dec-2020) or in UKRR 2020 population",
+      crit == "c1" ~ "  with valid creatinine record (with associated age and no linked operators) or in UKRR population", 
+      crit == "c2" ~ "  with eGFR<60 or UKRR 2020 population", 
+      crit == "c3" ~ "  with no RRT mismatch (primary care dialysis/Tx code but absent from UKRR 2020 population)", 
       crit == "c4" ~ "  with no missing demographic information",
       crit == "c5" ~ "  with maximum of 5 doses recorded up to 20 April 2022",
       crit == "c6" ~ "  with no vaccines administered at an interval of <14 days (primary analysis subset)",

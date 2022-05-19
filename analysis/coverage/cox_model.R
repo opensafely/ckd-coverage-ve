@@ -140,6 +140,11 @@ for (s in 1:length(strata)) {
   if (ckd_group %in% c("CKD3a", "CKD3b", "CKD4-5")) {
     var_list_subset = var_list_subset[var_list_subset!="dialysis" & var_list_subset!="kidney_transplant"]
   }
+  
+  ## Exclude cev_other from RRT groups given that all will be 0 by definition
+  if (ckd_group %in% c("RRT (dialysis)", "RRT (Tx)")) {
+    var_list_subset = var_list_subset[var_list_subset!="cev_other"]
+  }
     
   
   ## Fit stratified minimally adjusted models in loop

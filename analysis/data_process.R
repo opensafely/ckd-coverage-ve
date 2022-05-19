@@ -238,6 +238,8 @@ print("Cross-tabulate 2020 modalities")
 print(table(data_extract$ukrr_2020_mod))
 print("Cross-tabulate index modalities")
 print(table(data_extract$ukrr_index_mod))
+print("Cross-tabulate 2019 vs 2020 modalities")
+print(table(data_extract$ukrr_2019_mod, data_extract$ukrr_2020_mod))
 print("Cross-tabulate index vs 2020 modalities")
 print(table(data_extract$ukrr_index_mod, data_extract$ukrr_2020_mod))
 
@@ -245,6 +247,8 @@ print("Cross-tabulate 2020 groups")
 print(table(data_extract$ukrr_2020_group))
 print("Cross-tabulate index groups")
 print(table(data_extract$ukrr_index_group))
+print("Cross-tabulate 2019 vs 2020 groups")
+print(table(data_extract$ukrr_2019_group, data_extract$ukrr_2020_group))
 print("Cross-tabulate index vs 2020 groups")
 print(table(data_extract$ukrr_index_group, data_extract$ukrr_2020_group))
 
@@ -260,19 +264,19 @@ print(sum(data_extract$ukrr_2019==1 &
 data_processed <- data_extract %>%
   mutate(
     # CKD inclusion criteria
-    ckd_inclusion_egfr_ukrr_D_T_3to5_diagnostic = ifelse(egfr < 60 | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis" | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_stages_3_5==1 | chronic_kidney_disease_diagnostic==1, 1, 0),
-    ckd_inclusion_egfr_ukrr_D_T_3to5 = ifelse(egfr < 60 | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis" | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
-    ckd_inclusion_egfr_ukrr_D_T = ifelse(egfr < 60 | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis" | dialysis==1 | kidney_transplant==1, 1, 0),
-    ckd_inclusion_egfr_ukrr = ifelse(egfr < 60 | ukrr_index_group=="Tx" | ukrr_index_group=="Dialysis", 1, 0),
+    ckd_inclusion_egfr_ukrr_D_T_3to5_diagnostic = ifelse(egfr < 60 | ukrr_2020_group=="Tx" | ukrr_2020_group=="Dialysis" | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_stages_3_5==1 | chronic_kidney_disease_diagnostic==1, 1, 0),
+    ckd_inclusion_egfr_ukrr_D_T_3to5 = ifelse(egfr < 60 | ukrr_2020_group=="Tx" | ukrr_2020_group=="Dialysis" | dialysis==1 | kidney_transplant==1 | chronic_kidney_disease_stages_3_5==1, 1, 0),
+    ckd_inclusion_egfr_ukrr_D_T = ifelse(egfr < 60 | ukrr_2020_group=="Tx" | ukrr_2020_group=="Dialysis" | dialysis==1 | kidney_transplant==1, 1, 0),
+    ckd_inclusion_egfr_ukrr = ifelse(egfr < 60 | ukrr_2020_group=="Tx" | ukrr_2020_group=="Dialysis", 1, 0),
 
     # CKD 6-levels
     ckd_6cat = "No CKD",
-    ckd_6cat = ifelse(egfr_cat5 == "Stage 3a" & ukrr_index_group=="None", "CKD3a", ckd_6cat),
-    ckd_6cat = ifelse(egfr_cat5 == "Stage 3b" & ukrr_index_group=="None", "CKD3b", ckd_6cat),
-    ckd_6cat = ifelse(egfr_cat5 == "Stage 4" & ukrr_index_group=="None", "CKD4", ckd_6cat),
-    ckd_6cat = ifelse(egfr_cat5 == "Stage 5" & ukrr_index_group=="None", "CKD5", ckd_6cat),
-    ckd_6cat = ifelse(ukrr_index_group == "Dialysis", "RRT (dialysis)", ckd_6cat),
-    ckd_6cat = ifelse(ukrr_index_group == "Tx", "RRT (Tx)", ckd_6cat),
+    ckd_6cat = ifelse(egfr_cat5 == "Stage 3a" & ukrr_2020_group=="None", "CKD3a", ckd_6cat),
+    ckd_6cat = ifelse(egfr_cat5 == "Stage 3b" & ukrr_2020_group=="None", "CKD3b", ckd_6cat),
+    ckd_6cat = ifelse(egfr_cat5 == "Stage 4" & ukrr_2020_group=="None", "CKD4", ckd_6cat),
+    ckd_6cat = ifelse(egfr_cat5 == "Stage 5" & ukrr_2020_group=="None", "CKD5", ckd_6cat),
+    ckd_6cat = ifelse(ukrr_2020_group == "Dialysis", "RRT (dialysis)", ckd_6cat),
+    ckd_6cat = ifelse(ukrr_2020_group == "Tx", "RRT (Tx)", ckd_6cat),
 
     # CKD 5-levels (merging 4/5)
     ckd_5cat = ckd_6cat,
@@ -392,7 +396,9 @@ data_processed <- data_extract %>%
     any_cancer = ifelse(cancer==1 | haem_cancer==1, 1, 0), 
 
     # CEV other
-    any_comorb = pmax(dialysis, kidney_transplant, immunosuppression, mod_sev_obesity, diabetes, any_resp_dis,
+    rrt_2020 = ifelse(ukrr_2020_group=="Tx" | ukrr_2020_group=="Dialysis", 1, 0),
+    any_comorb = pmax(rrt_2020, 
+                      immunosuppression, mod_sev_obesity, diabetes, any_resp_dis,
                       chd, cld, asplenia, cancer, haem_cancer, non_kidney_transplant, chronic_neuro_dis_inc_sig_learn_dis, sev_mental_ill),
     cev_other = ifelse(cev==1 & any_comorb==0, 1, 0),
     

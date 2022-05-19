@@ -34,7 +34,13 @@ data_processed <- data_processed %>%
     ckd_5cat = ifelse(ckd_6cat == "CKD4" | ckd_6cat == "CKD5", "CKD4-5", ckd_5cat),
     rrt_mismatch = ifelse((ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b" | ckd_5cat=="CKD4-5") & (dialysis==1 | kidney_transplant==1), 1, 0)
   )
-  
+
+# Increase proportion of cev other to 5% to ensure effective running of later models
+data_processed$cev_other <- as.numeric(rcat(n=nsamples, c("0", "1"), c(0.95,0.05)))
+
+# Set cev_other to 0 if in dialysis or Tx group
+data_processed$cev_other[data_processed$ckd_6cat %in% c("RRT (dialysis)", "RRT (Tx)")] = 0
+
 # set vaccine coverage for primary doses, third, and fourth dose
 primary_coverage <- 0.95
 third_coverage <- 0.6 # assignments only retained if primary doses given, so final prevalence ~0.6*0.95=0.57

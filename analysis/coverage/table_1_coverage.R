@@ -85,7 +85,6 @@ clean_table_names = function(input_table) {
   # Relabel variables for plotting
   input_table$Variable[input_table$Variable=="care_home"] = "Care home resident"
   input_table$Variable[input_table$Variable=="hscworker"] = "Health/social care worker"
-  input_table$Variable[input_table$Variable=="cev"] = "Clinically extremely vulnerable"
   input_table$Variable[input_table$Variable=="housebound"] = "Housebound"
   input_table$Variable[input_table$Variable=="endoflife"] = "End of life care"
   input_table$Variable[input_table$Variable=="prior_covid_cat"] = "Prior COVID"
