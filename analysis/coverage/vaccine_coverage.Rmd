@@ -22,6 +22,9 @@ library('fs')
 library('survival')
 library('survminer')
 
+# Define analysis cut-off date
+end_date <- as_date("2022-04-20")
+
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
 
@@ -57,41 +60,27 @@ A total of **`r prettyNum(rounded_n)`** (rounded to the nearest 5) met the inclu
 `r if(flag=="present") { paste0("NB: Dummy data processing flag detected!") }`    
 <br/><br/>  
 
-#### Table 1: Summary of population
+#### Cohort selection
 ```{r}
-table_1 <- read_rds(here::here("output", "tables", "table1_coverage_redacted.rds"))
-
-## Set factor levels for group
-table_1$Group[table_1$Group=="Other"] = "Risk group"
-
-ckd4_5_sum = plyr::round_any(sum(data_cohort$ckd_6cat=="CKD4" | data_cohort$ckd_6cat=="CKD5"),5)
-ckd4_sum = plyr::round_any(sum(data_cohort$ckd_6cat=="CKD4"),5)
-ckd5_sum = plyr::round_any(sum(data_cohort$ckd_6cat=="CKD5"),5)
-
-subset(table_1, Group!="Time between doses 1 and 2" & Group!="Time between doses 2 and 3") %>% 
-   gt(groupname_col = "Group") %>%
-   tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
-   tab_style(
-     style = cell_text(indent = pct(5)),
-     locations = cells_body(columns = "Variable")
-     ) %>%
-   tab_options(table.font.size = pct(95)) %>% #table.width = pct(80) 
-   tab_footnote(
-     footnote = "All counts rounded to nearest 5; any rounded counts <=10 or within <=10 of population total redacted.",
-     locations = cells_column_labels(columns = "Count")
-   )
+flowchart <- read.csv(here::here("output", "tables", "flowchart_coverage.csv"))
+names(flowchart)[1] = "Criteria"
+flowchart %>%
+  mutate(`N (rounded)` = plyr::round_any(flowchart$n, 5)) %>%
+  select(Criteria, `N (rounded)`) %>%
+  gt() %>%
+  tab_options(table.font.size = pct(95))
 ```
-<br/>Of the `r prettyNum(ckd4_5_sum)` individuals with CKD4-5, `r prettyNum(ckd4_sum)` had CKD 4 and `r prettyNum(ckd5_sum)` had CKD 5. 
-<br/><br/>    
+<br/><br/>
 
-#### Table 1: Summary of population, stratified by CKD status
+#### Table 1: Summary of population
 ```{r}
 table_1 <- read_rds(here::here("output", "tables", "table1_coverage_redacted_by_CKD.rds"))
 
 ## Set factor levels for group
 table_1$Group[table_1$Group=="Other"] = "Risk group"
 
-subset(table_1, Group!="Time between doses 1 and 2" & Group!="Time between doses 2 and 3") %>% 
+## Render table
+table_1 %>% 
    gt(groupname_col = "Group") %>%
    tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
    tab_style(
@@ -103,101 +92,18 @@ subset(table_1, Group!="Time between doses 1 and 2" & Group!="Time between doses
      footnote = "All counts rounded to nearest 5; any rounded counts <=10 or within <=10 of population total redacted.",
      locations = cells_column_labels(columns = "Variable")
    )
+
+## Calculate breakdown of CKD4-5 
+ckd4_5_sum = plyr::round_any(sum(data_cohort$ckd_6cat=="CKD4" | data_cohort$ckd_6cat=="CKD5"),5)
+ckd4_sum = plyr::round_any(sum(data_cohort$ckd_6cat=="CKD4"),5)
+ckd5_sum = plyr::round_any(sum(data_cohort$ckd_6cat=="CKD5"),5)
 ```
+<br/>Of the `r prettyNum(ckd4_5_sum)` individuals with CKD4-5, `r prettyNum(ckd4_sum)` had CKD 4 and `r prettyNum(ckd5_sum)` had CKD 5. 
 <br/><br/>    
 
-#### Coverage over time (uncensored population)
-```{r, message=FALSE, fig.width=8, fig.height=8}
-# Create vector of dates between first and last recorded vaccines
-campaign_start <- as_date("2020-12-01")
-end_date <- as_date("2022-04-20")
-
-# create vector containing every other week
-date_vec <- seq(campaign_start, end_date, by="weeks")
-date_vec <- date_vec[seq(1, length(date_vec), 2)]
-
-# set rounding factor
-rounding_cutoff = 10
-
-# cumulative table
-t_all <- data.frame(date = date_vec)
-for (i in 1:nrow(t_all)) {
-  date_ref = t_all$date[i]
-  t_all$dose1_total[i] = plyr::round_any(sum(data_uncensored$vax1_date<=date_ref, na.rm=T), rounding_cutoff)
-  t_all$dose2_total[i] = plyr::round_any(sum(data_uncensored$vax2_date<=date_ref, na.rm=T), rounding_cutoff) 
-  t_all$dose3_total[i] = plyr::round_any(sum(data_uncensored$vax3_date<=date_ref, na.rm=T), rounding_cutoff)
-  t_all$dose4_total[i] = plyr::round_any(sum(data_uncensored$vax4_date<=date_ref, na.rm=T), rounding_cutoff)
-
-  t_all$dose1_pfizer[i] = plyr::round_any(sum(data_uncensored$vax1_type=="pfizer" & data_uncensored$vax1_date<=date_ref, na.rm=T), rounding_cutoff)
-  t_all$dose2_pfizer[i] = plyr::round_any(sum(data_uncensored$vax2_type=="pfizer" & data_uncensored$vax2_date<=date_ref, na.rm=T), rounding_cutoff) 
-  t_all$dose3_pfizer[i] = plyr::round_any(sum(data_uncensored$vax2_type=="pfizer" & data_uncensored$vax3_date<=date_ref, na.rm=T), rounding_cutoff) 
-  t_all$dose4_pfizer[i] = plyr::round_any(sum(data_uncensored$vax2_type=="pfizer" & data_uncensored$vax4_date<=date_ref, na.rm=T), rounding_cutoff)
-
-  t_all$dose1_az[i] = plyr::round_any(sum(data_uncensored$vax1_type=="az" & data_uncensored$vax1_date<=date_ref, na.rm=T), rounding_cutoff) 
-  t_all$dose2_az[i] = plyr::round_any(sum(data_uncensored$vax2_type=="az" & data_uncensored$vax2_date<=date_ref, na.rm=T), rounding_cutoff) 
-  t_all$dose3_az[i] = plyr::round_any(sum(data_uncensored$vax3_type=="az" & data_uncensored$vax3_date<=date_ref, na.rm=T), rounding_cutoff) 
-  t_all$dose4_az[i] = plyr::round_any(sum(data_uncensored$vax4_type=="az" & data_uncensored$vax4_date<=date_ref, na.rm=T), rounding_cutoff)
-
-  t_all$dose1_moderna[i] = plyr::round_any(sum(data_uncensored$vax1_type=="moderna" & data_uncensored$vax1_date<=date_ref, na.rm=T), rounding_cutoff)
-  t_all$dose2_moderna[i] = plyr::round_any(sum(data_uncensored$vax2_type=="moderna" & data_uncensored$vax2_date<=date_ref, na.rm=T), rounding_cutoff) 
-  t_all$dose3_moderna[i] = plyr::round_any(sum(data_uncensored$vax3_type=="moderna" & data_uncensored$vax3_date<=date_ref, na.rm=T), rounding_cutoff) 
-  t_all$dose4_moderna[i] = plyr::round_any(sum(data_uncensored$vax4_type=="moderna" & data_uncensored$vax4_date<=date_ref, na.rm=T), rounding_cutoff)
-  
-  t_all$az_az[i] = plyr::round_any(sum(data_uncensored$vax2_date<=date_ref & data_uncensored$vax12_type=="az-az", na.rm=T), rounding_cutoff)
-  t_all$pfizer_pfizer[i] = plyr::round_any(sum(data_uncensored$vax2_date<=date_ref & data_uncensored$vax12_type=="pfizer-pfizer", na.rm=T), rounding_cutoff)
-  t_all$moderna_moderna[i] = plyr::round_any(sum(data_uncensored$vax2_date<=date_ref & data_uncensored$vax12_type=="moderna-moderna", na.rm=T), rounding_cutoff)
-  t_all$heterologous_dose2[i] = plyr::round_any(sum(data_uncensored$vax2_date<=date_ref & (data_uncensored$vax1_type!=data_uncensored$vax2_type), na.rm=T), rounding_cutoff)
-}
-
-# Save as csv ----
-# write_csv(t_all, here::here("output", "tables", "coverage_over_time_rounded.csv"))
-
-# Plot cumulative distribution
-palette = c("#3B9AB2","#78B7C5","#EBCC2A","#E1AF00","#B40F20")
-t_plot = rbind(
-  data.frame(dose = "dose 1", total = t_all$dose1_total, percent = round(t_all$dose1_total/rounded_n_uncensored*100,1), date = t_all$date),
-  data.frame(dose = "dose 2", total = t_all$dose2_total, percent = round(t_all$dose2_total/rounded_n_uncensored*100,1), date = t_all$date),
-  data.frame(dose = "dose 3", total = t_all$dose3_total, percent = round(t_all$dose3_total/rounded_n_uncensored*100,1), date = t_all$date),
-  data.frame(dose = "dose 4", total = t_all$dose4_total, percent = round(t_all$dose4_total/rounded_n_uncensored*100,1), date = t_all$date)
-)
-plot_max = max(t_plot$total/1000)*1.1
-g1 = ggplot(t_plot, aes(x = date, y = total/1000, colour = dose)) + geom_line() +
-          theme_bw()+ scale_colour_manual(values = palette[c(1,2,4,5)]) +
-          theme(legend.position="right") + 
-  ggtitle("Any vaccine") +
-  scale_x_date(date_labels = "%b %Y") +
-  theme(legend.title = element_text(size=14), legend.text = element_text(size=12), axis.text = element_text(size=14), axis.title = element_text(size=14)) +
-  scale_y_continuous(
-    name = "N doses given (1000s)", limits=c(0,plot_max),
-    sec.axis = sec_axis(~ ./rounded_n*100, name="%", breaks= c(0,25,50,75,100))
-  )
-
-# Plot cumulative product-specific vaccination
-palette = c("#003c30","#b2182b","#74add1","grey")
-t_plot = rbind(
-  data.frame(product = "2 x ChAdOx1-S", total = t_all$az_az, date = t_all$date),
-  data.frame(product = "2 x Pfizer", total = t_all$pfizer_pfizer, date = t_all$date),
-  data.frame(product = "2 x Moderna", total = t_all$moderna_moderna, date = t_all$date),
-  data.frame(product = "Heterologous", total = t_all$heterologous, date = t_all$date)
-)
-plot_max = max(t_plot$total/1000)*1.1
-g2 = ggplot(t_plot, aes(x = date, y = total/1000, colour = product)) + geom_line() +
-          theme_bw() + ylab("doses given") + scale_colour_manual(values = palette[c(1,2,3,4)]) +
-          theme(legend.position="right") +
-  ggtitle("Product-specific vaccination (primary series)") +
-  scale_x_date(date_labels = "%b %Y") +
-  theme(legend.title = element_text(size=14), legend.text = element_text(size=12), axis.text = element_text(size=14), axis.title = element_text(size=14)) +
-  scale_y_continuous(
-    name = "N doses given (1000s)", limits=c(0,plot_max),
-    sec.axis = sec_axis(~ ./rounded_n*100, name="%", breaks= c(0,25,50,75,100))
-  )
-plot_grid(g1, g2, ncol=1,  align="v", axis = c("lr"))
-```
-<br/>Numbers rounded to the nearest 10 before plotting.     
-<br/><br/>    
-
+#### Coverage as of 20-Apr-2022
 ```{r}
-#### Coverage over time (1 - Kaplan-Meier)
+#### Generate Kaplan-Meier tte data for each dose
 data_km <- data_cohort %>%
   mutate(
     # Start date
@@ -225,26 +131,35 @@ data_km <- data_cohort %>%
     covid_vax_dose4 = dplyr::if_else((vax4_date>censor_date) | is.na(vax4_date), 0, 1),
     
     # Uncensored pre cut-off
-    uncensored_at_cut_off = if_else(
+    uncensored_at_cut_off = ifelse(
                               (is.na(death_date) & is.na(dereg_date)) | 
                               (!is.na(death_date) & death_date>end_date) | 
                               (!is.na(dereg_date) & dereg_date>end_date), 1, 0)
 )
 
-
-# Dose 1
-surv_table = function(dose, dosenum, data_input) {
-  decimal_threshold = 10/nrow(data_input)
+## Function to generate rounded survival table (steps delayed to include at least 10 events)
+surv_table = function(dose, dosenum, data_input, threshold=10) {
+  #decimal_threshold = 10/nrow(data_input)
   surv = survfit(as.formula(paste0("Surv(follow_up_time_",dose,", covid_vax_",dose,") ~ 1")), data = data_input) %>% 
     broom::tidy() %>% 
     filter(estimate > 0) %>%
     mutate(
-      estimate_rounded = pmin(1,plyr::round_any(estimate, decimal_threshold), na.rm=TRUE),
-      cum.in_rounded = 1 - estimate,
+      N = plyr::round_any(max(n.risk, na.rm=TRUE),threshold),
+      cml.event = cumsum(replace_na(n.event, 0)),
+      cml.censor = cumsum(replace_na(n.censor, 0)),
+      cml.event.floor = floor_any(cml.event, threshold),
+      cml.censor.floor = floor_any(cml.censor, threshold),
+      n.event.floor = diff(c(0,cml.event.floor)),
+      n.censor.floor = diff(c(0,cml.censor.floor)),
+      n.risk.floor = N - lag(cml.event.floor + cml.censor.floor,1,0),
+      surv.floor = cumprod(1 - n.event.floor / n.risk.floor),
+      cum.in.floor = 1 - surv.floor,
+      #estimate_rounded = pmin(1,plyr::round_any(estimate, decimal_threshold), na.rm=TRUE),
+      #cum.in_rounded = 1 - estimate_rounded,
       dose = paste0("dose ",dosenum),
       date = as.Date("2020-12-01", format = "%Y-%m-%d")+time
     ) %>%
-    select(time, n.risk, n.censor, cum.in_rounded, dose, date) %>%
+    select(time, n.risk.floor, n.censor.floor, cum.in.floor, dose, date) %>%
     filter(time>=0)
 }
 
@@ -255,17 +170,7 @@ km_collated = rbind(
   surv_table("dose4", 4, data_km)
 )
 
-palette = c("#3B9AB2","#78B7C5","#EBCC2A","#E1AF00","#B40F20")
-km_plot = ggplot(km_collated, aes(x = date, y = cum.in_rounded*100, colour = factor(dose))) + geom_line() +
-          theme_bw()+ scale_colour_manual(values = palette[c(1,2,4,5)]) +
-          theme(legend.position="right") + scale_x_date(date_labels = "%b %Y") +
-  ylim(0,100) + xlab("Date") + ylab("Cumulative coverage (%)") + labs(colour="Dose") +
-  theme(legend.title = element_text(size=14), legend.text = element_text(size=12), 
-        axis.text = element_text(size=14), axis.title = element_text(size=14))
-```
 
-#### Coverage as of 20-Apr-2022
-```{r}
 ## Calculate coverage in total and uncensored populations
 collated = data.frame(
   Dose = c("1", "2", "3", "4"),
@@ -274,19 +179,21 @@ collated = data.frame(
                          sum(data_cohort$vax3_date<=end_date, na.rm=T), sum(data_cohort$vax4_date<=end_date, na.rm=T))
 ) %>%
   mutate(
+    N_vaccinated_total = plyr::round_any(N_vaccinated_total, 5),
     coverage_total = round(N_vaccinated_total/N_cohort_total*100,1),
     N_cohort_uncensored = rep(rounded_n_uncensored, 4),
     N_vaccinated_uncensored = c(sum(data_uncensored$vax1_date<=end_date, na.rm=T), sum(data_uncensored$vax2_date<=end_date, na.rm=T), 
                                 sum(data_uncensored$vax3_date<=end_date, na.rm=T), sum(data_uncensored$vax4_date<=end_date, na.rm=T)),
+    N_vaccinated_uncensored = plyr::round_any(N_vaccinated_uncensored, 5),
     coverage_uncensored = round(N_vaccinated_uncensored/N_cohort_uncensored*100,1)
   )
 names(collated) = c("Dose", "N (total)", "n vaccinated (total)", "Coverage (total), %",
                             "N (uncensored)", "n vaccinated (uncensored)", "Coverage (uncensored), %")
 
-collated$`Cumulative coverage` = c(round(max(subset(km_collated, dose=="dose 1")$cum.in_rounded)*100,1),
-                      round(max(subset(km_collated, dose=="dose 2")$cum.in_rounded)*100,1),
-                      round(max(subset(km_collated, dose=="dose 3")$cum.in_rounded)*100,1),
-                      round(max(subset(km_collated, dose=="dose 4")$cum.in_rounded)*100,1))
+collated$`Cumulative coverage` = c(round(max(subset(km_collated, dose=="dose 1")$cum.in.floor)*100,1),
+                      round(max(subset(km_collated, dose=="dose 2")$cum.in.floor)*100,1),
+                      round(max(subset(km_collated, dose=="dose 3")$cum.in.floor)*100,1),
+                      round(max(subset(km_collated, dose=="dose 4")$cum.in.floor)*100,1))
 
 ## Generate table
 gt(collated) %>%
@@ -310,10 +217,10 @@ gt(collated) %>%
 ```{r}
 extract_subset_max = function(selected_subset) {
   data.frame(
-    cov = c(round(max(surv_table("dose1", 1, subset(data_km, ckd_5cat==selected_subset))$cum.in_rounded)*100,1),
-        round(max(surv_table("dose2", 2, subset(data_km, ckd_5cat==selected_subset))$cum.in_rounded)*100,1),
-        round(max(surv_table("dose3", 3, subset(data_km, ckd_5cat==selected_subset))$cum.in_rounded)*100,1),
-        round(max(surv_table("dose4", 4, subset(data_km, ckd_5cat==selected_subset))$cum.in_rounded)*100,1))
+    cov = c(round(max(surv_table("dose1", 1, subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1),
+        round(max(surv_table("dose2", 2, subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1),
+        round(max(surv_table("dose3", 3, subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1),
+        round(max(surv_table("dose4", 4, subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1))
   )
 }
 collated_cov = cbind(
@@ -364,26 +271,6 @@ collated %>%
 <br/>Data for full cohort (censored/uncensored). Any counts of <=100 grouped as 'other'; all counts rounded to nearest 5; any rounded counts <=10 redacted.
 <br/><br/>  
 
-#### Figure 1: Cumulative coverage and product profile by dose
-```{r, fig.width=9, fig.height=3}
-palette = c("#003c30","#b2182b","#74add1","grey")
-collated$vaccine = factor(collated$Combination, levels = c("other", "Moderna", "ChAdOx1", "BNT162b2"))
-collated$dose = str_replace(collated$Group, "Dose ", "")
-
-# Frequency plot
-g1 = ggplot(collated, aes(fill=vaccine, y=as.numeric(Frequency)/1000, x=dose)) + 
-    geom_bar(position="stack", stat="identity") +
-    theme_bw() + ylab("N doses (thousands)") + scale_fill_manual(values = palette[c(2,1,3)]) +
-    theme(legend.position="right") + xlab("Dose") + labs(fill="Vaccine") +
-    theme(legend.title = element_text(size=14), legend.text = element_text(size=12), 
-        axis.text = element_text(size=14), axis.title = element_text(size=14))
-
-plot_grid(km_plot, g1, 
-          ncol=2,  align="h", axis = c("tb"), rel_widths=c(1.5,1))
-```
-<br/>Data for full cohort (censored/uncensored).
-<br/><br/>
-
 #### Product combinations across doses
 ```{r}
 ## Dose 1-2
@@ -403,9 +290,38 @@ rbind(t_dose_dose12, t_dose_dose123) %>%
   tab_options(table.font.size = pct(95))
 ```
 <br/>
-Data for full cohort (censored/uncensored). Any counts of <=100 grouped as 'other'; all counts rounded to nearest 5; any rounded counts <=10 redacted.
+Data for full cohort (censored/uncensored). Any counts of <=100 grouped as 'other'; all counts rounded to nearest 5; any rounded counts or non-counts <=10 redacted.
 <br/><br/>  
 
+#### Figure 1: Cumulative coverage and product profile by dose
+```{r, fig.width=9, fig.height=3}
+## Coverage plot
+palette = c("#3B9AB2","#78B7C5","#EBCC2A","#E1AF00","#B40F20")
+km_plot = ggplot(km_collated, aes(x = date, y = cum.in.floor*100, colour = factor(dose))) + geom_line() +
+          theme_bw()+ scale_colour_manual(values = palette[c(1,2,4,5)]) +
+          theme(legend.position="right") + scale_x_date(date_labels = "%b %Y") +
+  ylim(0,100) + xlab("Date") + ylab("Cumulative coverage (%)") + labs(colour="Dose") +
+  theme(legend.title = element_text(size=14), legend.text = element_text(size=12), 
+        axis.text = element_text(size=14), axis.title = element_text(size=14))
+
+### Product profile plot
+palette = c("#8da0cb","#fc8d62","#66c2a5","grey")
+collated$vaccine = factor(collated$Combination, levels = c("other", "Moderna", "ChAdOx1", "BNT162b2"))
+collated$dose = str_replace(collated$Group, "Dose ", "")
+
+# Frequency plot
+profile_plot = ggplot(collated, aes(fill=vaccine, y=as.numeric(Frequency)/1000, x=dose)) + 
+    geom_bar(position="stack", stat="identity") +
+    theme_bw() + ylab("N doses (thousands)") + scale_fill_manual(values = palette[c(2,1,3)]) +
+    theme(legend.position="right") + xlab("Dose") + labs(fill="Vaccine") +
+    theme(legend.title = element_text(size=14), legend.text = element_text(size=12), 
+        axis.text = element_text(size=14), axis.title = element_text(size=14))
+
+plot_grid(km_plot, profile_plot, 
+          ncol=2,  align="h", axis = c("tb"), rel_widths=c(1.5,1))
+```
+<br/>Data delayed for full cohort (censored/uncensored). Kaplan-Meier steps are delayed until at least 10 events have occurred.
+<br/><br/>
 
 
 
@@ -442,9 +358,6 @@ Follow-up was censored on the date of death, deregistration, or the end of the s
 ```{r}
 ## Function to create clean table of dose-specific cox outputs
 create_reduced_tbl = function(input_tbl) {
-  # example: selected_dose = "dose2"
-  ## Import cox regression results
-  
   ## Add % unvaccinated at cut-off
   input_tbl$perc_unvac <- round(as.numeric(input_tbl$n_unvax_at_cut_off)/as.numeric(input_tbl$n_uncensored_at_cut_off)*100,1)
   
@@ -500,39 +413,50 @@ dose3_tbl <- read_rds(here::here("output", "model", paste0("mod_strat_coxph_reda
   create_reduced_tbl()
 tabulate_reduced_tbl(dose3_tbl)
 ```
-All counts rounded to nearest 5; data redacted for any rows with rounded values of <=10 for n (total), n (vaccinated), or n (unvaccinated), where n (unvaccinated) is the difference between n (total) and n (vaccinated) after rounding. % unvaccinated calculated among individuals who were uncensored at cut-off.<br/><br/>    
+All counts rounded to nearest 5; data redacted for any rows with rounded values of <=10 for n (vaccinated) or n (unvaccinated), where n (unvaccinated) is the difference between n (total) and n (vaccinated) after rounding. % unvaccinated calculated among individuals who were uncensored at cut-off.<br/><br/>    
 
 #### Plot of partially adjusted model outputs
 ```{r, fig.width=8, fig.height=12}
 ## Function to create plot of cox outputs
-plot_reduced_tbl = function(input_tbl, dose4=FALSE) {
+plot_reduced_tbl = function(input_tbl, dose4=FALSE, level = c("partial", "full")) {
+  
+  if (level=="partial") {
+      input_tbl$HR = input_tbl$`HR (multi)`
+      input_tbl$lowerCI = input_tbl$`lower CI (multi)`
+      input_tbl$upperCI = input_tbl$`upper CI (multi)`
+  } else {
+      input_tbl$HR = input_tbl$`HR (full)`
+      input_tbl$lowerCI = input_tbl$`lower CI (full)`
+      input_tbl$upperCI = input_tbl$`upper CI (full)`
+  }
+  
   ## Remove redacted components from plot
-  input_tbl$`HR (multi)`[input_tbl$`HR (multi)`=="[Redacted]"] = NA
-  input_tbl$`lower CI (multi)`[input_tbl$`HR (multi)`=="[Redacted]"] = NA
-  input_tbl$`upper CI (multi)`[input_tbl$`HR (multi)`=="[Redacted]"] = NA
+  input_tbl$HR[input_tbl$HR=="[Redacted]"] = NA
+  input_tbl$lowerCI[input_tbl$HR=="[Redacted]"] = NA
+  input_tbl$upperCI[input_tbl$HR=="[Redacted]"] = NA
   
   ## Recode HRs and CIs as numerics
-  input_tbl$`HR (multi)` = as.numeric(input_tbl$`HR (multi)`)
-  input_tbl$`lower CI (multi)` = as.numeric(input_tbl$`lower CI (multi)`)
-  input_tbl$`upper CI (multi)` = as.numeric(input_tbl$`upper CI (multi)`)
+  input_tbl$HR = as.numeric(input_tbl$HR)
+  input_tbl$lowerCI = as.numeric(input_tbl$lowerCI)
+  input_tbl$upperCI = as.numeric(input_tbl$upperCI)
   
   ## Set plot min
   plot_min = 0.5
-  if(min(input_tbl$`lower CI (multi)`, na.rm=T) < plot_min) { plot_min = min(input_tbl$`lower CI (multi)`, na.rm=T) }
+  if(min(input_tbl$lowerCI, na.rm=T) < plot_min) { plot_min = min(input_tbl$lowerCI, na.rm=T) }
   
   ## Set plot max
   plot_max = 2
-  if(max(input_tbl$`upper CI (multi)`, na.rm=T) > plot_max) { plot_max = max(input_tbl$`upper CI (multi)`, na.rm=T) }
+  if(max(input_tbl$upperCI, na.rm=T) > plot_max) { plot_max = max(input_tbl$upperCI, na.rm=T) }
   
   ## Add redaction text variable
   input_tbl$redaction = NA
   input_tbl$redaction[input_tbl$`n (total)`=="[Redacted]"] = "[R]"
   
   ## Generate plot of HRs
-  g1 = ggplot(input_tbl, aes(y = `HR (multi)`, x = level, colour = var_group)) + 
+  g1 = ggplot(input_tbl, aes(y = HR, x = level, colour = var_group)) + 
     geom_point(size = 2, alpha=0.8) +
-    geom_text(aes(y = plot_min+0.02, label = redaction)) +
-    geom_errorbar(aes(ymin=as.numeric(`lower CI (multi)`), ymax=as.numeric(`upper CI (multi)`), colour = var_group), width=0) + 
+    geom_text(aes(y = 0.52, label = redaction)) +
+    geom_errorbar(aes(ymin=as.numeric(lowerCI), ymax=as.numeric(upperCI), colour = var_group), width=0) + 
     coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
     theme_bw() + theme(strip.background = element_blank()) + labs(colour = "Group") +
     geom_hline(yintercept=1, linetype="dotted") + 
@@ -556,65 +480,13 @@ plot_reduced_tbl = function(input_tbl, dose4=FALSE) {
   
   plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"), rel_widths = c(3,0.9))
 }
-plot_reduced_tbl(dose3_tbl)
+plot_reduced_tbl(dose3_tbl, level="partial")
 ```
 <br/><br/> 
 
 #### Plot of fully adjusted model outputs
 ```{r, fig.width=8, fig.height=12}
-## Function to create plot of cox outputs
-plot_reduced_tbl = function(input_tbl, dose4=FALSE) {
-  ## Remove redacted components from plot
-  input_tbl$`HR (full)`[input_tbl$`HR (full)`=="[Redacted]"] = NA
-  input_tbl$`lower CI (full)`[input_tbl$`HR (full)`=="[Redacted]"] = NA
-  input_tbl$`upper CI (full)`[input_tbl$`HR (full)`=="[Redacted]"] = NA
-  
-  ## Recode HRs and CIs as numerics
-  input_tbl$`HR (full)` = as.numeric(input_tbl$`HR (full)`)
-  input_tbl$`lower CI (full)` = as.numeric(input_tbl$`lower CI (full)`)
-  input_tbl$`upper CI (full)` = as.numeric(input_tbl$`upper CI (full)`)
-  
-  ## Set plot min
-  plot_min = 0.5
-  if(min(input_tbl$`lower CI (full)`, na.rm=T) < plot_min) { plot_min = min(input_tbl$`lower CI (full)`, na.rm=T) }
-  
-  ## Set plot max
-  plot_max = 2
-  if(max(input_tbl$`upper CI (full)`, na.rm=T) > plot_max) { plot_max = max(input_tbl$`upper CI (full)`, na.rm=T) }
-  
-  ## Add redaction text variable
-  input_tbl$redaction = NA
-  input_tbl$redaction[input_tbl$`n (total)`=="[Redacted]"] = "[R]"
-  
-  ## Generate plot of HRs
-  g1 = ggplot(input_tbl, aes(y = `HR (full)`, x = level, colour = var_group)) + 
-    geom_point(size = 2, alpha=0.8) +
-    geom_text(aes(y = plot_min+0.02, label = redaction)) +
-    geom_errorbar(aes(ymin=as.numeric(`lower CI (full)`), ymax=as.numeric(`upper CI (full)`), colour = var_group), width=0) + 
-    coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
-    theme_bw() + theme(strip.background = element_blank()) + labs(colour = "Group") +
-    geom_hline(yintercept=1, linetype="dotted") + 
-    ylab("Hazard ratio") + xlab("") +
-    scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
-    scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2)) +
-    theme(axis.title = element_text(size=12), axis.text = element_text(size=12), strip.text = element_blank(), 
-          legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = c(-1.5,0.95))
-  
-  if (dose4==TRUE) { plot_min = min(input_tbl$`% unvaccinated`, na.rm=T)-10 } else { plot_min = 0 }
-  if (dose4==TRUE) { plot_max = 100 } else { plot_max = max(input_tbl$`% unvaccinated`, na.rm=T)+5 }
-  g2 = ggplot(input_tbl, aes(y = `% unvaccinated`, x = level,  colour = var_group)) + 
-    geom_point(size = 2, alpha=0.8) +
-    geom_segment(aes(xend=level), yend=0) +
-    ylim(plot_min,plot_max) + coord_flip() + facet_grid(group~., scales = "free", space = "free") + 
-    theme_bw() + theme(strip.background = element_blank()) + 
-    ylab("% Unvaccinated") + xlab("") +
-    scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
-    theme(axis.title = element_text(size=12), axis.text.x = element_text(size=12), axis.text.y = element_blank(), strip.text = element_blank(), 
-          legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.position = "none")
-  
-  plot_grid(g1, g2, ncol=2,  align="h", axis = c("tb"), rel_widths = c(3,0.9))
-}
-plot_reduced_tbl(dose3_tbl)
+plot_reduced_tbl(dose3_tbl, level="full")
 ```
 <br/><br/> 
 
@@ -648,30 +520,18 @@ tbl_summary$perc_unvac <- round(100 - (as.numeric(tbl_summary$n_event) / as.nume
 ## Select variables of interes
 tbl_reduced <- tbl_summary %>%
    select(var_group, var_label, label, n_obs, n_event, perc_unvac,
-         estimate_minimal, conf.low_minimal, conf.high_minimal, p.value_minimal,
-         estimate_partial, conf.low_partial, conf.high_partial, p.value_partial,
-         estimate, conf.low, conf.high, p.value)
+         estimate_partial, conf.low_partial, conf.high_partial, p.value_partial)
 
 ## Relabel columns
 names(tbl_reduced) = c("var_group", "group", "level", "n (total)", "n (vaccinated)", "% unvaccinated",
-                            "OR (min)", "lower CI (min)", "upper CI (min)", "p (min)",
-                            "OR (multi)", "lower CI (multi)", "upper CI (multi)", "p (multi)",
-                            "OR (full)", "lower CI (full)", "upper CI (full)", "p (full)")
+                            "OR (multi)", "lower CI (multi)", "upper CI (multi)", "p (multi)")
 
 ## Create formatted gt output
 tbl_reduced %>% 
   gt(rowname_col = "level", groupname_col = "group") %>%
-  tab_spanner(
-    label = "minimally adjusted",
-    columns = c("OR (min)", "lower CI (min)", "upper CI (min)", "p (min)")
-  ) %>%
     tab_spanner(
     label = "partially adjusted",
     columns = c("OR (multi)", "lower CI (multi)", "upper CI (multi)", "p (multi)")
-  ) %>%
-  tab_spanner(
-    label = "fully adjusted",
-    columns = c("OR (full)", "lower CI (full)", "upper CI (full)", "p (full)")
   ) %>%
   cols_hide(columns = "var_group") %>%
   tab_options(table.font.size = pct(85)) %>%
@@ -683,7 +543,7 @@ tbl_reduced %>%
         ),
       locations = list(
         cells_body(
-          columns = c("p (min)", "p (multi)", "% unvaccinated")
+          columns = c("p (multi)", "% unvaccinated")
         )
       )
    ) %>%
@@ -788,7 +648,7 @@ tabulate_reduced_tbl(dose4_tbl)
 
 #### Plot of partially adjusted model outputs
 ```{r, fig.width=8, fig.height=12}
-plot_reduced_tbl(dose4_tbl, dose4=TRUE)
+plot_reduced_tbl(dose4_tbl, dose4=TRUE, level="partial")
 ```
 <br/><br/><br/><br/>
 
@@ -910,8 +770,6 @@ tabulate_reduced_tbl_subgroup(dose3_tbl_subgroup, "dose3")
 ```{r, fig.width=13, fig.height=10}
 ## Function to create plot of cox subgroup outputs 
 plot_reduced_tbl_subgroup = function(input_tbl) {
-  ## Example: input_tbl = tbl_subgroup
-  
   ## Remove redacted components from plot
   input_tbl$estimate_partial[input_tbl$estimate_partial=="[Redacted]"] = NA
   input_tbl$conf.low_partial[input_tbl$conf.low_partial=="[Redacted]"] = NA
@@ -936,7 +794,7 @@ plot_reduced_tbl_subgroup = function(input_tbl) {
   ## Add redaction text variable
   input_tbl$redaction = NA
   input_tbl$redaction[input_tbl$n_obs=="[Redacted]"] = "[R]"
-  
+
   ## Generate plot of HRs
   ggplot(input_tbl, aes(y = estimate_partial, x = label, colour = var_group)) + 
     geom_point(size = 2, alpha=0.8) +
