@@ -35,8 +35,8 @@ data_processed <- data_processed %>%
     rrt_mismatch = ifelse((ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b" | ckd_5cat=="CKD4-5") & (dialysis==1 | kidney_transplant==1), 1, 0)
   )
 
-# Increase proportion of cev other to 5% to ensure effective running of later models
-data_processed$cev_other <- as.numeric(rcat(n=nsamples, c("0", "1"), c(0.95,0.05)))
+# Increase proportion of cev_other to 10% to ensure effective running of later models
+data_processed$cev_other <- as.numeric(rcat(n=nsamples, c("0", "1"), c(0.9,0.1)))
 
 # Set cev_other to 0 if in dialysis or Tx group
 data_processed$cev_other[data_processed$ckd_6cat %in% c("RRT (dialysis)", "RRT (Tx)")] = 0

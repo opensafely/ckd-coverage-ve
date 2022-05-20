@@ -92,7 +92,7 @@ dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
 
 ## Set variable list
 var_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "rural_urban_group",
-              "sex", "ethnicity", "imd", "ckd_5cat", "chronic_kidney_disease_stages_3_5", "dialysis", "kidney_transplant",
+              "sex", "ethnicity", "imd", "ckd_5cat", "chronic_kidney_disease_stages_3_5",
               "prior_covid_cat", "immunosuppression", "mod_sev_obesity", "diabetes", "any_resp_dis", "chd", "cld", "asplenia", "cancer",
               "haem_cancer", "non_kidney_transplant", "chronic_neuro_dis_inc_sig_learn_dis","sev_mental_ill",
               "cev_other") 
@@ -135,11 +135,6 @@ for (s in 1:length(strata)) {
     data_subset = subset(data_cox, ckd_5cat==ckd_group) 
     var_list_subset = var_list[var_list!="ckd_5cat"]
     }
-  
-  ## Exclude dialysis and Tx codes from CKD groups given that these were exclusion criteria
-  if (ckd_group %in% c("CKD3a", "CKD3b", "CKD4-5")) {
-    var_list_subset = var_list_subset[var_list_subset!="dialysis" & var_list_subset!="kidney_transplant"]
-  }
   
   ## Exclude cev_other from RRT groups given that all will be 0 by definition
   if (ckd_group %in% c("RRT (dialysis)", "RRT (Tx)")) {
@@ -266,8 +261,6 @@ for (s in 1:length(strata)) {
   tbl_summary$label[tbl_summary$var_label=="housebound"] = "Housebound"
   tbl_summary$label[tbl_summary$var_label=="endoflife"] = "End of life care"
   tbl_summary$label[tbl_summary$var_label=="chronic_kidney_disease_stages_3_5"] = "CKD3-5 primary care code"
-  tbl_summary$label[tbl_summary$var_label=="dialysis"] = "Dialysis primary care code"
-  tbl_summary$label[tbl_summary$var_label=="kidney_transplant"] = "Kidney transplant primary care code"
   tbl_summary$label[tbl_summary$var_label=="prior_covid_cat"] = "Prior COVID"
   tbl_summary$label[tbl_summary$var_label=="immunosuppression"] = "Immunosuppression"
   tbl_summary$label[tbl_summary$var_label=="mod_sev_obesity"] = "Moderate/severe obesity"
@@ -286,7 +279,7 @@ for (s in 1:length(strata)) {
   ## Group variables for plotting
   # var_label
   tbl_summary$var_label[tbl_summary$var_label=="ckd_5cat"] = "CKD subgroup"
-  tbl_summary$var_label[tbl_summary$label %in% c("CKD3-5 primary care code", "Dialysis primary care code", "Kidney transplant primary care code")] = "CKD (primary care coding)"
+  tbl_summary$var_label[tbl_summary$label %in% c("CKD3-5 primary care code")] = "CKD (primary care coding)"
   tbl_summary$var_label[tbl_summary$label %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care")] = "Risk group (occupation/access)"
   tbl_summary$var_label[tbl_summary$label %in% c("Prior COVID", "Immunosuppression", "Moderate/severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
                                                    "Chronic heart disease", "Chronic liver disease","Asplenia", "Cancer (non-haematologic)", "Haematologic cancer", "Obesity", 
@@ -295,8 +288,8 @@ for (s in 1:length(strata)) {
     
   # var_group
   tbl_summary$var_group = "Demography"
-  tbl_summary$var_group[tbl_summary$var_label %in% c("CKD subgroup", "CKD (primary care coding)")] = "Risk group (CKD-related)"
-  tbl_summary$var_group[tbl_summary$var_label %in% c("Risk group (clinical, non-CKD)")] = "Risk group (clinical, non-CKD)"
+  tbl_summary$var_group[tbl_summary$var_label %in% c("CKD subgroup", "CKD (primary care coding)")] = "Risk group (CKD/RRT-related)"
+  tbl_summary$var_group[tbl_summary$var_label %in% c("Risk group (clinical, non-CKD)")] = "Risk group (other)"
 
   # order factor levels for labels, var_label, and var_group
   tbl_summary$label = factor(tbl_summary$label, levels = rev(tbl_summary$label))
