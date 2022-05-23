@@ -471,12 +471,12 @@ plot_reduced_tbl = function(input_tbl, dose4=FALSE, level = c("partial", "full")
   
   ## Set axis breaks depending on outcome
   if (dose4==TRUE) { 
-      g1 = g1 + scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2,4,8,16)) 
+      g1 = g1 + scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2,4,8)) 
   } else { 
       g1 = g1 + scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2)) 
   }
 
-  if (dose4==TRUE) { plot_min = 0 } else { plot_min = min(input_tbl$`% vaccinated`, na.rm=T)-20 }
+  if (dose4==TRUE) { plot_min = 0 } else { plot_min = min(input_tbl$`% vaccinated`, na.rm=T)-10 }
   if (dose4==TRUE) { plot_max = max(input_tbl$`% vaccinated`, na.rm=T)+10 } else { plot_max = 100 }
   g2 = ggplot(input_tbl, aes(y = `% vaccinated`, x = level,  colour = var_group)) + 
     geom_point(size = 2, alpha=0.8) +
@@ -811,7 +811,7 @@ plot_reduced_tbl_subgroup = function(input_tbl, dose4=FALSE) {
   
   ## Set axis breaks depending on outcome
   if (dose4==TRUE) { 
-      g1 = g1 + scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2,4,8,16)) 
+      g1 = g1 + scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.25,1,4)) 
   } else { 
       g1 = g1 + scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2)) 
   }
