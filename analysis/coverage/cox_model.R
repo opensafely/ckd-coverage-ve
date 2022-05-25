@@ -106,7 +106,7 @@ min_adj_list <- c("ageband2", "care_home", "hscworker")
 
 ## Set subset of variables to be used in partially adjusted models
 adj_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "rural_urban_group",
-              "sex", "ethnicity", "imd", "prior_covid_cat")
+              "sex", "ethnicity", "imd", "prior_covid_cat", "haem_cancer", "immunosuppression")
 
 ## Pick out variables and recode list as factors
 data_cox <- data_cox %>% select(all_of(var_list), follow_up_time, covid_vax, region, uncensored_at_cut_off, unvax_uncensored_at_cut_off)
