@@ -305,7 +305,7 @@ data_processed <- data_extract %>%
     
     # JCVI group - https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1007737/Greenbook_chapter_14a_30July2021.pdf#page=12
     jcvi_group = fct_case_when(
-      care_home==1 ~ "1 (care home resident)",
+      care_home==1 & age>=65 ~ "1 (65+ care home resident)",
       care_home==0 & (age>=80 | hscworker==1) ~ "2 (80+ or health/social care worker)",
       care_home==0 & (age>=75 & age<80) ~ "3 (75+)",
       care_home==0 & ((age>=70 & age<75) | (cev==1 & age>=16 & age<70)) ~ "4 (70+ or clinically extremely vulnerable)",

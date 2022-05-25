@@ -31,10 +31,14 @@ source(here::here("analysis", "functions.R"))
 ## Import data
 data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
 data_uncensored <- read_rds(here::here("output", "data", "data_cohort_coverage_logistic.rds"))
+data_dose4 <- read_rds(here::here("output", "data", "data_cohort_coverage_dose4.rds"))
+data_dose4_uncensored <- subset(data_dose4, is.na(death_date) & is.na(dereg_date))
 
 ## Calculate rounded population totals
 rounded_n = plyr::round_any(nrow(data_cohort), 5)
 rounded_n_uncensored = plyr::round_any(nrow(data_uncensored), 5)
+rounded_n_dose4 = plyr::round_any(nrow(data_dose4), 5)
+rounded_n_dose4_uncensored = plyr::round_any(nrow(data_dose4_uncensored), 5)
 
 if (data_cohort$mock_data_flag[1]==1) { flag = "present" } else { flag = "absent" }
 ```
@@ -56,6 +60,8 @@ Vaccine recommendations for people with kidney disease in the UK have evolved ov
 * No dose intervals of <14 days across first 4 doses
 
 A total of **`r prettyNum(rounded_n)`** (rounded to the nearest 5) met the inclusion criteria (see *output/data/flowchart.csv* for additional details), of which **`r prettyNum(rounded_n_uncensored)`** remained uncensored (alive and registered) throughout follow-up (01-Dec-2020 to 20-Apr-2022).
+
+Of the total population, **`r prettyNum(rounded_n_dose4)`** were >=75 years or had a history of immunosuppression, haematologic cancer, or transplant on the index date. This population includes individuals eligible for an extended primary series aor second booster dose, and was therefore included in the dose 4 analysis subset. **`r prettyNum(rounded_n_dose4_uncensored)`** remained uncensored (alive and registered) throughout follow-up (01-Dec-2020 to 20-Apr-2022).
 
 `r if(flag=="present") { paste0("NB: Dummy data processing flag detected!") }`    
 <br/><br/>  
@@ -101,6 +107,34 @@ ckd5_sum = plyr::round_any(sum(data_cohort$ckd_6cat=="CKD5"),5)
 <br/>Of the `r prettyNum(ckd4_5_sum)` individuals with CKD4-5, `r prettyNum(ckd4_sum)` had CKD 4 and `r prettyNum(ckd5_sum)` had CKD 5. 
 <br/><br/>    
 
+#### Table 1 (dose 4 subset): Summary of population
+```{r}
+table_1 <- read_rds(here::here("output", "tables", "table1_coverage_redacted_by_CKD_dose4.rds"))
+
+## Set factor levels for group
+table_1$Group[table_1$Group=="Other"] = "Risk group"
+
+## Render table
+table_1 %>% 
+   gt(groupname_col = "Group") %>%
+   tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
+   tab_style(
+     style = cell_text(indent = pct(5)),
+     locations = cells_body(columns = "Variable")
+     ) %>%
+   tab_options(table.font.size = pct(95)) %>% #table.width = pct(80) 
+   tab_footnote(
+     footnote = "All counts rounded to nearest 5; any rounded counts <=10 or within <=10 of population total redacted.",
+     locations = cells_column_labels(columns = "Variable")
+   )
+
+## Calculate breakdown of CKD4-5 
+ckd4_5_sum = plyr::round_any(sum(data_dose4$ckd_6cat=="CKD4" | data_dose4$ckd_6cat=="CKD5"),5)
+ckd4_sum = plyr::round_any(sum(data_dose4$ckd_6cat=="CKD4"),5)
+ckd5_sum = plyr::round_any(sum(data_dose4$ckd_6cat=="CKD5"),5)
+```
+
+
 #### Coverage as of 20-Apr-2022
 ```{r}
 #### Generate Kaplan-Meier tte data for each dose
@@ -131,14 +165,27 @@ data_km <- data_cohort %>%
     covid_vax_dose4 = dplyr::if_else((vax4_date>censor_date) | is.na(vax4_date), 0, 1),
     
     # Uncensored pre cut-off
-    uncensored_at_cut_off = ifelse(
-                              (is.na(death_date) & is.na(dereg_date)) | 
-                              (!is.na(death_date) & death_date>end_date) | 
-                              (!is.na(dereg_date) & dereg_date>end_date), 1, 0)
+    # uncensored_at_cut_off = ifelse(
+    #                           (is.na(death_date) & is.na(dereg_date)) | 
+    #                           (!is.na(death_date) & death_date>end_date) | 
+    #                           (!is.na(dereg_date) & dereg_date>end_date), 1, 0)
+)
+
+#### Generate Kaplan-Meier tte data for dose 4 subset
+data_km_dose4 <- data_dose4 %>%
+  mutate(
+    start_date = as.Date("2020-12-01", format = "%Y-%m-%d"),
+    end_date = as.Date("2022-04-20", format = "%Y-%m-%d"),
+    censor_date = pmin(death_date, 
+                       dereg_date, 
+                       end_date, 
+                       na.rm=TRUE),
+    follow_up_time_dose4 = tte(start_date, vax4_date, censor_date),
+    covid_vax_dose4 = dplyr::if_else((vax4_date>censor_date) | is.na(vax4_date), 0, 1),
 )
 
 ## Function to generate rounded survival table (steps delayed to include at least 10 events)
-surv_table = function(dose, dosenum, data_input, threshold=10) {
+surv_table = function(dose, dosenum, doselabel, data_input, threshold=10) {
   #decimal_threshold = 10/nrow(data_input)
   surv = survfit(as.formula(paste0("Surv(follow_up_time_",dose,", covid_vax_",dose,") ~ 1")), data = data_input) %>% 
     broom::tidy() %>% 
@@ -156,44 +203,49 @@ surv_table = function(dose, dosenum, data_input, threshold=10) {
       cum.in.floor = 1 - surv.floor,
       #estimate_rounded = pmin(1,plyr::round_any(estimate, decimal_threshold), na.rm=TRUE),
       #cum.in_rounded = 1 - estimate_rounded,
-      dose = paste0("dose ",dosenum),
-      date = as.Date("2020-12-01", format = "%Y-%m-%d")+time
+      #dose = paste0("dose ",dosenum),
+      date = as.Date("2020-12-01", format = "%Y-%m-%d")+time,
+      dose = doselabel, 
     ) %>%
     select(time, n.risk.floor, n.censor.floor, cum.in.floor, dose, date) %>%
     filter(time>=0)
 }
 
 km_collated = rbind(
-  surv_table("dose1", 1, data_km),
-  surv_table("dose2", 2, data_km),
-  surv_table("dose3", 3, data_km),
-  surv_table("dose4", 4, data_km)
+  surv_table("dose1", 1, "Dose 1", data_km),
+  surv_table("dose2", 2, "Dose 2",  data_km),
+  surv_table("dose3", 3, "Dose 3", data_km),
+  surv_table("dose4", 4, "Dose 4 (full)", data_km),
+  surv_table("dose4", 4, "Dose 4 (subset)", data_km_dose4)
 )
-
 
 ## Calculate coverage in total and uncensored populations
 collated = data.frame(
-  Dose = c("1", "2", "3", "4"),
-  N_cohort_total = rep(rounded_n, 4),
+  Dose = c("1", "2", "3", "4 (full)", "4 (subset)"),
+  N_cohort_total = c(rep(rounded_n, 4), rounded_n_dose4),
   N_vaccinated_total = c(sum(data_cohort$vax1_date<=end_date, na.rm=T), sum(data_cohort$vax2_date<=end_date, na.rm=T), 
-                         sum(data_cohort$vax3_date<=end_date, na.rm=T), sum(data_cohort$vax4_date<=end_date, na.rm=T))
-) %>%
+                         sum(data_cohort$vax3_date<=end_date, na.rm=T), sum(data_cohort$vax4_date<=end_date, na.rm=T),
+                         sum(data_dose4$vax4_date<=end_date, na.rm=T))
+  ) %>%
   mutate(
     N_vaccinated_total = plyr::round_any(N_vaccinated_total, 5),
     coverage_total = round(N_vaccinated_total/N_cohort_total*100,1),
-    N_cohort_uncensored = rep(rounded_n_uncensored, 4),
+    N_cohort_uncensored = c(rep(rounded_n_uncensored, 4), rounded_n_dose4_uncensored),
     N_vaccinated_uncensored = c(sum(data_uncensored$vax1_date<=end_date, na.rm=T), sum(data_uncensored$vax2_date<=end_date, na.rm=T), 
-                                sum(data_uncensored$vax3_date<=end_date, na.rm=T), sum(data_uncensored$vax4_date<=end_date, na.rm=T)),
+                                sum(data_uncensored$vax3_date<=end_date, na.rm=T), sum(data_uncensored$vax4_date<=end_date, na.rm=T),
+                                sum(data_dose4_uncensored$vax4_date<=end_date, na.rm=T)),
     N_vaccinated_uncensored = plyr::round_any(N_vaccinated_uncensored, 5),
     coverage_uncensored = round(N_vaccinated_uncensored/N_cohort_uncensored*100,1)
   )
 names(collated) = c("Dose", "N (total)", "n vaccinated (total)", "Coverage (total), %",
                             "N (uncensored)", "n vaccinated (uncensored)", "Coverage (uncensored), %")
 
-collated$`Cumulative coverage` = c(round(max(subset(km_collated, dose=="dose 1")$cum.in.floor)*100,1),
-                      round(max(subset(km_collated, dose=="dose 2")$cum.in.floor)*100,1),
-                      round(max(subset(km_collated, dose=="dose 3")$cum.in.floor)*100,1),
-                      round(max(subset(km_collated, dose=="dose 4")$cum.in.floor)*100,1))
+collated$`Cumulative coverage` = c(round(max(subset(km_collated, dose=="Dose 1")$cum.in.floor)*100,1),
+                      round(max(subset(km_collated, dose=="Dose 2")$cum.in.floor)*100,1),
+                      round(max(subset(km_collated, dose=="Dose 3")$cum.in.floor)*100,1),
+                      round(max(subset(km_collated, dose=="Dose 4 (full)")$cum.in.floor)*100,1),
+                      round(max(subset(km_collated, dose=="Dose 4 (subset)")$cum.in.floor)*100,1)
+                      )
 
 ## Generate table
 gt(collated) %>%
@@ -217,14 +269,15 @@ gt(collated) %>%
 ```{r}
 extract_subset_max = function(selected_subset) {
   data.frame(
-    cov = c(round(max(surv_table("dose1", 1, subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1),
-        round(max(surv_table("dose2", 2, subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1),
-        round(max(surv_table("dose3", 3, subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1),
-        round(max(surv_table("dose4", 4, subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1))
+    cov = c(round(max(surv_table("dose1", 1, "Dose 1", subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1),
+        round(max(surv_table("dose2", 2, "Dose 2", subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1),
+        round(max(surv_table("dose3", 3, "Dose 3", subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1),
+        round(max(surv_table("dose4", 4, "Dose 4 (full)", subset(data_km, ckd_5cat==selected_subset))$cum.in.floor)*100,1),
+        round(max(surv_table("dose4", 4, "Dose 4 (subset)", subset(data_km_dose4, ckd_5cat==selected_subset))$cum.in.floor)*100,1))
   )
 }
 collated_cov = cbind(
-  dose = 1:4,
+  Dose = c("1", "2", "3", "4 (full)", "4 (subset)"),
   extract_subset_max("CKD3a"),
   extract_subset_max("CKD3b"),
   extract_subset_max("CKD4-5"),
@@ -243,23 +296,28 @@ collated_cov %>% gt() %>%
 ```{r}
 ## Dose 1
 t_dose_dose1 = data.frame(table(data_cohort$vax1_type_descr)) %>% 
+  arrange(desc(Freq)) %>%
   redact_table(multiple=FALSE) %>%
-  mutate(Group = "Dose 1")
+  mutate(Group = "Dose 1") 
 
 ## Dose 2
 t_dose_dose2 = data.frame(table(data_cohort$vax2_type_descr)) %>% 
+  arrange(desc(Freq)) %>%
   redact_table(multiple=FALSE) %>%
-  mutate(Group = "Dose 2")
+  mutate(Group = "Dose 2") %>%
+  arrange(desc(Frequency))
 
 ## Dose 3
 t_dose_dose3 = data.frame(table(data_cohort$vax3_type_descr)) %>% 
+  arrange(desc(Freq)) %>%
   redact_table(multiple=FALSE) %>%
   mutate(Group = "Dose 3")
 
 ## Dose 4
 t_dose_dose4 = data.frame(table(data_cohort$vax4_type_descr)) %>% 
+  arrange(desc(Freq)) %>%
   redact_table(multiple=FALSE) %>%
-  mutate(Group = "Dose 4")
+  mutate(Group = "Dose 4") 
 
 # Generate combined table
 collated = rbind(t_dose_dose1, t_dose_dose2, t_dose_dose3, t_dose_dose4)
@@ -278,12 +336,14 @@ collated %>%
 ## Dose 1-2
 t_dose_dose12 = data.frame(table(data_cohort$vax12_type)) %>% 
   redact_table() %>%
-  mutate(Group = "Dose 1-2 combination")
+  mutate(Group = "Dose 1-2 combination") %>%
+  arrange(desc(Frequency))
 
 ## Dose 1-2-3
 t_dose_dose123 = data.frame(table(data_cohort$vax123_type)) %>% 
   redact_table() %>%
-  mutate(Group = "Dose 1-2-3 combination")
+  mutate(Group = "Dose 1-2-3 combination") %>%
+  arrange(desc(as.numeric(Frequency)))
 
 # Generate combined table
 rbind(t_dose_dose12, t_dose_dose123) %>% 
@@ -301,12 +361,21 @@ Data for full cohort (censored/uncensored). Any counts of <=100 grouped as 'othe
 ```{r, fig.width=9, fig.height=3}
 ## Coverage plot
 palette = c("#3B9AB2","#78B7C5","#EBCC2A","#E1AF00","#B40F20")
-km_plot = ggplot(km_collated, aes(x = date, y = cum.in.floor*100, colour = factor(dose))) + geom_line() +
+
+# Create simplified dose variable for plotting
+km_collated$dose_plot = km_collated$dose
+km_collated$dose_plot[km_collated$dose %in% c("Dose 4 (full)", "Dose 4 (subset)")] = "Dose 4"
+
+# Create variable for full vs subset
+km_collated$Population = "Full"
+km_collated$Population[km_collated$dose=="Dose 4 (subset)"] = "Subset"
+
+km_plot = ggplot(km_collated, aes(x = date, y = cum.in.floor*100, colour = factor(dose_plot))) + geom_line(aes(linetype=Population)) +
           theme_bw()+ scale_colour_manual(values = palette[c(1,2,4,5)]) +
           theme(legend.position="right") + scale_x_date(date_labels = "%b %Y") +
-  ylim(0,100) + xlab("Date") + ylab("Cumulative coverage (%)") + labs(colour="Dose") +
-  theme(legend.title = element_text(size=14), legend.text = element_text(size=12), 
-        axis.text = element_text(size=14), axis.title = element_text(size=14))
+          ylim(0,100) + xlab("Date") + ylab("Cumulative coverage (%)") + labs(colour="Dose") +
+          theme(legend.title = element_text(size=14), legend.text = element_text(size=12), 
+              axis.text = element_text(size=14), axis.title = element_text(size=14))
 
 ### Product profile plot
 palette = c("#8da0cb","#fc8d62","#66c2a5","grey")

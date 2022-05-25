@@ -984,11 +984,11 @@ study = StudyDefinition(
     test_result = "positive",
     returning = "date",
     date_format = "YYYY-MM-DD",
-    between=["covid_vax_date_1 - 90 days","covid_vax_date_2 - 1 day"],
+    between=["index_date - 90 days","index_date - 1 day"],
     find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
     return_expectations = {
-      "date": {"earliest": "2020-09-01", "latest": "2021-04-01"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-09-02", "latest": "2020-11-30"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.02,
     },
@@ -1003,10 +1003,10 @@ study = StudyDefinition(
     ),
     returning = "date",
     date_format = "YYYY-MM-DD",
-    between=["covid_vax_date_1 - 90 days","covid_vax_date_2 - 1 day"],
+    between=["index_date - 90 days","index_date - 1 day"],
     find_first_match_in_period=True,
     return_expectations = {
-      "date": {"earliest": "2020-09-01", "latest": "2021-04-01"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-09-02", "latest": "2020-11-30"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.02,
     },
@@ -1016,11 +1016,11 @@ study = StudyDefinition(
   prevax_covid_hospitalisation_date = patients.admitted_to_hospital(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
-    between=["covid_vax_date_1 - 90 days","covid_vax_date_2 - 1 day"],
+    between=["index_date - 90 days","index_date - 1 day"],
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2020-09-01", "latest": "2021-04-01"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-09-02", "latest": "2020-11-30"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.005,
     },
@@ -1031,7 +1031,7 @@ study = StudyDefinition(
     pathogen = "SARS-CoV-2",
     test_result = "any",
     returning = "number_of_matches_in_period",
-    between=["covid_vax_date_1 - 90 days","covid_vax_date_2 - 1 day"],
+    between=["index_date - 90 days","index_date - 1 day"],
     restrict_to_earliest_specimen_date = False,
     return_expectations={
       "int": {"distribution": "normal", "mean": 4, "stddev": 1},
