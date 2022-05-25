@@ -37,7 +37,7 @@ if(length(args)==0) {
     outcome = "vax3_date"
     outcome_label = "dose3"
     cutoff = as.Date("2022-04-20", format = "%Y-%m-%d")
-  } else if (args[[1]]=="dose4full") {
+  } else if (args[[1]]=="dose4") {
     outcome = "vax4_date"
     outcome_label = "dose4"
     cutoff = as.Date("2022-04-20", format = "%Y-%m-%d")
@@ -48,7 +48,11 @@ if(length(args)==0) {
 }
 
 ## Import data
-data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
+if (outcome_label == "dose3") {
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
+} else {
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage_dose4.rds"))
+}
 
 ## Import custom user functions and packages
 source(here::here("analysis", "functions.R"))
