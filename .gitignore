@@ -4,7 +4,7 @@ output/*
 metadata/*
 analysis/*.html
 extras/*
-*Rhistory
-*DS_Store
-analysis/*Rhistory
-analysis/*DS_Store
+.Rhistory
+.DS_Store
+analysis/.Rhistory
+analysis/.DS_Store

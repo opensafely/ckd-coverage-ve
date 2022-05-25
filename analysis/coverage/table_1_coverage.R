@@ -15,6 +15,23 @@ library('gtsummary')
 library('plyr')
 library('reshape2')
 
+## Import command-line arguments
+args <- commandArgs(trailingOnly=TRUE)
+
+## Set input and output pathways for matched/unmatched data - default is unmatched
+if(length(args)==0) {
+  outcome_label = "dose3"
+} else {
+  if (args[[1]]=="dose3") {
+    outcome_label = "dose3"
+  } else if (args[[1]]=="dose4") {
+    outcome_label = "dose4"
+  } else {
+    # print error if no argument specified
+    stop("No outcome specified")
+  }
+}
+
 ## Set rounding and redaction thresholds
 rounding_threshold = 5
 redaction_threshold = 10
@@ -23,7 +40,11 @@ redaction_threshold = 10
 fs::dir_create(here::here("output", "tables"))
 
 ## Import data
-data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
+if (outcome_label=="dose3") {
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
+} else {
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage_dose4.rds"))
+}
 
 ## Format data
 data_cohort <- data_cohort %>%
@@ -178,6 +199,11 @@ for (i in 1:length(ckd_levels)) {
     }
 }
 
-# Save as html ----
-gt::gtsave(gt(collated_table), here::here("output","tables", "table1_coverage_redacted_by_CKD.html"))
-write_rds(collated_table, here::here("output", "tables", "table1_coverage_redacted_by_CKD.rds"), compress = "gz")
+# Save as html/csv
+if (outcome_label=="dose3") {
+  gt::gtsave(gt(collated_table), here::here("output","tables", "table1_coverage_redacted_by_CKD.html"))
+  write_rds(collated_table, here::here("output", "tables", "table1_coverage_redacted_by_CKD.rds"), compress = "gz")
+} else {
+  gt::gtsave(gt(collated_table), here::here("output","tables", "table1_coverage_redacted_by_CKD_dose4.html"))
+  write_rds(collated_table, here::here("output", "tables", "table1_coverage_redacted_by_CKD_dose4.rds"), compress = "gz")
+}

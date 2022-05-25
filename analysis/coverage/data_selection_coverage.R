@@ -49,6 +49,9 @@ data_criteria <- data_processed %>%
     valid_vaxgap23 = tbv2_3 >= 14 | is.na(vax3_date), # at least 14 days between dose 2 and dose 3 if dose 3 given
     valid_vaxgap34 = tbv3_4 >= 14 | is.na(vax4_date), # at least 14 days between dose 3 and dose 4 f dose 3 given
     
+    # Dose 4 denominator
+    eligible_dose4 = (age>=75 | care_home==1 | haem_cancer==1 | immunosuppression==1 | ckd_5cat=="RRT (Tx)" | non_kidney_transplant==1), 
+    
     # Other
     alive_throughout = is.na(death_date),
     registered_throughout = is.na(dereg_date),
@@ -62,7 +65,11 @@ data_criteria <- data_processed %>%
 
     include_logistic = (
       include & alive_throughout & registered_throughout
-    )
+    ),
+    
+    include_dose4 = (
+      include & eligible_dose4
+    ),
   )
 
 ## Define data cohort for primary analysis
@@ -88,6 +95,17 @@ data_cohort_logistic <- data_criteria %>%
 ## Save dataset
 write_rds(data_cohort_logistic, here::here("output", "data", "data_cohort_coverage_logistic.rds"), compress="gz")
 
+## Define data cohort for dose 4 analysis
+data_cohort_dose4 <- data_criteria %>%
+  filter(include_dose4) %>%
+  select(patient_id) %>%
+  left_join(data_processed, by="patient_id") %>%
+  select(-starts_with("ckd_inclusion_")) %>%
+  droplevels()
+
+## Save dataset
+write_rds(data_cohort_dose4, here::here("output", "data", "data_cohort_coverage_dose4.rds"), compress="gz")
+
 data_flowchart <- data_criteria %>%
   transmute(
     # Primary analysis cohort
@@ -100,8 +118,10 @@ data_flowchart <- data_criteria %>%
     c6 = c5 & (valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34),
     # Logistic regression analysis cohort
     c7 = c6 & alive_throughout,
-    c8 = c7 & registered_throughout
-  ) %>%
+    c8 = c7 & registered_throughout,
+    # Dose 4 analysis cohort
+    c9 = c6 & eligible_dose4
+    ) %>%
   summarise(
     across(.fns=sum)
   ) %>%
@@ -125,6 +145,7 @@ data_flowchart <- data_criteria %>%
       crit == "c6" ~ "  with no vaccines administered at an interval of <14 days (primary analysis subset)",
       crit == "c7" ~ "  alive throughout follow-up period (logistic regression sensitivity subset only)",
       crit == "c8" ~ "  registered throughout follow-up period (logistic regression sensitivity subset only)",
+      crit == "c9" ~ "  eligible for dose 4 based on immunosuppression, transplant, haematologic cancer, care home residence, or age >=75y (dose 4 analysis subset)",
       TRUE ~ NA_character_
     )
   )
