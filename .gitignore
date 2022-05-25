@@ -9,3 +9,6 @@ analysis/.Rhistory
 .DS_Store
 analysis/.DS_Store
 codelists/.DS_Store
+
+.Rhistory
+.Rproj.user
