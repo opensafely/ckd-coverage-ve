@@ -167,6 +167,8 @@ for (s in 1:length(strata)) {
   
   ## Fit stratified partially adjusted models in loop
   for (i in 1:length(var_list_subset)) {
+  for (i in 1:19) {
+      
     # Select current variable from list, then select final list of model covariates
     var = var_list_subset[i]
     if (var %in% adj_list) { final_list = adj_list } else { final_list = c(var, adj_list) }
@@ -177,7 +179,7 @@ for (s in 1:length(strata)) {
     summary = extract_model(cox_partial) 
     
     # Pick out adjusted outputs for term of interest
-    summary_var = summary[grepl(var, summary$term),]
+    if (var!="cancer") { summary_var = summary[grepl(var, summary$term),] } else { summary_var = summary[summary$term=="cancer1",] }
     
     # Collate with previous model outputs
     if (i == 1) { cox_partial_collated = summary_var } else { cox_partial_collated = rbind(cox_partial_collated,summary_var) }
