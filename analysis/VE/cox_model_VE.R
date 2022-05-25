@@ -44,6 +44,11 @@ if(length(args)==0){
     db = "VE_matched"
     input_name = "data_cohort_VE_matched.rds"
     irr_name = "table_irr_matched_redacted.rds"
+  } else if (args[[1]]=="calendar_time") {
+    # file names for calendar time models
+    db = "VE_calendar_time"
+    input_name = "data_cohort_VE.rds"
+    irr_name = "table_irr_redacted.rds" # calculated on person-time
   } else {
     # print error if no argument specified
     print("No matching argument specified")
@@ -60,6 +65,7 @@ source(here::here("analysis", "functions.R"))
 dir.create(here::here("output", "model", db), showWarnings = FALSE, recursive=TRUE)
 
 ## Set analysis intervals and last follow-up day
+# TBC
 postvaxcuts <- 56*0:5
 postvax_periods = c("1-56", "57-112", "113-168", "169-224", "225-280")
 lastfupday <- max(postvaxcuts)
@@ -87,11 +93,12 @@ postvax_time <- data_cohort %>%
     fup_day = postvaxcuts[id_postvax],
     timesincevax_pw = timesince_cut(fup_day+1, postvaxcuts)
   ) %>%
-  droplevels() %>%
+  droplevels()# %>%
   # 6 rows per patient (one per follow-up period)
+  # id_postvax = comparison period
   # fup_day = final day of preceding follow-up period
   # timesincevax_pw = days included in follow-up period
-  select(patient_id, fup_day, timesincevax_pw)
+  # select(patient_id, fup_day, timesincevax_pw)
 
 
 
@@ -111,7 +118,7 @@ if (db=="VE") {
   formula2_full <- formula1_full %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + ckd_5cat + immunosuppression + care_home + sex + imd + ethnicity + 
                                               rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
 
-} else {
+} else if (db=="VE_matched") {
   # cox models stratified by follow-up window - matched analysis
   formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(timesincevax_pw)
   formula1 <- formula0 %>% update(. ~ . + ns(vax2_day, 3)) # no longer need to adjust for region
@@ -121,6 +128,23 @@ if (db=="VE") {
   formula0_full <- Surv(follow_up_time, ind_outcome) ~ vax2_az
   formula1_full <- formula0_full %>% update(. ~ . + ns(vax2_day, 3)) # no longer need to adjust for region
   formula2_full <- formula1_full %>% update(. ~ . + sex + imd + ethnicity + rural_urban_group + prevax_tests_cat + multimorb + sev_mental_ill) # no longer need to adjust for age or prior COVID
+} else if (db=="VE_calendar_timw") {
+  #TODO
+  # cox models stratified by follow-up window
+  formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(id_postvax)
+  formula1 <- formula0 %>% update(. ~ . + strata(strata_var)) # strata_var = region * jcvi_group
+  formula2 <- formula1 %>% update(. ~ . + 
+                                    poly(age, degree = 2, raw = TRUE) +
+                                    # poly(age_1, degree = 2, raw = TRUE) + # care home (no restriction on age)
+                                    # poly(age_2, degree = 2, raw = TRUE) + # 80+
+                                    # poly(age_3, degree = 1, raw = TRUE) + # 75-79
+                                    # poly(age_4a, degree = 1, raw = TRUE) + # 70-74
+                                    # poly(age_4b, degree = 2, raw = TRUE) + # 16-69
+                                    # poly(age_5, degree = 1, raw = TRUE) + # 65-69
+                                    # poly(age_6, degree = 2, raw = TRUE) + # 16-64
+                                    ckd_5cat + immunosuppression + 
+                                    # care_home + # remove carehome as only jcvi group 1? 
+                                    sex + imd + ethnicity + rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
 }
 
 
@@ -136,6 +160,8 @@ cox_model_VE <- function(number, formula_cox, stratified=TRUE) {
   if (number==0) { model_type = "unadjusted" } 
   if (number==1) { model_type = "region/date adjusted" } 
   if (number==2) { model_type = "fully adjusted" } 
+  
+  if (db == "VE_calendar_time" & !stratified) stop("Must set stratified=TRUE if db=\"VE_calendar_time\"")
   
   if (stratified) {
     # if stratified = FALSE, fit cox model stratified by follow-up window
@@ -213,6 +239,7 @@ date_list = c("postvax_positive_test_date", "postvax_covid_emergency_date", "pos
 irr_table = read_rds(here::here("output", "tables", irr_name))
 
 for (i in 1:length(outcome_list)) {
+  
   selected_outcome = outcome_list[i]
   selected_outcome_clean = clean_list[i]
   irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
@@ -250,20 +277,33 @@ for (i in 1:length(outcome_list)) {
   # set factor levels for postvaccination periods
   data_cox$timesincevax_pw = factor(data_cox$timesincevax_pw, levels = postvax_periods)
   
+  # derive strata_var if using calendar timescale
+  if (db == "VE_calendar_time") {
+    data_cox <- data_cox %>% mutate(strata_var = as.character(glue("{jcvi_group}_{region}")))
+  }
+  
   ### print dataset size and save ----
   logoutput(
     glue(selected_outcome_clean, "\ndata_cox data size = ", nrow(data_cox)),
     glue("data_cox memory usage = ", format(object.size(data_cox), units="GB", standard="SI", digits=3L))
   )
 
-  # run unadjusted and adjusted models, stratified and unstratified
-  #assign("last.warning", NULL, envir = baseenv()) # clear warnings
-  summary0 <- cox_model_VE(0, formula0)
-  summary1 <- cox_model_VE(1, formula1)
-  summary2 <- cox_model_VE(2, formula2)
+  # assign("last.warning", NULL, envir = baseenv()) # clear warnings
+  # always run stratified models
   summary0_full <- cox_model_VE(0, formula0_full, stratified=FALSE)
   summary1_full <- cox_model_VE(1, formula1_full, stratified=FALSE)
   summary2_full <- cox_model_VE(2, formula2_full, stratified=FALSE)
+  # only run on full dataset if db!="VE_calendar_time"
+  if (db != "VE_calendar_time") {
+    summary0 <- cox_model_VE(0, formula0)
+    summary1 <- cox_model_VE(1, formula1)
+    summary2 <- cox_model_VE(2, formula2)
+  } else {
+  # otherwise save empty datasets
+    summary0 <- list(glance = tibble(), tidy = tibble())
+    summary1 <- list(glance = tibble(), tidy = tibble())
+    summary2 <- list(glance = tibble(), tidy = tibble())
+  }
   
   ## Combine and save model summary (brief) 
   model_glance <- data.frame(
