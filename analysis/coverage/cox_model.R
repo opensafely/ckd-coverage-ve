@@ -167,8 +167,6 @@ for (s in 1:length(strata)) {
   
   ## Fit stratified partially adjusted models in loop
   for (i in 1:length(var_list_subset)) {
-  for (i in 1:19) {
-      
     # Select current variable from list, then select final list of model covariates
     var = var_list_subset[i]
     if (var %in% adj_list) { final_list = adj_list } else { final_list = c(var, adj_list) }
