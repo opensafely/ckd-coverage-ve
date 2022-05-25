@@ -177,7 +177,7 @@ data_flowchart <- data_criteria %>%
       crit == "c6" ~ "  post-vaccination outcomes recorded after second dose",
       crit == "c7" ~ "  not healthcare worker, receiving end-of-life care, or housebound", # care home resident
       crit == "c8" ~ "  not censored before second dose",
-      crit == "c9" ~ "  no CODID from 90 days before dose 1 up to the date of dose 2",
+      crit == "c9" ~ "  no COVID from 90 days before dose 1 up to the date of dose 2",
       TRUE ~ NA_character_
     )
   )
