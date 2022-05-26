@@ -11,17 +11,17 @@
 ### Preliminaries ----
 
 ## Import libraries
-library('here')
-library('tidyr')
+# library('here')
+# library('tidyr')
 library('tidyverse')
 library('lubridate')
 library('survival')
-library('gtsummary')
-library('gt')
-library('survminer')
+# library('gtsummary')
+# library('gt')
+# library('survminer')
 library('glue')
-library('fs')
-library('splines')
+# library('fs')
+# library('splines')
 sessionInfo()
 
 ## Import command-line arguments (specifying whether or not to run matched analysis)
@@ -107,7 +107,18 @@ postvax_time <- data_cohort %>%
 ####################################################### 
 ### formulae for unadjusted/adjusted models
 #######################################################
+surv_strata = c("tstart", "tstop", "ind_outcome") 
+surv_full = c("follow_up_time", "ind_outcome")
+expo = "vax2_az"
+vars0_strata = "timesincevax_pw"
+vars2 = c("age", "ckd_5cat", "immunosuppression", "care_home", "sex", "imd", 
+         "ethnicity", "rural_urban_group", "prior_covid_cat", "prevax_tests_cat", 
+         "multimorb", "sev_mental_ill")
+
 if (db=="VE") {
+  
+  vars1 = c("region","vax2_day")
+  
   # cox models stratified by follow-up window
   formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(timesincevax_pw)
   formula1 <- formula0 %>% update(. ~ . + strata(region)*ns(vax2_day, 3))
@@ -121,6 +132,12 @@ if (db=="VE") {
                                               rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
   
 } else if (db=="VE_matched") {
+  
+  vars1 = "vax2_day"
+  # replace covs if matched
+  vars2 = c("sex", "imd", "ethnicity", "rural_urban_group", "prevax_tests_cat", 
+           "multimorb", "sev_mental_ill")
+  
   # cox models stratified by follow-up window - matched analysis
   formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(timesincevax_pw)
   formula1 <- formula0 %>% update(. ~ . + ns(vax2_day, 3)) # no longer need to adjust for region
@@ -131,6 +148,10 @@ if (db=="VE") {
   formula1_full <- formula0_full %>% update(. ~ . + ns(vax2_day, 3)) # no longer need to adjust for region
   formula2_full <- formula1_full %>% update(. ~ . + sex + imd + ethnicity + rural_urban_group + prevax_tests_cat + multimorb + sev_mental_ill) # no longer need to adjust for age or prior COVID
 } else if (db=="VE_calendar_timw") {
+  # replace strata0 if VE_calendar time
+  vars0 = "id_postvax"
+  vars1 = "strata_var"
+  
   #TODO
   # cox models stratified by follow-up window
   formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(id_postvax)
@@ -156,59 +177,62 @@ if (db=="VE") {
 outcome_list = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death")
 clean_list = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death")
 date_list = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date")
+
 i = which(outcome_list == outcome)
+selected_outcome = outcome_list[i]
+selected_outcome_clean = clean_list[i]
 
 # read in incidence rate ratio table
 irr_table = read_rds(here::here("output", "tables", irr_name))
+irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
 
+# derive strata_var if using calendar timescale
+if (db == "VE_calendar_time") {
+  data_cohort <- data_cohort %>% mutate(strata_var = as.character(glue("{jcvi_group}_{region}")))
+}
 
-  
-  selected_outcome = outcome_list[i]
-  selected_outcome_clean = clean_list[i]
-  irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
-  
-  data_tte <- data_cohort %>% 
-    mutate(
-      # select dates for outcome in question
-      outcome_date = get(date_list[i]),
-      
-      # censor date already defined in data_selection_VE.R script 
-      
-      # calculate tte and ind for outcome in question
-      tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=TRUE),
-      ind_outcome = get(paste0("ind_",selected_outcome)),
-      tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-      
-      # calculate follow-up time (censor/event)
-      follow_up_time = tte(vax2_date-1, get(date_list[i]), censor_date) 
-    )
-  
-  data_cox <- tmerge(
-    data1 = data_tte %>% select(-starts_with("ind_"), -ends_with("_date")),
-    data2 = data_tte,
-    id = patient_id,
-    tstart = 0L,
-    tstop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-    ind_outcome = event(tte_outcome)
-  ) %>%
-    tmerge( # create treatment timescale variables
-      data1 = .,
-      data2 = postvax_time,
-      id = patient_id,
-      timesincevax_pw = tdc(fup_day, timesincevax_pw)
-    )
-  # set factor levels for postvaccination periods
-  data_cox$timesincevax_pw = factor(data_cox$timesincevax_pw, levels = postvax_periods)
-  
-  # derive strata_var if using calendar timescale
-  if (db == "VE_calendar_time") {
-    data_cox <- data_cox %>% mutate(strata_var = as.character(glue("{jcvi_group}_{region}")))
-  }
-  
-  ### print dataset size and save ----
-  logoutput(
-    glue(selected_outcome_clean, "\ndata_cox data size = ", nrow(data_cox)),
-    glue("data_cox memory usage = ", format(object.size(data_cox), units="GB", standard="SI", digits=3L))
+data_tte <- data_cohort %>% 
+  mutate(
+    # select dates for outcome in question
+    outcome_date = get(date_list[i]),
+    
+    # censor date already defined in data_selection_VE.R script 
+    
+    # calculate tte and ind for outcome in question
+    tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=TRUE),
+    ind_outcome = get(paste0("ind_",selected_outcome)),
+    tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
+    
+    # calculate follow-up time (censor/event)
+    follow_up_time = tte(vax2_date-1, get(date_list[i]), censor_date) 
   )
-  
+
+data_cox_strata <- tmerge(
+  data1 = data_tte %>% select(-starts_with("ind_"), -ends_with("_date")),
+  data2 = data_tte,
+  id = patient_id,
+  tstart = 0L,
+  tstop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
+  ind_outcome = event(tte_outcome)
+) %>%
+  tmerge( # create treatment timescale variables
+    data1 = .,
+    data2 = postvax_time,
+    id = patient_id,
+    timesincevax_pw = tdc(fup_day, timesincevax_pw)
+  ) %>%
+  select(all_of(c(surv_strata, expo, vars0_strata, vars1, vars2)))
+
+data_cox_full <- data_tte %>%
+  select(all_of(c(surv_full, expo, vars1, vars2)))
+
+# set factor levels for postvaccination periods
+data_cox$timesincevax_pw = factor(data_cox$timesincevax_pw, levels = postvax_periods)
+
+### print dataset size and save ----
+logoutput(
+  glue(selected_outcome_clean, "\ndata_cox data size = ", nrow(data_cox)),
+  glue("data_cox memory usage = ", format(object.size(data_cox), units="GB", standard="SI", digits=3L))
+)
+
 
