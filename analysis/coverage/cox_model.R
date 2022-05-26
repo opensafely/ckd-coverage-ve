@@ -2,7 +2,7 @@
 
 # This script:
 # - imports processed data
-# - fit multivariable stratified cox model(s) using the coxph package
+# - fits multivariable stratified cox model(s) using the coxph package
 # - saves model outputs
 
 ######################################
@@ -87,16 +87,17 @@ data_cox <- data_cohort %>%
                               (!is.na(death_date) & death_date>end_date) | 
                               (!is.na(dereg_date) & dereg_date>end_date), 1, 0),
     
-    # Unvaccinated and uncensored at cut-off
-    unvax_uncensored_at_cut_off = ifelse(covid_vax==0 & uncensored_at_cut_off==1, 1, 0)
+    # Vaccinated and uncensored at cut-off
+    vax_uncensored_at_cut_off = ifelse(covid_vax==1 & uncensored_at_cut_off==1, 1, 0)
   )
 
 ## Create output directory
 dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
 
 ## Set variable list
-var_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "rural_urban_group",
-              "sex", "ethnicity", "imd", "ckd_5cat", "chronic_kidney_disease_stages_3_5",
+var_list <- c("ageband2", "sex", "ethnicity", "imd",  "rural_urban_group",
+              "ckd_5cat", "chronic_kidney_disease_stages_3_5",
+              "care_home", "hscworker", "housebound", "endoflife",
               "prior_covid_cat", "immunosuppression", "mod_sev_obesity", "diabetes", "any_resp_dis", "chd", "cld", "asplenia", "cancer",
               "haem_cancer", "non_kidney_transplant", "chronic_neuro_dis_inc_sig_learn_dis","sev_mental_ill",
               "cev_other") 
@@ -109,7 +110,7 @@ adj_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "
               "sex", "ethnicity", "imd", "prior_covid_cat", "haem_cancer", "immunosuppression")
 
 ## Pick out variables and recode list as factors
-data_cox <- data_cox %>% select(all_of(var_list), follow_up_time, covid_vax, region, uncensored_at_cut_off, unvax_uncensored_at_cut_off)
+data_cox <- data_cox %>% select(all_of(var_list), follow_up_time, covid_vax, region, uncensored_at_cut_off, vax_uncensored_at_cut_off)
 data_cox[,var_list] <- lapply(data_cox[,var_list], factor)
 
 ## Check all cases complete
@@ -210,7 +211,7 @@ for (s in 1:length(strata)) {
     ) %>%
     mutate(
       var_label = if_else(row_type=="label", "", var_label),
-      label = if_else(reference_row %in% TRUE, paste0(label, " (ref)"),label),
+      label_clean = if_else(reference_row %in% TRUE, paste0(label, " (ref)"),label),
       estimate = if_else(reference_row %in% TRUE, 1, estimate),
       variable = fct_inorder(variable),
       conf.low = round(conf.low,2),
@@ -222,8 +223,9 @@ for (s in 1:length(strata)) {
     )
 
   ## Add variable to summary table that tabulates number uncensored at analysis end date and number uncensored/unvaccinated
+  ## NB: To be cross-compared with KM estimates below as sense check that KM approximates coverage at analysis cut-off
   tbl_full$n_uncensored_at_cut_off = NA
-  tbl_full$n_unvax_at_cut_off = NA
+  tbl_full$n_vax_at_cut_off = NA
   
   ## Loop over variable list
   for (i in 1:length(var_list_subset)) {
@@ -234,12 +236,47 @@ for (s in 1:length(strata)) {
     tbl_full$n_uncensored_at_cut_off[j:(j+length(var_uncensored)-1)] = var_uncensored
     
     # Tabulate variable vs uncensored at cut-off, then incorporate into summary table
-    var_unvax = table(data.frame(data_subset)[,var_list_subset[i]], data_subset$unvax_uncensored_at_cut_off)[,2]
-    tbl_full$n_unvax_at_cut_off[j:(j+length(var_unvax)-1)] = var_unvax
+    var_vax = table(data.frame(data_subset)[,var_list_subset[i]], data_subset$vax_uncensored_at_cut_off)[,2]
+    tbl_full$n_vax_at_cut_off[j:(j+length(var_vax)-1)] = var_vax
     
     # Update row number for next step in loop
     j = j + length(var_uncensored)
   }
+  
+  ## Add variable to summary table that tabulates KM estimates of coverage by group
+  tbl_full$km_coverage = NA
+  
+  ## Convert data subset to dataframe to enable variable name processing within loop
+  data_subset = data.frame(data_subset)
+  
+  ## Calculate KM coverage estimates via loop over variable list
+  for (i in 1:length(var_list_subset)) {
+    
+    var_selected = var_list_subset[i]
+    data_subset$var_selected = data_subset[,var_selected]
+    levels = names(table(data_subset$var_selected))
+    
+    for (j in 1:length(levels)) {
+      data_level = subset(data_subset, var_selected==levels[j])
+      surv = survfit(as.formula("Surv(follow_up_time, covid_vax) ~ 1"), data = data_level) %>% 
+        broom::tidy() %>% 
+        filter(estimate > 0) %>%
+        mutate(
+          N = plyr::round_any(max(n.risk, na.rm=TRUE),10),
+          cml.event = cumsum(replace_na(n.event, 0)),
+          cml.censor = cumsum(replace_na(n.censor, 0)),
+          cml.event.floor = floor_any(cml.event, 10),
+          cml.censor.floor = floor_any(cml.censor, 10),
+          n.event.floor = diff(c(0,cml.event.floor)),
+          n.censor.floor = diff(c(0,cml.censor.floor)),
+          n.risk.floor = N - lag(cml.event.floor + cml.censor.floor,1,0),
+          surv.floor = cumprod(1 - n.event.floor / n.risk.floor),
+          cum.in.floor = 1 - surv.floor
+        )
+      tbl_full$km_coverage[tbl_full$variable==var_list_subset[i] & tbl_full$label==levels[j]] = round(max(surv$cum.in.floor)*100,1)
+    }
+  }
+    
   
   ## Check adjusted models have outputs for same variables, then merge
   if (all(cox_minimal_collated$term %in% tbl_full$term)==FALSE) stop('minimally/fully adjusted model outputs have non-matching variables') 
@@ -265,7 +302,7 @@ for (s in 1:length(strata)) {
   tbl_summary$label[tbl_summary$var_label=="housebound"] = "Housebound"
   tbl_summary$label[tbl_summary$var_label=="endoflife"] = "End of life care"
   tbl_summary$label[tbl_summary$var_label=="chronic_kidney_disease_stages_3_5"] = "CKD3-5 primary care code"
-  tbl_summary$label[tbl_summary$var_label=="prior_covid_cat"] = "Prior COVID"
+  tbl_summary$label[tbl_summary$var_label=="prior_covid_cat"] = "Prior SARS-CoV-2"
   tbl_summary$label[tbl_summary$var_label=="immunosuppression"] = "Immunosuppression"
   tbl_summary$label[tbl_summary$var_label=="mod_sev_obesity"] = "Moderate/severe obesity"
   tbl_summary$label[tbl_summary$var_label=="diabetes"] = "Diabetes"
@@ -281,24 +318,25 @@ for (s in 1:length(strata)) {
   tbl_summary$label[tbl_summary$var_label=="cev_other"] = "Clinically extremely vulnerable (other)"
     
   ## Group variables for plotting
-  # var_label
-  tbl_summary$var_label[tbl_summary$var_label=="ckd_5cat"] = "CKD subgroup"
-  tbl_summary$var_label[tbl_summary$label %in% c("CKD3-5 primary care code")] = "CKD (primary care coding)"
-  tbl_summary$var_label[tbl_summary$label %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care")] = "Risk group (occupation/access)"
-  tbl_summary$var_label[tbl_summary$label %in% c("Prior COVID", "Immunosuppression", "Moderate/severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
+  # var_label/group
+  tbl_summary$var_label[tbl_summary$var_label=="ckd_5cat"] = "Kidney disease subgroup"
+  tbl_summary$var_label[tbl_summary$label %in% c("CKD3-5 primary care code")] = "Primary care coding of kidney disease"
+  tbl_summary$var_label[tbl_summary$label %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care")] = "Risk group (occupation/accessibility)"
+  tbl_summary$var_label[tbl_summary$label %in% c("Prior SARS-CoV-2", "Immunosuppression", "Moderate/severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
                                                    "Chronic heart disease", "Chronic liver disease","Asplenia", "Cancer (non-haematologic)", "Haematologic cancer", "Obesity", 
                                                    "Organ transplant (non-kidney)", "Chronic neurological disease (inc. learning disability)", "Severe mental illness", 
-                                                   "Clinically extremely vulnerable (other)")] = "Risk group (clinical, non-CKD)"
-    
-  # var_group
-  tbl_summary$var_group = "Demography"
-  tbl_summary$var_group[tbl_summary$var_label %in% c("CKD subgroup", "CKD (primary care coding)")] = "Risk group (CKD/RRT-related)"
-  tbl_summary$var_group[tbl_summary$var_label %in% c("Risk group (clinical, non-CKD)")] = "Risk group (other)"
+                                                   "Clinically extremely vulnerable (other)")] = "Risk group (clinical)"
+  tbl_summary$group = tbl_summary$var_label
+  
+  # plot_group
+  tbl_summary$plot_group = "Demography"
+  tbl_summary$plot_group[tbl_summary$group %in% c("CKD subgroup", "CKD (primary care coding)")] = "Risk group (CKD/RRT-related)"
+  tbl_summary$plot_group[tbl_summary$group %in% c("Risk group (clinical, non-CKD)")] = "Risk group (other)"
 
-  # order factor levels for labels, var_label, and var_group
+  # order factor levels for labels, group, and plot_group
   tbl_summary$label = factor(tbl_summary$label, levels = rev(tbl_summary$label))
-  tbl_summary$var_label = factor(tbl_summary$var_label, levels = unique(tbl_summary$var_label))
-  tbl_summary$var_group = factor(tbl_summary$var_group, levels = unique(tbl_summary$var_group))
+  tbl_summary$group = factor(tbl_summary$group, levels = unique(tbl_summary$group))
+  tbl_summary$plot_group = factor(tbl_summary$plot_group, levels = unique(tbl_summary$plot_group))
   
   ## Round counts to rounding threshold to avoid disclosure issues and add non-event counts
   tbl_summary$N = plyr::round_any(tbl_summary$N,rounding_threshold)
@@ -306,25 +344,28 @@ for (s in 1:length(strata)) {
   tbl_summary$n_obs = plyr::round_any(tbl_summary$n_obs,rounding_threshold)
   tbl_summary$n_event = plyr::round_any(tbl_summary$n_event,rounding_threshold)
   tbl_summary$n_uncensored_at_cut_off = plyr::round_any(tbl_summary$n_uncensored_at_cut_off,rounding_threshold)
-  tbl_summary$n_unvax_at_cut_off = plyr::round_any(tbl_summary$n_unvax_at_cut_off,rounding_threshold)
-
+  tbl_summary$n_vax_at_cut_off = plyr::round_any(tbl_summary$n_vax_at_cut_off,rounding_threshold)
+  tbl_summary$perc_vax_cut_off = round(tbl_summary$n_vax_at_cut_off/tbl_summary$n_uncensored_at_cut_off*100,1)
+  
   ## Add non-event count (overall and variable-specific)
-  tbl_summary$N_nonevent = tbl_summary$N - tbl_summary$N_event
   tbl_summary$n_nonevent = tbl_summary$n_obs - tbl_summary$n_event
+  tbl_summary$n_unvax_uncensored = tbl_summary$n_uncensored_at_cut_off - tbl_summary$n_vax_at_cut_off
   
   ## Pick out key variables for outputs
   tbl_reduced <- data.frame(tbl_summary) %>%
-    select(variable, var_label, var_group, label, # columns 1:4
-           N, n_obs, # columns 5:6
-           N_event, N_nonevent, n_event, n_nonevent, # columns 7:10 - references for redaction
-           n_uncensored_at_cut_off, n_unvax_at_cut_off, # columns 11:12
-           estimate, conf.low, conf.high, p.value, # columns 13:16
-           estimate_minimal, conf.low_minimal, conf.high_minimal, p.value_minimal, # columns 17:20
-           estimate_partial, conf.low_partial, conf.high_partial, p.value_partial) # columns 21:24 
+    mutate(label = label_clean) %>%
+    select(variable, group, plot_group, label, # columns 1:4
+           N, N_event, n_obs, # columns 5:7
+           n_event, n_unvax_uncensored, # columns 8:9 - references for redaction
+           n_uncensored_at_cut_off, n_vax_at_cut_off, perc_vax_cut_off, km_coverage, # columns 10:13
+           estimate, conf.low, conf.high, p.value, # columns 14:17
+           estimate_minimal, conf.low_minimal, conf.high_minimal, p.value_minimal, # columns 18:21
+           estimate_partial, conf.low_partial, conf.high_partial, p.value_partial) # columns 22:25 
   
   ## Redact all model outputs if events/non-events <= redaction threshold
   for (i in 1:nrow(tbl_reduced)) {
-    if (min(as.numeric(tbl_reduced[i,7:10]), na.rm=T)<=redaction_threshold) { tbl_reduced[i,5:24] = "[Redacted]" }
+    if (as.numeric(tbl_reduced[i,"n_event"], na.rm=T)>0 & as.numeric(tbl_reduced[i,"n_event"], na.rm=T)<=redaction_threshold) {  tbl_reduced[i,5:25] = "[Redacted]" }
+    if (as.numeric(tbl_reduced[i,"n_unvax_uncensored"], na.rm=T)>0 & as.numeric(tbl_reduced[i,"n_event"], na.rm=T)<=redaction_threshold) {  tbl_reduced[i,5:25] = "[Redacted]" }
   }
   
   ## Save outputs
