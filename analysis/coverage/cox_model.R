@@ -364,8 +364,11 @@ for (s in 1:length(strata)) {
   
   ## Redact all model outputs if events/non-events <= redaction threshold
   for (i in 1:nrow(tbl_reduced)) {
-    if (as.numeric(tbl_reduced[i,"n_event"], na.rm=T)>0 & as.numeric(tbl_reduced[i,"n_event"], na.rm=T)<=redaction_threshold) {  tbl_reduced[i,5:25] = "[Redacted]" }
-    if (as.numeric(tbl_reduced[i,"n_unvax_uncensored"], na.rm=T)>0 & as.numeric(tbl_reduced[i,"n_event"], na.rm=T)<=redaction_threshold) {  tbl_reduced[i,5:25] = "[Redacted]" }
+    if (
+      (as.numeric(tbl_reduced[i,"n_event"], na.rm=T)>0 & as.numeric(tbl_reduced[i,"n_event"], na.rm=T)<=redaction_threshold) |
+      (as.numeric(tbl_reduced[i,"n_unvax_uncensored"], na.rm=T)>0 & as.numeric(tbl_reduced[i,"n_event"], na.rm=T)<=redaction_threshold)) {  
+      tbl_reduced[i,5:25] = "[Redacted]" 
+      }
   }
   
   ## Save outputs
