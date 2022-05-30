@@ -34,12 +34,12 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
-  timescale = "calendartime"
-  outcome = "covid_postest"
+  timescale = "persontime"
+  selected_outcome = "covid_postest"
 } else {
   db = args[[1]]
   timescale = args[[2]]
-  outcome = args[[3]]
+  selected_outcome = args[[3]]
 }
 
 input_name = "data_cohort_VE.rds"
@@ -58,17 +58,30 @@ dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
 
 ## Set analysis intervals and last follow-up day
 # TODO
+# specify this upstream?
 postvaxcuts <- 56*0:5
 postvax_periods = c("1-56", "57-112", "113-168", "169-224", "225-280")
 lastfupday <- max(postvaxcuts)
+write_rds(
+  list(
+    postvaxcuts = postvaxcuts,
+    postvax_periods = postvax_periods
+  ),
+  here::here("output", "lib", "postvax_list.rds")
+)
 
 ## create special log file ----
-cat(glue("## script info for cox preflight ##"), "  \n", file = here::here("output", "model", glue("cox_preflight_log_{db}_{timescale}_{outcome}.txt")), append = FALSE)
+cat(
+  glue("## script info for cox preflight ##"), 
+  "  \n", 
+  file = here::here("output", "model", glue("log_cox_preflight_{db}_{timescale}_{selected_outcome}.txt")), 
+  append = FALSE
+  )
 
 ## function to pass additional log text
 logoutput <- function(...){
-  cat(..., file = here::here("output", "model", db, glue("cox_preflight_log_{db}_{timescale}_{outcome}.txt")), sep = "\n  ", append = TRUE)
-  cat("\n", file = here::here("output", "model", db, glue("cox_preflight_log_{db}_{timescale}_{outcome}.txt")), sep = "\n  ", append = TRUE)
+  cat(..., file = here::here("output", "model", glue("log_cox_preflight_{db}_{timescale}_{selected_outcome}.txt")), sep = "\n  ", append = TRUE)
+  cat("\n", file = here::here("output", "model", glue("log_cox_preflight_{db}_{timescale}_{selected_outcome}.txt")), sep = "\n  ", append = TRUE)
 }
 
 ### print dataset size ----
@@ -125,9 +138,8 @@ outcomes_list <- read_rds(
   here::here("output", "lib", "outcomes.rds")
 )
 
-outcomes_index = which(outcomes_list$short_name == outcome)
-selected_outcome = outcomes_list$short_name[outcomes_index]
-selected_outcome_clean = outcomes_list$clean_name[outcomes_index]
+outcome_index = which(outcomes_list$short_name == selected_outcome)
+selected_outcome_clean = outcomes_list$clean_name[outcome_index]
 
 # derive strata_var if using calendar timescale
 if (timescale == "calendartime") {
@@ -137,7 +149,7 @@ if (timescale == "calendartime") {
 data_tte <- data_cohort %>% 
   mutate(
     # select dates for outcome in question
-    outcome_date = get(date_list[i]),
+    outcome_date = get(outcomes_list$date_name[outcome_index]),
     
     # censor date already defined in data_selection_VE.R script 
     
@@ -147,7 +159,7 @@ data_tte <- data_cohort %>%
     tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
     
     # calculate follow-up time (censor/event)
-    follow_up_time = tte(vax2_date-1, get(date_list[i]), censor_date) 
+    follow_up_time = tte(vax2_date-1, get(outcomes_list$date_name[outcome_index]), censor_date) 
   ) %>%
   mutate(across(all_of(vars2_cat), as.factor))
 
@@ -169,11 +181,17 @@ data_cox_strata <- tmerge(
   mutate(across(timesincevax_pw, factor, levels = postvax_periods)) %>%
   # ind_outcome as logical to match data_tte
   mutate(across(ind_outcome, as.logical)) %>%
-  select(any_of(c(surv_strata, expo, vars0, vars1, vars2_cont, vars2_cat))) %>%
+  select(
+    patient_id,
+    any_of(c(surv_strata, expo, vars0, vars1, vars2_cont, vars2_cat))
+    ) %>%
   as_tibble()
 
 data_cox_full <- data_tte %>%
-  select(any_of(c(surv_full, expo, vars1, vars2_cont, vars2_cat))) 
+  select(
+    patient_id,
+    any_of(c(surv_full, expo, vars1, vars2_cont, vars2_cat))
+    ) 
 
 rm(data_tte, data_cohort)
 
@@ -192,11 +210,11 @@ if (any(check_events_full$total_events <= events_threshold)) {
   # save empty outputs
   write_rds(
     tibble(),
-    here::here("output", "model", db, glue("data_cox_full_{db}_{timescale}_{outcome}.rds"))
+    here::here("output", "model", db, glue("data_cox_full_{db}_{timescale}_{selected_outcome}.rds"))
   )
   write_rds(
     list(),
-    here::here("output", "model", db, glue("formulas_full_{db}_{timescale}_{outcome}.rds"))
+    here::here("output", "model", db, glue("formulas_full_{db}_{timescale}_{selected_outcome}.rds"))
   )
   error_message = "Too few outcome events to model."
   logoutput(error_message)
@@ -226,12 +244,12 @@ if (!strata) {
   # save empty outputs
   write_rds(
     data_cox_strata_merged,
-    here::here("output", "model", db, glue("data_cox_strata_{db}_{timescale}_{outcome}.rds")),
+    here::here("output", "model", db, glue("data_cox_strata_{db}_{timescale}_{selected_outcome}.rds")),
     compress = "gz"
   )
   write_rds(
     formulas_strata,
-    here::here("output", "model", db, glue("formulas_strata_{db}_{timescale}_{outcome}.rds"))
+    here::here("output", "model", db, glue("formulas_strata_{db}_{timescale}_{selected_outcome}.rds"))
   )
 }
 
@@ -400,7 +418,7 @@ if (timescale == "persontime") {
   }
   
   # final formulas
-  formula0_full <- as.formula(glue("Surv(tstart, tstop, ind_outcome) ~ {expo}"))
+  formula0_full <- as.formula(glue("Surv(follow_up_time, ind_outcome) ~ {expo}"))
   formula1_full <- formula0_full %>% update(formula1_update)
   formula2_full <- formula1_full %>% update(formula2_update_full)
   
@@ -458,33 +476,33 @@ logoutput(
 # stratified
 write_rds(
   data_cox_strata_merged,
-  here::here("output", "model", glue("data_cox_strata_{db}_{timescale}_{outcome}.rds")),
+  here::here("output", "model", glue("data_cox_strata_{db}_{timescale}_{selected_outcome}.rds")),
   compress = "gz"
 )
 write_rds(
   formulas_strata,
-  here::here("output", "model", glue("formulas_strata_{db}_{timescale}_{outcome}.rds"))
+  here::here("output", "model", glue("formulas_strata_{db}_{timescale}_{selected_outcome}.rds"))
 )
 
 # full
 if (timescale == "persontime") {
   write_rds(
     data_cox_full_merged,
-    here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{outcome}.rds")),
+    here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{selected_outcome}.rds")),
     compress = "gz"
   )
   write_rds(
     formulas_full,
-    here::here("output", "model", glue("formulas_full_{db}_{timescale}_{outcome}.rds"))
+    here::here("output", "model", glue("formulas_full_{db}_{timescale}_{selected_outcome}.rds"))
   )
 } else {
   write_rds(
     tibble(),
-    here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{outcome}.rds"))
+    here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{selected_outcome}.rds"))
   )
   write_rds(
     list(),
-    here::here("output", "model", glue("formulas_full_{db}_{timescale}_{outcome}.rds"))
+    here::here("output", "model", glue("formulas_full_{db}_{timescale}_{selected_outcome}.rds"))
   )
 }
 
