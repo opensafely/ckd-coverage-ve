@@ -11,143 +11,93 @@
 ### Preliminaries ----
 
 ## Import libraries
-library('here')
-library('tidyr')
+# library('here')
+# library('tidyr')
 library('tidyverse')
 library('lubridate')
 library('survival')
-library('gtsummary')
-library('gt')
-library('survminer')
+# library('gtsummary')
+# library('gt')
+# library('survminer')
 library('glue')
-library('fs')
-library('splines')
+# library('fs')
+# library('splines')
 sessionInfo()
 
 ## Import command-line arguments (specifying whether or not to run matched analysis)
 args <- commandArgs(trailingOnly=TRUE)
 
 ## Set input and output pathways for matched/unmatched data - default is unmatched
+# arg1 = db = matched / unmatched
+# arg2 = timescale = persontime / calendartime
+# arg3 = outcome = covid_postest / covid_emergency / covid_hosp / covid_death
 if(length(args)==0){
   # default (unmatched) file names
-  db = "VE"
-  input_name = "data_cohort_VE.rds"
-  irr_name = "table_irr_redacted.rds"
+  db = "unmatched"
+  timescale = "calendartime"
+  outcome = "covid_postest"
 } else {
-  if (args[[1]]=="unmatched") { 
-    # unmatched file names    
-    db = "VE"
-    input_name = "data_cohort_VE.rds"
-    irr_name = "table_irr_redacted.rds"
-  } else if (args[[1]]=="matched") {
-    # matched file names
-    db = "VE_matched"
-    input_name = "data_cohort_VE_matched.rds"
-    irr_name = "table_irr_matched_redacted.rds"
-  } else if (args[[1]]=="calendar_time") {
-    # file names for calendar time models
-    db = "VE_calendar_time"
-    input_name = "data_cohort_VE.rds"
-    irr_name = "table_irr_redacted.rds" # calculated on person-time
-  } else {
-    # print error if no argument specified
-    print("No matching argument specified")
-  }
+  db = args[[1]]
+  timescale = args[[2]]
+  outcome = args[[3]]
 }
 
 ## Import data
-data_cohort <- read_rds(here::here("output", "data", input_name))
+full = timescale != "calendartime"
+if (full) {
+  # get data for full model
+  data_cox_full <- read_rds(here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{outcome}.rds")))
+}
+# check dataset not empty
+if (nrow(data_cox_full) == 0) {
+  # log
+  try(stop("Not enough events to fit model."))
+}
+# read data for stratified model
+data_cox_strata <- read_rds(here::here("output", "model", glue("data_cox_strata_{db}_{timescale}_{outcome}.rds")))
+strata = nrow(data_cox_strata) > 0
+# check dataset not empty
+if (!strata & timescale == "calendartime") {
+  # log
+  try(stop("Not enough events to fit model with calendar timescale."))
+}
+
+## Import formulas 
+if (full) {
+  formulas_full <- read_rds(here::here("output", "model", glue("formulas_full_{db}_{timescale}_{outcome}.rds")))
+}
+if (strata) {
+  formulas_strata <- read_rds(here::here("output", "model", glue("formulas_strata_{db}_{timescale}_{outcome}.rds")))
+}
+
+# # read in incidence rate ratio table
+# irr_name = glue("table_irr_{db}_{timescale}_redacted.rds")
+irr_name = "table_irr_redacted.rds"
+irr_table = read_rds(here::here("output", "tables", irr_name))
+irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
+
+## Import outcomes
+outcomes_list <- read_rds(
+  here::here("output", "lib", "outcomes.rds")
+)
+outcomes_index = which(outcomes_list$short_name == outcome)
+selected_outcome = outcomes_list$short_name[outcomes_index]
+selected_outcome_clean = outcomes_list$clean_name[outcomes_index]
 
 ## Import custom user functions and packages
-source(here::here("analysis", "functions.R"))
+# source(here::here("analysis", "functions.R"))
 
 ## Create directory for full model outputs
-dir.create(here::here("output", "model", db), showWarnings = FALSE, recursive=TRUE)
-
-## Set analysis intervals and last follow-up day
-# TBC
-postvaxcuts <- 56*0:5
-postvax_periods = c("1-56", "57-112", "113-168", "169-224", "225-280")
-lastfupday <- max(postvaxcuts)
+dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
 
 ## create special log file ----
-cat(glue("## script info for cox models ##"), "  \n", file = here::here("output", "model", db, glue("modelcox_log.txt")), append = FALSE)
+cat(glue("## script info for cox models ##"), "  \n", file = here::here("output", "model", glue("cox_model_log_{db}_{timescale}_{output}.txt")), append = FALSE)
 
 ## function to pass additional log text
 logoutput <- function(...){
-  cat(..., file = here::here("output", "model", db, glue("modelcox_log.txt")), sep = "\n  ", append = TRUE)
-  cat("\n", file = here::here("output", "model", db, glue("modelcox_log.txt")), sep = "\n  ", append = TRUE)
+  cat(..., file = here::here("output", "model", glue("cox_model_log_{db}_{timescale}_{output}.txt")), sep = "\n  ", append = TRUE)
+  cat("\n", file = here::here("output", "model", glue("cox_model_log_{db}_{timescale}_{output}.txt")), sep = "\n  ", append = TRUE)
 }
-
-### print dataset size ----
-logoutput(
-  glue("data_cohort data size = ", nrow(data_cohort)),
-  glue("data_cohort memory usage = ", format(object.size(data_cohort), units="GB", standard="SI", digits=3L))
-)
-
-# create dataset containing one row per patient per post-vaccination period
-postvax_time <- data_cohort %>%
-  select(patient_id) %>%
-  uncount(weights = length(postvaxcuts), .id="id_postvax") %>%
-  mutate(
-    fup_day = postvaxcuts[id_postvax],
-    timesincevax_pw = timesince_cut(fup_day+1, postvaxcuts)
-  ) %>%
-  droplevels()# %>%
-  # 6 rows per patient (one per follow-up period)
-  # id_postvax = comparison period
-  # fup_day = final day of preceding follow-up period
-  # timesincevax_pw = days included in follow-up period
-  # select(patient_id, fup_day, timesincevax_pw)
-
-
-
-####################################################### 
-### formulae for unadjusted/adjusted models
-#######################################################
-if (db=="VE") {
-  # cox models stratified by follow-up window
-  formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(timesincevax_pw)
-  formula1 <- formula0 %>% update(. ~ . + strata(region)*ns(vax2_day, 3))
-  formula2 <- formula1 %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + ckd_5cat + immunosuppression + care_home + sex + imd + ethnicity + 
-                                    rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
-  
-  # cox models for full follow-up time
-  formula0_full <- Surv(follow_up_time, ind_outcome) ~ vax2_az
-  formula1_full <- formula0_full %>% update(. ~ . + strata(region)*ns(vax2_day, 3))
-  formula2_full <- formula1_full %>% update(. ~ . + poly(age, degree = 2, raw = TRUE) + ckd_5cat + immunosuppression + care_home + sex + imd + ethnicity + 
-                                              rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
-
-} else if (db=="VE_matched") {
-  # cox models stratified by follow-up window - matched analysis
-  formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(timesincevax_pw)
-  formula1 <- formula0 %>% update(. ~ . + ns(vax2_day, 3)) # no longer need to adjust for region
-  formula2 <- formula1 %>% update(. ~ . + sex + imd + ethnicity + rural_urban_group + prevax_tests_cat + multimorb + sev_mental_ill) # no longer need to adjust for age or prior COVID
-  
-  # cox models for full follow-up time
-  formula0_full <- Surv(follow_up_time, ind_outcome) ~ vax2_az
-  formula1_full <- formula0_full %>% update(. ~ . + ns(vax2_day, 3)) # no longer need to adjust for region
-  formula2_full <- formula1_full %>% update(. ~ . + sex + imd + ethnicity + rural_urban_group + prevax_tests_cat + multimorb + sev_mental_ill) # no longer need to adjust for age or prior COVID
-} else if (db=="VE_calendar_timw") {
-  #TODO
-  # cox models stratified by follow-up window
-  formula0 <- Surv(tstart, tstop, ind_outcome) ~ vax2_az:strata(id_postvax)
-  formula1 <- formula0 %>% update(. ~ . + strata(strata_var)) # strata_var = region * jcvi_group
-  formula2 <- formula1 %>% update(. ~ . + 
-                                    poly(age, degree = 2, raw = TRUE) +
-                                    # poly(age_1, degree = 2, raw = TRUE) + # care home (no restriction on age)
-                                    # poly(age_2, degree = 2, raw = TRUE) + # 80+
-                                    # poly(age_3, degree = 1, raw = TRUE) + # 75-79
-                                    # poly(age_4a, degree = 1, raw = TRUE) + # 70-74
-                                    # poly(age_4b, degree = 2, raw = TRUE) + # 16-69
-                                    # poly(age_5, degree = 1, raw = TRUE) + # 65-69
-                                    # poly(age_6, degree = 2, raw = TRUE) + # 16-64
-                                    ckd_5cat + immunosuppression + 
-                                    # care_home + # remove carehome as only jcvi group 1? 
-                                    sex + imd + ethnicity + rural_urban_group + prior_covid_cat + prevax_tests_cat + multimorb + sev_mental_ill)
-}
-
-
 
 ####################################################### 
 ### function to fit cox model for specified formula 
@@ -161,23 +111,25 @@ cox_model_VE <- function(number, formula_cox, stratified=TRUE) {
   if (number==1) { model_type = "region/date adjusted" } 
   if (number==2) { model_type = "fully adjusted" } 
   
-  if (db == "VE_calendar_time" & !stratified) stop("Must set stratified=TRUE if db=\"VE_calendar_time\"")
+  if (timescale == "calendartime" & !stratified) stop("Must set stratified=TRUE if using calendar timescale")
   
   if (stratified) {
+    data_cox <- data_cox_strata
     # if stratified = FALSE, fit cox model stratified by follow-up window
     coxmod <- coxph(
       formula = formula_cox,
-      data = data_cox, # input data
+      data = data_cox,
       robust = TRUE, # compute robust variance
       id = patient_id, # required since multiple rows per subject
       na.action = "na.fail",
       control = coxph.control(iter.max = 50)
     )
   } else {
+    data_cox <- data_cox_full
     # if stratified = FALSE, fit model on full dataset
     coxmod <- coxph(
       formula_cox, 
-      data = data_tte,
+      data = data_cox,
       control = coxph.control(iter.max = 50)
       )
   }
@@ -215,7 +167,7 @@ cox_model_VE <- function(number, formula_cox, stratified=TRUE) {
     glance$convergence = coxmod$info[["convergence"]]
   } else {
     tidy$level = glance$level = "full"
-    glance$convergence = NA
+    glance$convergence = NA # why?
   }
   
   # model outputs
@@ -224,115 +176,110 @@ cox_model_VE <- function(number, formula_cox, stratified=TRUE) {
   lst(glance, tidy)
 }
 
-
-
-
-####################################################### 
-# loop to fit cox model across outcome
-####################################################### 
-
-outcome_list = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death")
-clean_list = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death")
-date_list = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date")
-
-# read in incidence rate ratio table
-irr_table = read_rds(here::here("output", "tables", irr_name))
-
-for (i in 1:length(outcome_list)) {
-  
-  selected_outcome = outcome_list[i]
-  selected_outcome_clean = clean_list[i]
-  irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
-  
-  data_tte <- data_cohort %>% 
-    mutate(
-      # select dates for outcome in question
-      outcome_date = get(date_list[i]),
-      
-      # censor date already defined in data_selection_VE.R script 
-      
-      # calculate tte and ind for outcome in question
-      tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=TRUE),
-      ind_outcome = get(paste0("ind_",selected_outcome)),
-      tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-      
-      # calculate follow-up time (censor/event)
-      follow_up_time = tte(vax2_date-1, get(date_list[i]), censor_date) 
-  )
-  
-  data_cox <- tmerge(
-    data1 = data_tte %>% select(-starts_with("ind_"), -ends_with("_date")),
-    data2 = data_tte,
-    id = patient_id,
-    tstart = 0L,
-    tstop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-    ind_outcome = event(tte_outcome)
-  ) %>%
-    tmerge( # create treatment timescale variables
-      data1 = .,
-      data2 = postvax_time,
-      id = patient_id,
-      timesincevax_pw = tdc(fup_day, timesincevax_pw)
-    )
-  # set factor levels for postvaccination periods
-  data_cox$timesincevax_pw = factor(data_cox$timesincevax_pw, levels = postvax_periods)
-  
-  # derive strata_var if using calendar timescale
-  if (db == "VE_calendar_time") {
-    data_cox <- data_cox %>% mutate(strata_var = as.character(glue("{jcvi_group}_{region}")))
+#######################################################
+# fit cox models
+#######################################################
+## Redact statistical outputs if <=10 events in glance
+redact_glance <- function(.data) {
+  redaction_columns = c(
+    "nevent", "statistic.log", "p.value.log", "statistic.sc", "p.value.sc",
+    "statistic.wald", "p.value.wald", "statistic.robust", "p.value.robust", 
+    "r.squared", "r.squared.max", "concordance", "std.error.concordance", 
+    "logLik", "AIC", "BIC")
+  for (i in 1:nrow(.data)) {
+    if (.data$nevent[i]>0 & .data$nevent[i]<=10) { .data[i,names(.data) %in% redaction_columns] = "[Redacted]" }
   }
-  
-  ### print dataset size and save ----
-  logoutput(
-    glue(selected_outcome_clean, "\ndata_cox data size = ", nrow(data_cox)),
-    glue("data_cox memory usage = ", format(object.size(data_cox), units="GB", standard="SI", digits=3L))
-  )
+}
 
-  # assign("last.warning", NULL, envir = baseenv()) # clear warnings
-  # always run stratified models
+
+if (full) {
   summary0_full <- cox_model_VE(0, formula0_full, stratified=FALSE)
   summary1_full <- cox_model_VE(1, formula1_full, stratified=FALSE)
   summary2_full <- cox_model_VE(2, formula2_full, stratified=FALSE)
-  # only run on full dataset if db!="VE_calendar_time"
-  if (db != "VE_calendar_time") {
-    summary0 <- cox_model_VE(0, formula0)
-    summary1 <- cox_model_VE(1, formula1)
-    summary2 <- cox_model_VE(2, formula2)
-  } else {
-  # otherwise save empty datasets
-    summary0 <- list(glance = tibble(), tidy = tibble())
-    summary1 <- list(glance = tibble(), tidy = tibble())
-    summary2 <- list(glance = tibble(), tidy = tibble())
-  }
   
-  ## Combine and save model summary (brief) 
-  model_glance <- data.frame(
-    bind_rows(summary0$glance, summary0_full$glance, 
-              summary1$glance, summary1_full$glance, 
-              summary2$glance, summary2_full$glance) %>%
-    mutate(outcome = selected_outcome, 
-           outcome_clean = selected_outcome_clean)
+  # glance
+  model_glance_full <- bind_rows(
+    summary0_full$glance, 
+    summary1_full$glance, 
+    summary2_full$glance
+    ) %>%
+    mutate(
+      outcome = outcome, 
+      outcome_clean = clean_list[outcome_list == outcome]
+      ) %>%
+    redact_glance()
+  
+  # save model summary
+  write_csv(
+    model_glance,
+    here::here("output", "model", glue("modelcox_glance_full_{db}_{timescale}_{selected_outcome}.csv"))
+    )
+  
+  
+  # tidy
+  model_tidy_full <- bind_rows(
+    summary0_full$tidy, 
+    summary1_full$tidy, 
+    summary2_full$tidy
+  ) %>%
+    mutate(
+      outcome = outcome, 
+      outcome_clean = clean_list[outcome_list == outcome]
+    )
+  
+  write_csv(
+    model_tidy, 
+    here::here("output", "model", glue("modelcox_tidy_full_{db}_{timescale}_{selected_outcome}.csv"))
+    )
+  
+}
+if (strata) {
+  summary0_strata <- cox_model_VE(0, formula0_strata, stratified=TRUE)
+  summary1_strata <- cox_model_VE(1, formula1_strata, stratified=TRUE)
+  summary2_strata <- cox_model_VE(2, formula2_strata, stratified=TRUE)
+  
+  # glance
+  model_glance_strata <- bind_rows(
+    summary0_strata$glance, 
+    summary1_strata$glance, 
+    summary2_strata$glance
+  ) %>%
+    mutate(
+      outcome = outcome, 
+      outcome_clean = clean_list[outcome_list == outcome]
+    ) %>%
+    redact_glance()
+  
+  # save model summary
+  write_csv(
+    model_glance,
+    here::here("output", "model", glue("modelcox_glance_strata_{db}_{timescale}_{selected_outcome}.csv"))
   )
   
-  ## Redact statistical outputs if <=10 events
-  redaction_columns = c("nevent", "statistic.log", "p.value.log", "statistic.sc", "p.value.sc", "statistic.wald", "p.value.wald", 
-                        "statistic.robust", "p.value.robust", "r.squared", "r.squared.max", "concordance", "std.error.concordance", "logLik", "AIC", "BIC")
-  for (i in 1:nrow(model_glance)) {
-    if (model_glance$nevent[i]>0 & model_glance$nevent[i]<=10) { model_glance[i,names(model_glance)%in%redaction_columns] = "[Redacted]" }
-  }
-  write_csv(model_glance, here::here("output", "model", db, glue(paste0("modelcox_glance_",selected_outcome,".csv"))))
+  # tidy
+  model_tidy_strata <- bind_rows(
+    summary0_strata$tidy, 
+    summary1_strata$tidy, 
+    summary2_strata$tidy
+  ) %>%
+    mutate(
+      outcome = outcome, 
+      outcome_clean = clean_list[outcome_list == outcome]
+    )
   
-  # combine and save model summary (full) 
-  model_tidy <- bind_rows(summary0$tidy, summary0_full$tidy, 
-                          summary1$tidy, summary1_full$tidy, 
-                          summary2$tidy, summary2_full$tidy) %>%
-    mutate(outcome = selected_outcome, 
-           outcome_clean = selected_outcome_clean)
-  write_csv(model_tidy, here::here("output", "model", db, glue(paste0("modelcox_tidy_full_",selected_outcome,".csv"))))
+  write_csv(
+    model_tidy, 
+    here::here("output", "model", glue("modelcox_tidy_strata_{db}_{timescale}_{selected_outcome}.csv"))
+  )
+}
+
+reduce_tidy <- function(.data) {
   
   # combine and save model summary (full - simplified)
-  model_tidy_reduced <- data.frame(model_tidy) %>%
-    filter(str_detect(term, fixed("timesincevax_pw")) | str_detect(term, fixed("vax2_az"))) %>%
+  model_tidy_reduced <- .data %>%
+    filter(
+      str_detect(term, fixed("timesincevax_pw")) | str_detect(term, fixed("vax2_az"))
+      ) %>%
     mutate(
       term=str_replace(term, pattern=fixed("vax2_az:strata(timesincevax_pw)"), ""),
       term=fct_inorder(term),
@@ -347,13 +294,26 @@ for (i in 1:length(outcome_list)) {
   model_tidy_reduced$BNT_events = irr_sub$BNT_events
   model_tidy_reduced$AZ_n = irr_sub$AZ_n
   model_tidy_reduced$AZ_events = irr_sub$AZ_events
-  redaction_columns = c("n_event", "exposure", "estimate", "std.error", "robust.se", "statistic", "p.value", "conf.low", "conf.high")
-  for (i in 1:nrow(model_tidy_reduced)) {
-    if (model_tidy_reduced$BNT_events[i]=="[Redacted]" | model_tidy_reduced$AZ_events[i]=="[Redacted]") { model_tidy_reduced[i,names(model_tidy_reduced)%in%redaction_columns] = "[Redacted]" }
-    if (model_tidy_reduced$BNT_events[i]=="0" & model_tidy_reduced$AZ_events[i]=="0") { model_tidy_reduced[i,names(model_tidy_reduced)%in%redaction_columns] = "[No events]" }
-  }
   
-  write_csv(model_tidy_reduced, here::here("output", "model", db, glue(paste0("modelcox_tidy_reduced_",selected_outcome,".csv"))))
-  write_rds(model_tidy_reduced, here::here("output", "model", db, glue(paste0("modelcox_tidy_reduced_",selected_outcome,".rds"))), compress="gz")
+  redaction_columns = c(
+    "n_event", "exposure", "estimate", "std.error", "robust.se", "statistic", 
+    "p.value", "conf.low", "conf.high")
+  
+  for (i in 1:nrow(model_tidy_reduced)) {
+    if (
+      model_tidy_reduced$BNT_events[i]=="[Redacted]" |
+      model_tidy_reduced$AZ_events[i]=="[Redacted]"
+    ) { 
+      model_tidy_reduced[i,names(model_tidy_reduced) %in% redaction_columns] = "[Redacted]"
+      }
+    if (
+      model_tidy_reduced$BNT_events[i]=="0" & 
+      model_tidy_reduced$AZ_events[i]=="0"
+    ) {
+      model_tidy_reduced[i,names(model_tidy_reduced)%in%redaction_columns] = "[No events]" 
+      }
+  }
 }
 
+write_csv(model_tidy_reduced, here::here("output", "model", db, glue(paste0("modelcox_tidy_reduced_",selected_outcome,".csv"))))
+write_rds(model_tidy_reduced, here::here("output", "model", db, glue(paste0("modelcox_tidy_reduced_",selected_outcome,".rds"))), compress="gz")
