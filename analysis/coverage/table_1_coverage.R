@@ -1,7 +1,7 @@
 ######################################
 
 # This script 
-# - produces a table with the study cohort in study population in relation to selected clinical and demographic groups
+# - produces a table summarising selected clinical and demographic groups in study cohort (overall and stratified by kidney disease subgroup)
 # - saves table as html
 
 ######################################
@@ -27,7 +27,7 @@ if(length(args)==0) {
   } else if (args[[1]]=="dose4") {
     outcome_label = "dose4"
   } else {
-    # print error if no argument specified
+    # Print error if no argument specified
     stop("No outcome specified")
   }
 }
@@ -50,20 +50,20 @@ if (outcome_label=="dose3") {
 data_cohort <- data_cohort %>%
   mutate(
     N = 1,
-    allpop = "All",
-    bpcat = ifelse(bpcat=="High" | bpcat=="Elevated", 1, 0)
+    allpop = "All"
   ) 
 
+## Define variables of interest
 counts <- data_cohort %>% 
   select(
          N,
          allpop,
+         
          ## Demographics
          ageband2,
          sex,
          ethnicity,
          imd,
-         region,
          rural_urban_group,
          
          # CKD groups and coding
@@ -89,13 +89,14 @@ counts <- data_cohort %>%
          asplenia,
          cancer,
          haem_cancer,
-         non_kidney_transplant,
+         other_transplant,
          chronic_neuro_dis_inc_sig_learn_dis,
          sev_mental_ill,
          cev_other,
 
          ## Other descriptors of interest
-         jcvi_group,
+         region,
+         jcvi_group
          ) 
 
 ## Function to clean table names
@@ -115,7 +116,7 @@ clean_table_names = function(input_table) {
   input_table$Variable[input_table$Variable=="asplenia"] = "Asplenia"
   input_table$Variable[input_table$Variable=="cancer"] = "Cancer (non-haematologic)"
   input_table$Variable[input_table$Variable=="haem_cancer"] = "Haematologic cancer"
-  input_table$Variable[input_table$Variable=="non_kidney_transplant"] = "Organ transplant (non-kidney)"
+  input_table$Variable[input_table$Variable=="other_transplant"] = "Organ transplant (non-kidney)"
   input_table$Variable[input_table$Variable=="chronic_neuro_dis_inc_sig_learn_dis"] = "Chronic neurological disease (inc. learning disability)"
   input_table$Variable[input_table$Variable=="sev_mental_ill"] = "Severe mental illness"
   input_table$Variable[input_table$Variable=="cev_other"] = "Clinically extremely vulnerable (other)"
@@ -124,7 +125,6 @@ clean_table_names = function(input_table) {
   input_table$Variable[input_table$Variable=="kidney_transplant"] = "Kidney transplant code"
   
   # Relabel groups for plotting
-  # Demography
   input_table$Group[input_table$Group=="ageband2"] = "Age"
   input_table$Group[input_table$Group=="sex"] = "Sex"
   input_table$Group[input_table$Group=="ethnicity"] = "Ethnicity"
@@ -133,12 +133,12 @@ clean_table_names = function(input_table) {
   input_table$Group[input_table$Group=="jcvi_group"] = "JCVI group"
   input_table$Group[input_table$Group=="rural_urban_group"] = "Setting"
   input_table$Group[input_table$Group=="ckd_5cat"] = "Kidney disease subgroup"
-
-  # Other
-  input_table$Group[(input_table$Variable %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care"))] = "Risk group (occupation/accessibility)"
   input_table$Group[(input_table$Variable %in% c("CKD3-5 code", "Dialysis code", "Kidney transplant code"))] = "Primary care coding of kidney disease"
-  input_table$Group[!(input_table$Group %in% c("Age", "Sex", "Ethnicity", "IMD", "Region", "JCVI group", "Setting", "Kidney disease subgroup", 
-                                               "Risk group (occupation/accessibility)", "Primary care coding of kidney disease"))] = "Risk group (clinical)"
+  input_table$Group[(input_table$Variable %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care"))] = "Risk group (occupation/access)"
+  input_table$Group[input_table$Variable %in% c("Prior SARS-CoV-2", "Immunosuppression", "Moderate/severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
+                                              "Chronic heart disease", "Chronic liver disease","Asplenia", "Cancer (non-haematologic)", "Haematologic cancer", "Obesity", 
+                                              "Organ transplant (non-kidney)", "Chronic neurological disease (inc. learning disability)", "Severe mental illness", 
+                                              "Clinically extremely vulnerable (other)")] = "Risk group (clinical)"
   input_table$Group[input_table$Variable=="N"] = "N"
   return(input_table)
 }
@@ -146,7 +146,7 @@ clean_table_names = function(input_table) {
 ## Generate full and stratified table
 ckd_levels = c("All", "CKD3a", "CKD3b",  "CKD4-5", "RRT (dialysis)", "RRT (Tx)")
 
-## Generate CKD-statified table
+## Generate table - full and stratified populations
 for (i in 1:length(ckd_levels)) {
   
   if (i == 1) { 
@@ -157,8 +157,8 @@ for (i in 1:length(ckd_levels)) {
   } else { 
     data_subset = subset(counts, ckd_5cat==ckd_levels[i]) 
     counts_summary = data_subset %>% 
-    select(-ckd_5cat) %>% 
-    tbl_summary(by = allpop)
+      select(-ckd_5cat) %>% 
+      tbl_summary(by = allpop)
     counts_summary$inputs$data <- NULL
   }
 
@@ -176,7 +176,7 @@ for (i in 1:length(ckd_levels)) {
   table1_clean = clean_table_names(table1)
   
   ## Calculate rounded total
-  rounded_n = plyr::round_any(nrow(data_subset),rounding_threshold)
+  rounded_n = plyr::round_any(nrow(data_subset), rounding_threshold)
   
   ## Round individual values to rounding threshold
   table1_redacted <- table1_clean %>%

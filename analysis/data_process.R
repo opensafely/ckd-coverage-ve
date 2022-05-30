@@ -4,7 +4,7 @@
 # - imports data extracted by the cohort extractor
 # - sets variable types (e.g. factors, dates, characters) and derives new variables (eGFR, CKD subgroup, etc)
 # - applies additional dummy data processing steps via dummy_data.R script if being run locally (skipped if being run on OpenSAFELY server)
-# - saves processed data as data_processed.csv/data_processed.rds
+# - saves processed data as data_processed.csv abd data_processed.rds
 
 ######################################
 
@@ -166,9 +166,9 @@ data_extract <- data_extract %>%
 
 data_extract <- data_extract %>%
   mutate(
-    ## define variables needed for calculation
-    creatinine = replace(creatinine, creatinine <20 | creatinine >3000, NA), # set implausible creatinine values to missing
-    SCR_adj = creatinine/88.4 # divide by 88.4 (to convert umol/l to mg/dl)
+    ## Define variables needed for calculation
+    creatinine = replace(creatinine, creatinine <20 | creatinine >3000, NA), # Set implausible creatinine values to missing
+    SCR_adj = creatinine/88.4 # Divide by 88.4 (to convert umol/l to mg/dl)
   ) %>%
   rowwise() %>%
   mutate(
@@ -200,23 +200,23 @@ data_extract <- data_extract %>%
 data_extract <- data_extract %>%
   mutate(
     # Add UKRR modality at index date - either 2020 modality, or 2019 modality if died between index date and end of 2020
-    ukrr_index_mod = ifelse((!is.na(death_date) & death_date>=as_date("2020-12-01") & death_date<=as_date("2020-12-31")) |
-                             (!is.na(dereg_date) & dereg_date>=as_date("2020-12-01") & dereg_date<=as_date("2020-12-31")), ukrr_2019_mod, ukrr_2020_mod),
+    ukrr_index_mod = ifelse(((!is.na(death_date)) & death_date>=as_date("2020-12-01") & death_date<=as_date("2020-12-31")) |
+                             ((!is.na(dereg_date)) & dereg_date>=as_date("2020-12-01") & dereg_date<=as_date("2020-12-31")), ukrr_2019_mod, ukrr_2020_mod),
 
     # 2019
     ukrr_2019_group = "None",
-    ukrr_2019_group = ifelse(!is.na(ukrr_2019_mod) & ukrr_2019_mod == "Tx", "Tx", ukrr_2019_group),
-    ukrr_2019_group = ifelse(!is.na(ukrr_2019_mod) & (ukrr_2019_mod == "ICHD" | ukrr_2019_mod == "HHD" | ukrr_2019_mod == "HD" | ukrr_2019_mod == "PD"), "Dialysis", ukrr_2019_group),
+    ukrr_2019_group = ifelse((!is.na(ukrr_2019_mod)) & ukrr_2019_mod == "Tx", "Tx", ukrr_2019_group),
+    ukrr_2019_group = ifelse((!is.na(ukrr_2019_mod)) & (ukrr_2019_mod == "ICHD" | ukrr_2019_mod == "HHD" | ukrr_2019_mod == "HD" | ukrr_2019_mod == "PD"), "Dialysis", ukrr_2019_group),
     
     # 2020
     ukrr_2020_group = "None",
-    ukrr_2020_group = ifelse(!is.na(ukrr_2020_mod) & ukrr_2020_mod == "Tx", "Tx", ukrr_2020_group),
-    ukrr_2020_group = ifelse(!is.na(ukrr_2020_mod) & (ukrr_2020_mod == "ICHD" | ukrr_2020_mod == "HHD" | ukrr_2020_mod == "HD" | ukrr_2020_mod == "PD"), "Dialysis", ukrr_2020_group),
+    ukrr_2020_group = ifelse((!is.na(ukrr_2020_mod)) & ukrr_2020_mod == "Tx", "Tx", ukrr_2020_group),
+    ukrr_2020_group = ifelse((!is.na(ukrr_2020_mod)) & (ukrr_2020_mod == "ICHD" | ukrr_2020_mod == "HHD" | ukrr_2020_mod == "HD" | ukrr_2020_mod == "PD"), "Dialysis", ukrr_2020_group),
     
     # Index (01-Dec-2020)
     ukrr_index_group = "None",
-    ukrr_index_group = ifelse(!is.na(ukrr_index_mod) & ukrr_index_mod == "Tx", "Tx", ukrr_index_group),
-    ukrr_index_group = ifelse(!is.na(ukrr_index_mod) & (ukrr_index_mod == "ICHD" | ukrr_index_mod == "HHD" | ukrr_index_mod == "HD" | ukrr_index_mod == "PD"), "Dialysis", ukrr_index_group),
+    ukrr_index_group = ifelse((!is.na(ukrr_index_mod)) & ukrr_index_mod == "Tx", "Tx", ukrr_index_group),
+    ukrr_index_group = ifelse((!is.na(ukrr_index_mod)) & (ukrr_index_mod == "ICHD" | ukrr_index_mod == "HHD" | ukrr_index_mod == "HD" | ukrr_index_mod == "PD"), "Dialysis", ukrr_index_group),
 
     # Set modalities as 'None' instead of NA
     ukrr_2019_mod = ifelse(is.na(ukrr_2019_mod), "None", ukrr_2019_mod), 
@@ -224,8 +224,8 @@ data_extract <- data_extract %>%
     ukrr_index_mod = ifelse(is.na(ukrr_index_mod), "None", ukrr_index_mod), 
 
     # Flag issues with ambiguous creatinine entries - either no creatinine-associated age or creatinine-linked operator (impacting interpretation of numeric values)
-    creatinine_date_issue = ifelse(!is.na(creatinine) & is.na(age_creatinine),1,0),
-    creatinine_operator_issue = ifelse(!is.na(creatinine_operator) & creatinine_operator %in% c("~", ">=", ">", "<", "<="),1,0)
+    creatinine_date_issue = ifelse((!is.na(creatinine)) & is.na(age_creatinine),1,0),
+    creatinine_operator_issue = ifelse((!is.na(creatinine_operator)) & creatinine_operator %in% c("~", ">=", ">", "<", "<="),1,0)
   )
 
 ## Print key processing metrics to log file
@@ -257,8 +257,8 @@ print(table((data_extract$ukrr_index_group=="Dialysis" | data_extract$ukrr_index
 
 print("Sum UKRR 2019 population with dereg/death between 01-Dec-2020 and 31-Dec-2020")
 print(sum(data_extract$ukrr_2019==1 &
-  ((!is.na(data_extract$death_date) & data_extract$death_date>=as_date("2020-12-01") & data_extract$death_date<=as_date("2020-12-31")) |
-            (!is.na(data_extract$dereg_date) & data_extract$dereg_date>=as_date("2020-12-01") & data_extract$dereg_date<=as_date("2020-12-31")))))
+  (((!is.na(data_extract$death_date)) & data_extract$death_date>=as_date("2020-12-01") & data_extract$death_date<=as_date("2020-12-31")) |
+            ((!is.na(data_extract$dereg_date)) & data_extract$dereg_date>=as_date("2020-12-01") & data_extract$dereg_date<=as_date("2020-12-31")))))
 
 ## Add derived variables
 data_processed <- data_extract %>%
@@ -282,7 +282,7 @@ data_processed <- data_extract %>%
     ckd_5cat = ckd_6cat,
     ckd_5cat = ifelse(ckd_6cat == "CKD4" | ckd_6cat == "CKD5", "CKD4-5", ckd_5cat),
     
-    # flag individuals with mismatch between UKRR and primary care data
+    # Flag individuals with mismatch between UKRR and primary care data
     rrt_mismatch = ifelse((ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b" | ckd_5cat=="CKD4-5") & (dialysis==1 | kidney_transplant==1), 1, 0),
     
     # Age
@@ -387,7 +387,10 @@ data_processed <- data_extract %>%
     ),
     
     # Immunosuppression
-    immunosuppression = ifelse(!is.na(immunosuppression_diagnosis_date) | !is.na(immunosuppression_medication_date), 1, 0),
+    immunosuppression = ifelse((!is.na(immunosuppression_diagnosis_date)) | (!is.na(immunosuppression_medication_date)), 1, 0),
+    
+    # Other transplant excluding kidney transplants
+    other_transplant = ifelse((organ_transplant==1 | non_kidney_transplant==1) & kidney_transplant==0 & ukrr_2020_group!="Tx", 1, 0), 
     
     # Any respiratory disease
     any_resp_dis= ifelse(chronic_resp_dis==1 | asthma==1, 1, 0), 
@@ -399,10 +402,10 @@ data_processed <- data_extract %>%
     rrt_2020 = ifelse(ukrr_2020_group=="Tx" | ukrr_2020_group=="Dialysis", 1, 0),
     any_comorb = pmax(rrt_2020, 
                       immunosuppression, mod_sev_obesity, diabetes, any_resp_dis,
-                      chd, cld, asplenia, cancer, haem_cancer, non_kidney_transplant, chronic_neuro_dis_inc_sig_learn_dis, sev_mental_ill),
+                      chd, cld, asplenia, any_cancer, other_transplant, chronic_neuro_dis_inc_sig_learn_dis, sev_mental_ill),
     cev_other = ifelse(cev==1 & any_comorb==0, 1, 0),
     
-    # Multiple comorbidities (non-CKD) - 0, 1, or 2+
+    # Multiple comorbidities (non-CKD-related) - 0, 1, or 2+
     multimorb =
       (mod_sev_obesity) +
       (diabetes) +
@@ -410,8 +413,8 @@ data_processed <- data_extract %>%
       (chd) +
       (cld) +
       (asplenia) +
-      (cancer) +
-      (haem_cancer),
+      (any_cancer) +
+      (other_transplant),
     multimorb = cut(multimorb, breaks = c(0, 1, 2, Inf), labels=c("0", "1", "2+"), right=FALSE),
     
     # Prior COVID - index
@@ -420,7 +423,7 @@ data_processed <- data_extract %>%
     # Prior COVID - boost index
     prior_covid_cat_boost = as.numeric(!is.na(pmin(prior_positive_test_date_boost, prior_primary_care_covid_case_date_boost, prior_covid_hospitalisation_date_boost, na.rm=TRUE))),
 
-    # COVID in window spanning 90 days pre dose 1 up to dose 2
+    # COVID in window spanning 90 days pre dose 1
     prevax_covid_cat = as.numeric(!is.na(pmin(prevax_positive_test_date, prevax_primary_care_covid_case_date, prevax_covid_hospitalisation_date, na.rm=TRUE))),
 
     # Number of tests in pre-vaccination period

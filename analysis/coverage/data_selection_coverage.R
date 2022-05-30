@@ -6,8 +6,6 @@
 # outputs inclusion/exclusions flowchart data
 # # # # # # # # # # # # # # # # # # # # #
 
-# Preliminaries ----
-
 ## Import libraries ----
 library('tidyverse')
 library('lubridate')
@@ -47,15 +45,16 @@ data_criteria <- data_processed %>%
     has_max_5_vax = n_vax <= 5, # maximum of 5 recorded doses
     valid_vaxgap12 = tbv1_2 >= 14 | is.na(vax2_date), # at least 14 days between dose 1 and dose 2 if dose 2 given
     valid_vaxgap23 = tbv2_3 >= 14 | is.na(vax3_date), # at least 14 days between dose 2 and dose 3 if dose 3 given
-    valid_vaxgap34 = tbv3_4 >= 14 | is.na(vax4_date), # at least 14 days between dose 3 and dose 4 f dose 3 given
+    valid_vaxgap34 = tbv3_4 >= 14 | is.na(vax4_date), # at least 14 days between dose 3 and dose 4 if dose 4 given
     
     # Dose 4 denominator
-    eligible_dose4 = (age>=75 | care_home==1 | haem_cancer==1 | immunosuppression==1 | ckd_5cat=="RRT (Tx)" | non_kidney_transplant==1), 
+    eligible_dose4 = (age>=75 | care_home==1 | haem_cancer==1 | immunosuppression==1 | ckd_5cat=="RRT (Tx)" | other_transplant==1), 
     
     # Other
     alive_throughout = is.na(death_date),
     registered_throughout = is.na(dereg_date),
     
+    # Primary outcome study population
     include = (
       has_age & 
       has_valid_creatinine_or_ukrr & has_ckd_egfr_ukrr & has_no_rrt_mismatch &
@@ -63,16 +62,18 @@ data_criteria <- data_processed %>%
       has_max_5_vax & valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34
     ),
 
+    # Logistic regression population (sensitivity analysis)
     include_logistic = (
       include & alive_throughout & registered_throughout
     ),
     
+    # Secondary outcome population (dose 4)
     include_dose4 = (
       include & eligible_dose4
     ),
   )
 
-## Define data cohort for primary analysis
+## Define primary outcome population
 data_cohort <- data_criteria %>%
   filter(include) %>%
   select(patient_id) %>%
@@ -84,7 +85,7 @@ data_cohort <- data_criteria %>%
 write_rds(data_cohort, here::here("output", "data", "data_cohort_coverage.rds"), compress="gz")
 write_csv(data_cohort, here::here("output", "data", "data_cohort_coverage.csv"))
 
-## Define data cohort for logistic regression (sensitivity analyses)
+## Define logistic regression population (sensitivity analysis)
 data_cohort_logistic <- data_criteria %>%
   filter(include_logistic) %>%
   select(patient_id) %>%
@@ -95,7 +96,7 @@ data_cohort_logistic <- data_criteria %>%
 ## Save dataset
 write_rds(data_cohort_logistic, here::here("output", "data", "data_cohort_coverage_logistic.rds"), compress="gz")
 
-## Define data cohort for dose 4 analysis
+## Define secondary outcome population (dose 4)
 data_cohort_dose4 <- data_criteria %>%
   filter(include_dose4) %>%
   select(patient_id) %>%
@@ -106,9 +107,10 @@ data_cohort_dose4 <- data_criteria %>%
 ## Save dataset
 write_rds(data_cohort_dose4, here::here("output", "data", "data_cohort_coverage_dose4.rds"), compress="gz")
 
+## Create flowchart of inclusions/exclusions
 data_flowchart <- data_criteria %>%
   transmute(
-    # Primary analysis cohort
+    # Primary outcome study population
     c0 = study_definition & has_age,
     c1 = c0 & has_valid_creatinine_or_ukrr,
     c2 = c1 & has_ckd_egfr_ukrr,
@@ -116,10 +118,10 @@ data_flowchart <- data_criteria %>%
     c4 = c3 & (has_sex & has_imd & has_ethnicity & has_region),
     c5 = c4 & (has_max_5_vax),
     c6 = c5 & (valid_vaxgap12 & valid_vaxgap23 & valid_vaxgap34),
-    # Logistic regression analysis cohort
+    # Logistic regression population (sensitivity analysis)
     c7 = c6 & alive_throughout,
     c8 = c7 & registered_throughout,
-    # Dose 4 analysis cohort
+    # Secondary outcome population (dose 4)
     c9 = c6 & eligible_dose4
     ) %>%
   summarise(

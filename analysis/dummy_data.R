@@ -22,7 +22,7 @@ nsamples <- nrow(data_processed)
 
 # Set vaccination start date
 start_date <- date("2020-12-08")
-end_date <- date("2022-04-20")
+end_date <- date("2022-05-11")
 
 # Set distribution of CKD groups
 data_processed$ckd_6cat <- rcat(n=nsamples, c("No CKD", "CKD3a", "CKD3b", "CKD4", "CKD5",
@@ -41,22 +41,22 @@ data_processed$cev_other <- as.numeric(rcat(n=nsamples, c("0", "1"), c(0.9,0.1))
 # Set cev_other to 0 if in dialysis or Tx group
 data_processed$cev_other[data_processed$ckd_6cat %in% c("RRT (dialysis)", "RRT (Tx)")] = 0
 
-# set vaccine coverage for primary doses, third, and fourth dose
+# Set vaccine coverage for primary doses, third, and fourth dose
 primary_coverage <- 0.95
-third_coverage <- 0.6 # assignments only retained if primary doses given, so final prevalence ~0.6*0.95=0.57
-fourth_coverage <- 0.2 # assignments only retained if primary doses given, so final prevalence ~0.57*0.2=0.11
-fifth_coverage <- 0.05 # assignments only retained if primary doses given, so final prevalence ~0.57*0.2=0.11
+third_coverage <- 0.90 # assignments only retained if primary doses given, so final prevalence ~0.95*0.90=0.855
+fourth_coverage <- 0.40 # assignments only retained if primary doses given, so final prevalence ~0.855*0.40=0.342
+fifth_coverage <- 0.05 # assignments only retained if primary doses given, so final prevalence ~0.342*0.05=0.0171
 
-# set distribution of vaccine type for primary doses, third, and fourth doses (https://reports.opensafely.org/reports/vaccine-coverage/)
+# Set distribution of vaccine type for primary doses, third, and fourth doses (https://reports.opensafely.org/reports/vaccine-coverage/)
 primary_vax_type <- rcat(n=nsamples, c("pfizer","az","moderna",""), c(0.47*primary_coverage,0.5*primary_coverage,0.03*primary_coverage,1-primary_coverage))
 third_vax_type <- rcat(n=nsamples, c("pfizer","az","moderna",""), c(0.76*third_coverage,0.01*third_coverage,0.23*third_coverage,1-third_coverage))
 fourth_vax_type <- rcat(n=nsamples, c("pfizer","az","moderna",""), c(0.76*fourth_coverage,0.01*fourth_coverage,0.23*fourth_coverage,1-fourth_coverage))
 fifth_vax_type <- rcat(n=nsamples, c("pfizer","az","moderna",""), c(0.76*fifth_coverage,0.01*fifth_coverage,0.23*fifth_coverage,1-fifth_coverage))
 
-# set distribution of dates for dose 1 of each vaccine - all administered within 10 weeks of product initiation for purposes of dummy data
+# Set distribution of dates for dose 1 of each vaccine - all administered within 10 weeks of product initiation for purposes of dummy data
 data_processed$covid_vax_date_1 <- as_date(runif(nsamples, start_date, start_date+70)) 
 
-# set distribution of dates for doses 2-4 of each vaccine - all administered 10-20 weeks after preceding dose for purposes of dummy data
+# Set distribution of dates for doses 2-5 of each vaccine - all administered 10-20 weeks after preceding dose for purposes of dummy data
 for (i in 1:nsamples) { 
   data_processed$covid_vax_date_2[i] <- as_date(sample((data_processed$covid_vax_date_1[i]+70):(data_processed$covid_vax_date_1[i]+140),1))
   data_processed$covid_vax_date_3[i] <- as_date(sample((data_processed$covid_vax_date_2[i]+70):(data_processed$covid_vax_date_2[i]+140),1))
@@ -64,28 +64,28 @@ for (i in 1:nsamples) {
   data_processed$covid_vax_date_5[i] <- as_date(sample((data_processed$covid_vax_date_4[i]+70):(data_processed$covid_vax_date_4[i]+140),1))
 }
 
-# middle dose date of theoretical distribution:
-# dose 1: 021-01-12 #as_date("2020-12-08") + 35
-# dose 2: 2021-04-27 #as_date("2021-01-12") + 105
-# dose 3: 2021-08-10 #as_date("2021-04-27") + 105
-# dose 4: 2022-04-26 #as_date("2020-08-10") + 105
-# dose 5: 2022-03-08 #as_date("2020-11-23") + 105
+# Middle dose date of theoretical distribution:
+# Dose 1: 2021-01-12 #as_date("2020-12-08") + 35
+# Dose 2: 2021-04-27 #as_date("2021-01-12") + 105
+# Dose 3: 2021-08-10 #as_date("2021-04-27") + 105
+# Dose 4: 2021-11-23 #as_date("2021-08-10") + 105
+# Dose 5: 2022-03-08 #as_date("2021-11-23") + 105
 
-# set any dates above end date to NA
+# Set any dates above end date to NA
 data_processed$covid_vax_date_1[data_processed$covid_vax_date_1>end_date] = NA
 data_processed$covid_vax_date_2[data_processed$covid_vax_date_2>end_date] = NA
 data_processed$covid_vax_date_3[data_processed$covid_vax_date_3>end_date] = NA
 data_processed$covid_vax_date_4[data_processed$covid_vax_date_4>end_date] = NA
 data_processed$covid_vax_date_5[data_processed$covid_vax_date_5>end_date] = NA
 
-# remove vaccination dates for proportion with unassigned products
+# Remove vaccination dates for proportion with unassigned products
 data_processed$covid_vax_date_1[primary_vax_type==""] = NA
 data_processed$covid_vax_date_2[primary_vax_type==""] = NA
 data_processed$covid_vax_date_3[third_vax_type=="" | primary_vax_type==""] = NA
 data_processed$covid_vax_date_4[fourth_vax_type=="" | third_vax_type=="" | primary_vax_type==""] = NA
 data_processed$covid_vax_date_5[fifth_vax_type=="" | fourth_vax_type=="" | third_vax_type=="" | primary_vax_type==""] = NA
 
-# reset all product-specific dates to NA, then select global vaccine date for corresponding doses according to product distribution defined above
+# Reset all product-specific dates to NA, then select global vaccine date for corresponding doses according to product distribution defined above
 # pfizer
 data_processed$pfizer_date_1 = data_processed$pfizer_date_2 = data_processed$pfizer_date_3 = data_processed$pfizer_date_4 = data_processed$pfizer_date_5 = as_date(NA)
 data_processed$pfizer_date_1[primary_vax_type=="pfizer"] = data_processed$covid_vax_date_1[primary_vax_type=="pfizer"]
