@@ -19,7 +19,7 @@ from codelists import *
 
 ### Set initial date parameters
 start_date = "2020-12-01"
-end_date = "2022-04-20" # date of most recent coverage report update (https://reports.opensafely.org/reports/vaccine-coverage/)
+end_date = "2022-05-11" # date of most recent coverage report update (https://reports.opensafely.org/reports/vaccine-coverage/)
 # if end_date updated, also update return_expectations in defined variables for consistency
 
 study = StudyDefinition(
@@ -59,16 +59,16 @@ study = StudyDefinition(
 # COVID VACCINATION - ANY TYPE
 ###############################################################################
 
-    # date of first COVID vaccination - source nhs-covid-vaccination-coverage
+    # Date of first COVID vaccination - source nhs-covid-vaccination-coverage
     covid_vax_date_1=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
-        between=["2020-12-01",end_date],  # any dose recorded after 01/12/2020
+        between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
     ),
     
-    # date of second COVID vaccination - source nhs-covid-vaccination-coverage
+    # Date of second COVID vaccination - source nhs-covid-vaccination-coverage
     covid_vax_date_2=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
         between=["covid_vax_date_1 + 1 day",end_date], # from day after previous dose
@@ -77,9 +77,9 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of third COVID vaccination (primary or booster) - modified from nhs-covid-vaccination-coverage
+    # Date of third COVID vaccination (primary or booster) - modified from nhs-covid-vaccination-coverage
     # 01 Sep 2021: 3rd dose (primary) at interval of >=8w recommended for immunosuppressed
-    # 14 Sep 2021: 3rd dose (booster) reommended for groups 1-9 at >=6m
+    # 14 Sep 2021: 3rd dose (booster) reommended for JCVI groups 1-9 at >=6m
     # 15 Nov 2021: 3rd dose (booster) recommended for 40–49y at >=6m
     # 29 Nov 2021: 3rd dose (booster) recommended for 18–39y at >=3m
     covid_vax_date_3=patients.with_tpp_vaccination_record(
@@ -90,10 +90,9 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of fourth COVID vaccination (booster) - newly added
-    # booster for immunosuppressed individuals who recieved a 3-dose primary series
+    # Date of fourth COVID vaccination (booster)
+    # 1st booster for immunosuppressed individuals who recieved a 3-dose primary series or 2nd booster during spring 2022 campaign
     # recommended at interval of 3 months
-    # to capture above, include fourth doses from 77 days (84 - 7) to allow for early receipt within 12th week
     covid_vax_date_4=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
         between=["covid_vax_date_3 + 1 day",end_date], # from day after previous dose
@@ -102,7 +101,7 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of fifth COVID vaccination (extended primary series + two boosters
+    # Date of fifth COVID vaccination (extended primary series + two boosters)
     covid_vax_date_5=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
         between=["covid_vax_date_4 + 1 day",end_date], # from day after previous dose
@@ -116,7 +115,7 @@ study = StudyDefinition(
 # COVID VACCINATION - pfizer/biontech
 ###############################################################################
 
-    # date of first COVID vaccination - pfizer
+    # Date of first COVID vaccination - pfizer
     pfizer_date_1=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
         between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
@@ -125,25 +124,25 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of second COVID vaccination - pfizer
+    # Date of second COVID vaccination - pfizer
     pfizer_date_2=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
-        between=["pfizer_date_1 + 1 day",end_date],  # from day after previous dose
+        between=["pfizer_date_1 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
     ),
     
-    # date of third COVID vaccination - pfizer
+    # Date of third COVID vaccination - pfizer
     pfizer_date_3=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
-        between=["pfizer_date_2 + 1 day",end_date],   # from day after previous dose
+        between=["pfizer_date_2 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
     ),
     
-    # date of fourth COVID vaccination - pfizer
+    # Date of fourth COVID vaccination - pfizer
     pfizer_date_4=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
         between=["pfizer_date_3 + 1 day",end_date], # from day after previous dose
@@ -152,7 +151,7 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of fifth COVID vaccination - pfizer
+    # Date of fifth COVID vaccination - pfizer
     pfizer_date_5=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
         between=["pfizer_date_4 + 1 day",end_date], # from day after previous dose
@@ -165,7 +164,7 @@ study = StudyDefinition(
 # COVID VACCINATION - astrazeneca
 ###############################################################################
 
-    # date of first COVID vaccination - astrazeneca
+    # Date of first COVID vaccination - astrazeneca
     az_date_1=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
         between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
@@ -174,7 +173,7 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of second COVID vaccination - astrazeneca
+    # Date of second COVID vaccination - astrazeneca
     az_date_2=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
         between=["az_date_1 + 1 day",end_date], # from day after previous dose
@@ -183,7 +182,7 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of third COVID vaccination - astrazeneca
+    # Date of third COVID vaccination - astrazeneca
     az_date_3=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
         between=["az_date_2 + 1 day",end_date], # from day after previous dose
@@ -192,7 +191,7 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of fourth COVID vaccination - astrazeneca
+    # Date of fourth COVID vaccination - astrazeneca
     az_date_4=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
         between=["az_date_3 + 1 day",end_date], # from day after previous dose
@@ -201,7 +200,7 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of fourth COVID vaccination - astrazeneca
+    # Date of fourth COVID vaccination - astrazeneca
     az_date_5=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
         between=["az_date_4 + 1 day",end_date], # from day after previous dose
@@ -214,7 +213,7 @@ study = StudyDefinition(
 # COVID VACCINATION - moderna
 ###############################################################################
 
-    # date of first COVID vaccination - moderna
+    # Date of first COVID vaccination - moderna
     moderna_date_1=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
         between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
@@ -223,7 +222,7 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of second COVID vaccination - moderna
+    # Date of second COVID vaccination - moderna
     moderna_date_2=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
         between=["moderna_date_1 + 1 day",end_date], # from day after previous dose
@@ -232,7 +231,7 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of third COVID vaccination - moderna
+    # Date of third COVID vaccination - moderna
     moderna_date_3=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
         between=["moderna_date_2 + 1 day",end_date], # from day after previous dose
@@ -241,7 +240,7 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of fourth COVID vaccination - moderna
+    # Date of fourth COVID vaccination - moderna
     moderna_date_4=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
         between=["moderna_date_3 + 1 day",end_date], # from day after previous dose
@@ -250,7 +249,7 @@ study = StudyDefinition(
         date_format="YYYY-MM-DD"
     ),
     
-    # date of fifth COVID vaccination - moderna
+    # Date of fifth COVID vaccination - moderna
     moderna_date_5=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
         between=["moderna_date_4 + 1 day",end_date], # from day after previous dose
@@ -298,7 +297,7 @@ study = StudyDefinition(
      return_expectations={
        "rate": "universal",
         "category": {
-         "ratios": {  # ~, =, >= , > , < , <=
+         "ratios": {  # ~, =, >=, >, <, <=
             None: 0.10,
             "~": 0.05,
             "=": 0.65,
@@ -345,16 +344,7 @@ study = StudyDefinition(
     on_or_before = "index_date - 1 day",
   ),
   
-  ## CKD codes - all stages
-  # chronic_kidney_disease_all_stages = patients.with_these_clinical_events(
-  #   chronic_kidney_disease_all_stages_codes,
-  #   returning = "date",
-  #   find_last_match_in_period = True,
-  #   on_or_before = "index_date - 1 day",
-  #   date_format = "YYYY-MM-DD",
-  # ),
-  
-  ## CKD codes - stages 3 - 5
+  ## CKD codes - stages 3-5
   chronic_kidney_disease_stages_3_5 = patients.with_these_clinical_events(
     chronic_kidney_disease_stages_3_5_codes,
     returning = "binary_flag",
@@ -984,7 +974,7 @@ study = StudyDefinition(
     test_result = "positive",
     returning = "date",
     date_format = "YYYY-MM-DD",
-    between=["index_date - 90 days","index_date - 1 day"],
+    between=["covid_vax_date_1 - 90 days","covid_vax_date_1 - 1 day"], # anything post dose 1 may be linked with comparative VE
     find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
     return_expectations = {
@@ -1003,7 +993,7 @@ study = StudyDefinition(
     ),
     returning = "date",
     date_format = "YYYY-MM-DD",
-    between=["index_date - 90 days","index_date - 1 day"],
+    between=["covid_vax_date_1 - 90 days","covid_vax_date_1 - 1 day"], # anything post dose 1 may be linked with comparative VE
     find_first_match_in_period=True,
     return_expectations = {
       "date": {"earliest": "2020-09-02", "latest": "2020-11-30"}, # need both earliest/latest to obtain expected incidence
@@ -1016,7 +1006,7 @@ study = StudyDefinition(
   prevax_covid_hospitalisation_date = patients.admitted_to_hospital(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
-    between=["index_date - 90 days","index_date - 1 day"],
+    between=["covid_vax_date_1 - 90 days","covid_vax_date_1 - 1 day"], # anything post dose 1 may be linked with comparative VE
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
@@ -1026,7 +1016,7 @@ study = StudyDefinition(
     },
   ),
   
-  ## Count of tests (any) in pre-vaccination period
+  ## Count of tests (any) in pre-index period (fixed time window to avoid influence of changing incidence over time)
   prevax_tests_conducted_any = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "any",
@@ -1053,7 +1043,7 @@ study = StudyDefinition(
     returning = "date",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
       "incidence": 0.15,
     },
@@ -1067,7 +1057,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -1082,7 +1072,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -1095,7 +1085,7 @@ study = StudyDefinition(
     between=["covid_vax_date_2",end_date],
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
       "incidence": 0.02
     },
@@ -1115,7 +1105,7 @@ study = StudyDefinition(
     returning = "date",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
       "incidence": 0.5,
     },
@@ -1128,7 +1118,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -1142,7 +1132,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
       "incidence": 0.05,
     },
@@ -1154,7 +1144,7 @@ study = StudyDefinition(
     between=["covid_vax_date_2",end_date],
     date_format="YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-04-20"},
+      "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
       "incidence": 0.02
     },
