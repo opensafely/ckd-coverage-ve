@@ -269,25 +269,11 @@ study = StudyDefinition(
     find_last_match_in_period=True,
     between=["index_date - 2 years","index_date - 1 day"],
     returning="numeric_value",
-    #include_date_of_match=True,
-    #date_format = "YYYY-MM-DD", #formerly include_month=True,
+    include_date_of_match=True,
+    date_format = "YYYY-MM-DD",
     return_expectations={
         "float": {"distribution": "normal", "mean": 60.0, "stddev": 15},
         "incidence": 0.95,
-    },
-  ),
-  
-  ## Determine date of creatinine test
-  creatinine_date = patients.with_these_clinical_events(
-    creatinine_codes,
-    find_last_match_in_period=True,
-    between=["index_date - 2 years","index_date - 1 day"],
-    returning="date",
-    date_format = "YYYY-MM-DD",
-    return_expectations = {
-      "date": {"earliest": "index_date - 2 years", "latest" : "index_date - 1 day"},
-      "rate": "uniform",
-      "incidence": 0.95,
     },
   ),
   
