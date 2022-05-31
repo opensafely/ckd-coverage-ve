@@ -162,8 +162,6 @@ vars2_cat = c("ckd_5cat", "immunosuppression", "care_home", "sex", "imd",
 ####################################################### 
 # prepare time to event data for the given outcome
 ####################################################### 
-# TODO
-
 # derive strata_var if using calendar timescale
 if (timescale == "calendartime") {
   
@@ -336,7 +334,9 @@ merge_levels <- function(.data, var, strata=FALSE) {
   
   # if more than 2 levels, prepare levels to reorder factor according to event frequency
   old_levs <- levels(.data[[var]])
-  if (length(old_levs) > 2) {
+  # which variables do we want to reorder by frequency of events?
+  if (var %in% c("ethnicity", "rural_urban_group")) {
+  # if (length(old_levs) > 2) {
     new_levs <- .data %>%
       filter(ind_outcome) %>%
       group_by(across(all_of(var))) %>%
@@ -373,6 +373,7 @@ merge_levels <- function(.data, var, strata=FALSE) {
   }
   
   var_levs <- levels(data[[var]])
+  # loop in reverse order, so last two levels first to merge
   for (i in rev(seq_along(var_levs))) {
     
     if (event_count_fun(var) > events_threshold) {
@@ -396,7 +397,7 @@ merge_levels <- function(.data, var, strata=FALSE) {
       var_levs <- var_levs[-i]
       # merge levels in data  
       data <- data %>%
-        mutate(across(var,
+        mutate(across(all_of(var),
                       ~ factor(
                         if_else(
                           as.integer(.x) == i,
@@ -412,6 +413,28 @@ merge_levels <- function(.data, var, strata=FALSE) {
   return(data)
 }
 
+merge_summary <- function(data_in) {
+  
+  name_data <- deparse(substitute(data_in))
+  
+  vars2_keep <- vars2_cat[vars2_cat %in% names(data_in)]
+  vars2_drop <- str_c(vars2_cat[!(vars2_cat %in% vars2_keep)], collapse = ", ")
+  if (length(vars2_drop) == 0) vars2_drop <- "NA"
+  out_drop <- glue("Dropped variables ----\n{vars2_drop}")
+  out_keep <- "Kept variables ----\nNA"
+  if (length(vars2_keep) > 0) {
+    out_keep <- "Kept variables with levels (merged levels separated by \"/\") ---- "
+    for (i in vars2_keep) {
+      out_keep <- c(out_keep, str_c(glue("levels({i}): "), str_c(levels(data_in[[i]]), collapse = "; ")))
+    }
+  }
+  out <- str_c(
+    c(glue("Merge summary for \"{name_data}\" ----"), " ", out_drop, " ", out_keep), 
+    collapse = "\n"
+    )
+  return(out)
+}
+
 if (timescale == "persontime") {
   # merge levels in full dataset
   data_cox_full_merged <- data_cox_full %>%
@@ -423,6 +446,9 @@ if (timescale == "persontime") {
         function(x) data_cox_full %>% merge_levels(var = x)
       )
     )
+  
+  logoutput(merge_summary(data_cox_full_merged))
+  
 }
 
 if (strata) {
@@ -436,6 +462,9 @@ if (strata) {
         function(x) data_cox_strata_keep %>% merge_levels(var = x, strata = TRUE)
       )
     )
+  
+  logoutput(merge_summary(data_cox_strata_merged))
+  
 }
 
 ### formulas ---
