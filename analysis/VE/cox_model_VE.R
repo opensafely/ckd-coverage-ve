@@ -34,7 +34,7 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
-  timescale = "persontime"
+  timescale = "calendartime"
   selected_outcome = "covid_postest"
 } else {
   db = args[[1]]
@@ -47,12 +47,13 @@ full = timescale != "calendartime"
 if (full) {
   # get data for full model
   data_cox_full <- read_rds(here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{selected_outcome}.rds")))
+  # check dataset not empty
+  if (nrow(data_cox_full) == 0) {
+    # log
+    try(stop("Not enough events to fit model."))
+  }
 }
-# check dataset not empty
-if (nrow(data_cox_full) == 0) {
-  # log
-  try(stop("Not enough events to fit model."))
-}
+
 # read data for stratified model
 data_cox_strata <- read_rds(here::here("output", "model", glue("data_cox_strata_{db}_{timescale}_{selected_outcome}.rds")))
 strata = nrow(data_cox_strata) > 0
@@ -64,10 +65,12 @@ if (!strata & timescale == "calendartime") {
 
 ## Import formulas 
 if (full) {
-  formulas_full <- read_rds(here::here("output", "model", glue("formulas_full_{db}_{timescale}_{selected_outcome}.rds")))
+  formulas_full <- read_rds(
+    here::here("output", "model", glue("formulas_full_{db}_{timescale}_{selected_outcome}.rds")))
 }
 if (strata) {
-  formulas_strata <- read_rds(here::here("output", "model", glue("formulas_strata_{db}_{timescale}_{selected_outcome}.rds")))
+  formulas_strata <- read_rds(
+    here::here("output", "model", glue("formulas_strata_{db}_{timescale}_{selected_outcome}.rds")))
 }
 
 ## Import outcomes
@@ -123,8 +126,7 @@ logoutput(
 ####################################################### 
 ### function to fit cox model for specified formula 
 ####################################################### 
-# number = 0
-# stratified = TRUE
+# number = 0; stratified = TRUE
 
 cox_model_VE <- function(number, stratified=TRUE) {
   if (number==0) model_type = "unadjusted"
@@ -233,11 +235,7 @@ if (full) {
       ) %>%
     redact_glance()
   
-  # save model summary
-  write_csv(
-    model_glance_full,
-    here::here("output", "model", glue("modelcox_glance_full_{db}_{timescale}_{selected_outcome}.csv"))
-    )
+
   
   # tidy
   model_tidy_full <- bind_rows(
@@ -250,12 +248,24 @@ if (full) {
       outcome_clean = selected_outcome_clean
     )
   
-  write_csv(
-    model_tidy_full, 
-    here::here("output", "model", glue("modelcox_tidy_full_{db}_{timescale}_{selected_outcome}.csv"))
-    )
+
   
+} else {
+  # empty outputs
+  model_glance_full <- tibble()
+  model_tidy_full <- tibble()
 }
+# save model summary
+write_csv(
+  model_glance_full,
+  here::here("output", "model", glue("modelcox_glance_full_{db}_{timescale}_{selected_outcome}.csv"))
+)
+write_csv(
+  model_tidy_full, 
+  here::here("output", "model", glue("modelcox_tidy_full_{db}_{timescale}_{selected_outcome}.csv"))
+)
+
+
 if (strata) {
   summary0_strata <- cox_model_VE(0, stratified=TRUE)
   summary1_strata <- cox_model_VE(1, stratified=TRUE)
@@ -273,12 +283,6 @@ if (strata) {
     ) %>%
     redact_glance()
   
-  # save model summary
-  write_csv(
-    model_glance_strata,
-    here::here("output", "model", glue("modelcox_glance_strata_{db}_{timescale}_{selected_outcome}.csv"))
-  )
-  
   # tidy
   model_tidy_strata <- bind_rows(
     summary0_strata$tidy, 
@@ -290,11 +294,21 @@ if (strata) {
       outcome_clean = selected_outcome_clean
     )
   
-  write_csv(
-    model_tidy_strata, 
-    here::here("output", "model", glue("modelcox_tidy_strata_{db}_{timescale}_{selected_outcome}.csv"))
-  )
+  
+} else {
+  # empty outputs
+  model_glance_strata <- tibble()
+  model_tidy_strata <- tibble()
 }
+# save model summary
+write_csv(
+  model_glance_strata,
+  here::here("output", "model", glue("modelcox_glance_strata_{db}_{timescale}_{selected_outcome}.csv"))
+)
+write_csv(
+  model_tidy_strata, 
+  here::here("output", "model", glue("modelcox_tidy_strata_{db}_{timescale}_{selected_outcome}.csv"))
+)
 
 reduce_tidy <- function(stratified=FALSE) {
   
@@ -374,17 +388,24 @@ reduce_tidy <- function(stratified=FALSE) {
 }
 
 # combine and save model summary (full - simplified)
-model_tidy_final <- bind_rows(reduce_tidy(TRUE), reduce_tidy(FALSE)) %>%
+model_tidy_final <- tibble()
+if (strata) {
+  model_tidy_final <- bind_rows(model_tidy_final, reduce_tidy(TRUE))
+} 
+if (full) {
+  model_tidy_final <- bind_rows(model_tidy_final, reduce_tidy(FALSE))
+}
+model_tidy_final <- model_tidy_final %>%
   mutate(across(term, fct_inorder)) %>%
   arrange(model, term)
 
 # save outputs
 write_csv(
   model_tidy_final, 
-  here::here("output", "model", glue("modelcox_tidy_reduced_{db}_{timescale_{selected_outcome}.csv"))
+  here::here("output", "model", glue("modelcox_tidy_reduced_{db}_{timescale}_{selected_outcome}.csv"))
   )
 write_rds(
   model_tidy_final,
-  here::here("output", "model", glue("modelcox_tidy_reduced_{db}_{timescale_{selected_outcome}.rds")), 
+  here::here("output", "model", glue("modelcox_tidy_reduced_{db}_{timescale}_{selected_outcome}.rds")), 
   compress="gz"
   )
