@@ -103,7 +103,7 @@ dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
 cat(
   glue("## script info for cox models ##"), 
   "  \n", 
-  file = here::here("output", "model", glue("log_cox_model_log_{db}_{timescale}_{selected_outcome}.txt")), 
+  file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}.txt")), 
   append = FALSE
   )
 
@@ -113,11 +113,18 @@ logoutput <- function(...){
   cat("\n", file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}.txt")), sep = "\n  ", append = TRUE)
 }
 
+logoutput(
+  "args:", 
+  glue("db = {db}"),
+  glue("timescale = {timescale}"),
+  glue("outcome = {selected_outcome_clean}")
+)
+
 ####################################################### 
 ### function to fit cox model for specified formula 
 ####################################################### 
-number = 0
-stratified = TRUE
+# number = 0
+# stratified = TRUE
 
 cox_model_VE <- function(number, stratified=TRUE) {
   if (number==0) model_type = "unadjusted"
@@ -232,7 +239,6 @@ if (full) {
     here::here("output", "model", glue("modelcox_glance_full_{db}_{timescale}_{selected_outcome}.csv"))
     )
   
-  
   # tidy
   model_tidy_full <- bind_rows(
     summary0_full$tidy, 
@@ -296,18 +302,36 @@ reduce_tidy <- function(stratified=FALSE) {
     .data <- model_tidy_strata
     .irr <- irr_sub_strata
   } else {
-    .data <- model_tidy_full %>% mutate(term = irr_sub_full$period)
+    .data <- model_tidy_full 
     .irr <- irr_sub_full
   }
   
-  # combine and save model summary (full - simplified)
   model_tidy_reduced <- .data %>%
-    filter(
-      str_detect(term, fixed("timesincevax_pw")) | str_detect(term, fixed("vax2_az"))
-      ) %>%
+    filter(str_detect(term, "^vax2_az")) %>%
+    mutate(across(term, 
+                  ~if_else(
+                    str_detect(.x, "timesincevax_pw"),
+                    # for the stratified model extract the time period from term:
+                    str_extract(.x, "\\d+-\\d+$"), 
+                    # for the full model extract the time period from irr_sub_full:
+                    irr_sub_full$period 
+                    ))) 
+  
+  n_models <- n_distinct(model_tidy_reduced$model)
+  n_periods <- n_distinct(.irr$period)
+  model_tidy_reduced <- model_tidy_reduced %>%
+    # Elsie note: full_join to make sure all time periods included
+    # join is safer, in case some periods dropped from models
+    full_join(.irr %>% 
+                 mutate(model = n_models) %>%
+                 uncount(model) %>%
+                 mutate(
+                   model = rep(unique(model_tidy_reduced$model), n_periods),
+                   model_name =  rep(unique(model_tidy_reduced$model_name),n_periods),
+                 ), 
+               by = c("term" = "period", "model", "model_name")) %>%
     mutate(
-      term=str_replace(term, pattern=fixed("vax2_az:strata(timesincevax_pw)"), ""),
-      term=fct_inorder(term),
+      # term=fct_inorder(term), # moved this to line 364, otherwise converted back to factor when bind_rows
       term_left = as.numeric(str_extract(term, "^\\d+"))-1,
       term_right = as.numeric(str_extract(term, "\\d+$"))-1,
       term_right = if_else(is.na(term_right), lastfupday, term_right),
@@ -321,7 +345,6 @@ reduce_tidy <- function(stratified=FALSE) {
   # add event counts from IRR table to unadjusted model
   # Elsie note: join is safer, in case some periods are not included in the model due to few events
   model_tidy_reduced <- model_tidy_reduced %>%
-    left_join(.irr, by = c("term" = "period")) %>%
     # Elsie note: didn't seem necessary to keep all columns as some were all missing, 
     # and some were redundant, I selected the following, but feel free to change
     select(
@@ -345,9 +368,15 @@ reduce_tidy <- function(stratified=FALSE) {
       model_tidy_reduced[i,names(model_tidy_reduced)%in%redaction_columns] = "[No events]" 
       }
   }
+  
+  return(model_tidy_reduced)
+  
 }
 
-model_tidy_final <- bind_rows(reduce_tidy(TRUE), reduce_tidy(FALSE))
+# combine and save model summary (full - simplified)
+model_tidy_final <- bind_rows(reduce_tidy(TRUE), reduce_tidy(FALSE)) %>%
+  mutate(across(term, fct_inorder)) %>%
+  arrange(model, term)
 
 # save outputs
 write_csv(
