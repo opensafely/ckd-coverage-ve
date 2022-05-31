@@ -34,7 +34,7 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
-  timescale = "persontime"
+  timescale = "calendartime"
   selected_outcome = "covid_postest"
 } else {
   db = args[[1]]
@@ -51,7 +51,12 @@ if (db == "unmatched") {
 if (db == "matched" & timescale == "calendartime") stop("Do not fit matched calendartime model.")
 
 ## Import data
-data_cohort <- read_rds(here::here("output", "data", input_name))
+data_cohort <- read_rds(here::here("output", "data", input_name)) %>%
+  # to avoid timestamps causing inqualities for dates on the same day
+  mutate(across(where(is.Date), 
+                ~ floor_date(
+                  as.Date(.x, format="%Y-%m-%d"),
+                  unit = "days")))
 
 ## Import custom user functions and packages
 source(here::here("analysis", "functions.R"))
@@ -203,6 +208,8 @@ if (timescale == "calendartime") {
       by = "patient_id"
     )
   
+  data_cox_full <- data_cox_strata
+  
 } else {
   
   data_tte <- data_cohort %>% 
@@ -323,6 +330,9 @@ if (timescale == "calendartime" & !strata) {
 
 ### merge or drop variable levels if <=2 events in either category of expo ----
 merge_levels <- function(.data, var, strata=FALSE) {
+  
+  # if var not already factor, convert to factor
+  .data <- .data %>% mutate(across(all_of(var), as.factor))
   
   # if more than 2 levels, prepare levels to reorder factor according to event frequency
   old_levs <- levels(.data[[var]])
