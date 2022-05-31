@@ -145,6 +145,11 @@ for (s in 1:length(strata)) {
     var_list_subset = var_list_subset[var_list_subset!="cev_other"]
   }
   
+  ## Exclude other_transplant from RRT (Tx) groups given that all will be 0 by definition
+  if (ckd_group=="RRT (Tx)") {
+    var_list_subset = var_list_subset[var_list_subset!="other_transplant"]
+  }
+  
   
   
   

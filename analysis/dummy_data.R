@@ -41,6 +41,9 @@ data_processed$cev_other <- as.numeric(rcat(n=nsamples, c("0", "1"), c(0.9,0.1))
 # Set cev_other to 0 if in dialysis or Tx group
 data_processed$cev_other[data_processed$ckd_6cat %in% c("RRT (dialysis)", "RRT (Tx)")] = 0
 
+# Set other_transplant to 0 if in Tx group
+data_processed$other_transplant[data_processed$ckd_6cat %in% c("RRT (Tx)")] = 0
+
 # Set vaccine coverage for primary doses, third, and fourth dose
 primary_coverage <- 0.95
 third_coverage <- 0.90 # assignments only retained if primary doses given, so final prevalence ~0.95*0.90=0.855
