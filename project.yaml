@@ -177,87 +177,123 @@ actions:
       moderately_sensitive:
         csv: output/tables/table_irr_redacted_verification.csv
   
-  # Cox models - comparative VE unmatched ----
-  cox_model_VE:
-    run: r:latest analysis/VE/cox_model_VE.R unmatched
-    needs: [data_selection_VE, table_irr]
+  # Cox models - comparative VE ----
+  # unmatched_persontime_covid_postest
+  # preflight
+  cox_preflight_unmatched_persontime_covid_postest_VE:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_postest
+    needs: [data_selection_VE]
     outputs:
       highly_sensitive:
-        data: output/model/VE/modelcox*.rds
+        data: output/model/data*unmatched_persontime_covid_postest.rds
+        formulas: output/model/formulas*unmatched_persontime_covid_postest.rds
       moderately_sensitive:
-        csv: output/model/VE/modelcox*.csv
-        txt: output/model/VE/modelcox*.txt
-
-  # Cox VE summaries for unmatched analysis ----
-  cox_VE_summary:
-    run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [data_selection_VE, table_1_VE, table_irr, cox_model_VE]
+        logs: output/model/log_cox_preflight_unmatched_persontime_covid_postest.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_postest_VE:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_postest
+    needs: [cox_preflight_unmatched_persontime_covid_postest_VE, table_irr]
     outputs:
+      highly_sensitive:
+        data: output/model/modelcox*unmatched_persontime_covid_postest.rds
       moderately_sensitive:
-        html: output/markdown/cox_VE_summary.html
+        csv: output/model/modelcox*unmatched_persontime_covid_postest.csv
+        logs: output/model/log_cox_model_unmatched_persontime_covid_postest.txt
+
+  # unmatched_calendartime_covid_postest
+  # preflight
+  cox_preflight_unmatched_calendartime_covid_postest_VE:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_postest
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/data*unmatched_calendartime_covid_postest.rds
+        formulas: output/model/formulas*unmatched_calendartime_covid_postest.rds
+      moderately_sensitive:
+        logs: output/model/log_cox_preflight_unmatched_calendartime_covid_postest.txt
+  
+  # model
+  cox_model_unmatched_calendartime_covid_postest_VE:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_postest
+    needs: [cox_preflight_unmatched_calendartime_covid_postest_VE, table_irr]
+    outputs:
+      highly_sensitive:
+        data: output/model/modelcox*unmatched_calendartime_covid_postest.rds
+      moderately_sensitive:
+        csv: output/model/modelcox*unmatched_calendartime_covid_postest.csv
+        logs: output/model/log_cox_model_unmatched_calendartime_covid_postest.txt
+
+#   # Cox VE summaries for unmatched analysis ----
+#   cox_VE_summary:
+#     run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
+#     needs: [data_selection_VE, table_1_VE, table_irr, cox_model_VE]
+#     outputs:
+#       moderately_sensitive:
+#         html: output/markdown/cox_VE_summary.html
         
-# PLR models - comparative VE unmatched ----
-  plr_model_VE:
-    run: r:latest analysis/VE/plr_model_VE.R unmatched
-    needs: [data_selection_VE, table_irr]
-    outputs:
-      highly_sensitive:
-        data: output/model/VE_plr/modelplr*.rds
-      moderately_sensitive:
-        csv: output/model/VE_plr/modelplr*.csv
-        txt: output/model/VE_plr/modelplr*.txt
+# # PLR models - comparative VE unmatched ----
+#   plr_model_VE:
+#     run: r:latest analysis/VE/plr_model_VE.R unmatched
+#     needs: [data_selection_VE, table_irr]
+#     outputs:
+#       highly_sensitive:
+#         data: output/model/VE_plr/modelplr*.rds
+#       moderately_sensitive:
+#         csv: output/model/VE_plr/modelplr*.csv
+#         txt: output/model/VE_plr/modelplr*.txt
 
-  # PLR VE summaries for unmatched analysis ----
-  plr_VE_summary:
-    run: r:latest -e 'rmarkdown::render("analysis/VE/plr_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [data_selection_VE, table_1_VE, table_irr, plr_model_VE]
-    outputs:
-      moderately_sensitive:
-        html: output/markdown/plr_VE_summary.html
+#   # PLR VE summaries for unmatched analysis ----
+#   plr_VE_summary:
+#     run: r:latest -e 'rmarkdown::render("analysis/VE/plr_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
+#     needs: [data_selection_VE, table_1_VE, table_irr, plr_model_VE]
+#     outputs:
+#       moderately_sensitive:
+#         html: output/markdown/plr_VE_summary.html
 
-#############################
-### VE - matched analyses
-#############################
-# Same scripts above but with matched argument in 'run'
+# #############################
+# ### VE - matched analyses
+# #############################
+# # Same scripts above but with matched argument in 'run'
 
-  # Table 1 (VE matched) ----
-  table_1_VE_matched:
-    run: r:latest analysis/VE/table_1_VE.R matched
-    needs: [data_selection_VE]
-    outputs:
-      highly_sensitive:
-        data: output/tables/table1_VE_matched_redacted.rds
-      moderately_sensitive:
-        table: output/tables/table1_VE_matched_redacted.html
+#   # Table 1 (VE matched) ----
+#   table_1_VE_matched:
+#     run: r:latest analysis/VE/table_1_VE.R matched
+#     needs: [data_selection_VE]
+#     outputs:
+#       highly_sensitive:
+#         data: output/tables/table1_VE_matched_redacted.rds
+#       moderately_sensitive:
+#         table: output/tables/table1_VE_matched_redacted.html
 
-  # Table IRR (VE matched)
-  table_irr_matched:
-    run: r:latest analysis/VE/table_irr.R matched
-    needs: [data_selection_VE]
-    outputs:
-      highly_sensitive:
-        data: output/tables/table_irr_matched_redacted.rds
-      moderately_sensitive:
-        csv: output/tables/table_irr_matched_redacted.csv
+#   # Table IRR (VE matched)
+#   table_irr_matched:
+#     run: r:latest analysis/VE/table_irr.R matched
+#     needs: [data_selection_VE]
+#     outputs:
+#       highly_sensitive:
+#         data: output/tables/table_irr_matched_redacted.rds
+#       moderately_sensitive:
+#         csv: output/tables/table_irr_matched_redacted.csv
 
-  # Cox models - comparative VE matched ----
-  cox_model_VE_matched:
-    run: r:latest analysis/VE/cox_model_VE.R matched
-    needs: [data_selection_VE, table_irr_matched]
-    outputs:
-      highly_sensitive:
-        data: output/model/VE_matched/modelcox*.rds
-      moderately_sensitive:
-        csv: output/model/VE_matched/modelcox*.csv
-        txt: output/model/VE_matched/modelcox*.txt
+#   # Cox models - comparative VE matched ----
+#   cox_model_VE_matched:
+#     run: r:latest analysis/VE/cox_model_VE.R matched
+#     needs: [data_selection_VE, table_irr_matched]
+#     outputs:
+#       highly_sensitive:
+#         data: output/model/VE_matched/modelcox*.rds
+#       moderately_sensitive:
+#         csv: output/model/VE_matched/modelcox*.csv
+#         txt: output/model/VE_matched/modelcox*.txt
    
-  # Cox VE summaries for matched analysis ----
-  cox_VE_summary_matched:
-    run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary_matched.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-    needs: [data_selection_VE, table_1_VE_matched, table_irr_matched, cox_model_VE_matched]
-    outputs:
-      moderately_sensitive:
-        html: output/markdown/cox_VE_summary_matched.html
+#   # Cox VE summaries for matched analysis ----
+#   cox_VE_summary_matched:
+#     run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary_matched.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
+#     needs: [data_selection_VE, table_1_VE_matched, table_irr_matched, cox_model_VE_matched]
+#     outputs:
+#       moderately_sensitive:
+#         html: output/markdown/cox_VE_summary_matched.html
         
         
   # Check session info for set of packages ----
