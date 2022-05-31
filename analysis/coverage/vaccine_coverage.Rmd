@@ -470,24 +470,25 @@ logistic_tbl <- read_rds(here::here("output", "model", "mod_strat_logistic_redac
   mutate(
     Variable = label_clean,
     `N (events), LR`= paste0(prettyNum(n_obs, big.mark = ",")," (",prettyNum(n_event, big.mark = ","),")"),
-    `OR (95% CI), minimally adjusted` = paste0(format(estimate_minimal,nsmall=2),
-                                               " (",format(conf.low_minimal,nsmall=2),"-",format(conf.high_minimal,nsmall=2),")"),
+    `Coverage (%), LR`= format(round(n_event/n_obs*100,1), nsmall=1),
+    # `OR (95% CI), minimally adjusted` = paste0(format(estimate_minimal,nsmall=2),
+    #                                            " (",format(conf.low_minimal,nsmall=2),"-",format(conf.high_minimal,nsmall=2),")"),
     `OR (95% CI), partially adjusted` = paste0(format(estimate_partial,nsmall=2),
-                                               " (",format(conf.low_partial,nsmall=2),"-",format(conf.high_partial,nsmall=2),")"),
-    `OR (95% CI), fully adjusted` = paste0(format(estimate_full,nsmall=2),
-                                               " (",format(conf.low_full,nsmall=2),"-",format(conf.high_full,nsmall=2),")")
+                                               " (",format(conf.low_partial,nsmall=2),"-",format(conf.high_partial,nsmall=2),")")
+    # `OR (95% CI), fully adjusted` = paste0(format(estimate_full,nsmall=2),
+    #                                            " (",format(conf.low_full,nsmall=2),"-",format(conf.high_full,nsmall=2),")")
   ) %>%
   # Remove gaps in reference rows for clean HRs
   mutate(
         n_obs_lr = n_obs,
         n_event_lr = n_event,
-       `OR (95% CI), minimally adjusted` =  gsub(" (  NA-  NA)", "", `OR (95% CI), minimally adjusted`, fixed = TRUE),
+       #`OR (95% CI), minimally adjusted` =  gsub(" (  NA-  NA)", "", `OR (95% CI), minimally adjusted`, fixed = TRUE),
        `OR (95% CI), partially adjusted` =  gsub(" (  NA-  NA)", "", `OR (95% CI), partially adjusted`, fixed = TRUE),
-       `OR (95% CI), fully adjusted` =  gsub(" (  NA-  NA)", "", `OR (95% CI), fully adjusted`, fixed = TRUE)
+       #`OR (95% CI), fully adjusted` =  gsub(" (  NA-  NA)", "", `OR (95% CI), fully adjusted`, fixed = TRUE)
   ) %>%
   select(
-    c(Variable,  `N (events), LR`,
-      `OR (95% CI), minimally adjusted`, `OR (95% CI), partially adjusted`, `OR (95% CI), fully adjusted`,
+    c(Variable,  `N (events), LR`, `Coverage (%), LR`, # `OR (95% CI), minimally adjusted`,
+      `OR (95% CI), partially adjusted`, #`OR (95% CI), fully adjusted`,
       n_obs_lr, n_event_lr)
   )
 
@@ -517,15 +518,16 @@ tbl_combined %>%
      ) %>%
     tab_spanner(
       label = "Cox models",
-      columns = starts_with("HR")
+      columns = c("N (events)", "Coverage (%)", 
+             "HR (95% CI), minimally adjusted", "HR (95% CI), partially adjusted", "HR (95% CI), fully adjusted")
     )  %>%
     tab_spanner(
       label = "Logistic regression",
-      columns = starts_with("OR")
+      columns = c("N (events), LR", "Coverage (%), LR", "OR (95% CI), partially adjusted")
     )%>%
     tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold")
 ```
-All counts are rounded to nearest 5. Data are redacted for any rows with rounded counts of >0 and <=10 for n (vaccinated) or n (unvaccinated and uncensored at cut-off). Cumulative coverage was determined based on Kaplan-Meier estimates.
+All counts are rounded to nearest 5. Data are redacted for any rows with rounded counts of >0 and <=10 for n (vaccinated) or n (unvaccinated and uncensored at cut-off). Coverage was determined based on Kaplan-Meier estimates (Cox models) or n/N (logistic regression models).
 <br/><br/>    
 
 #### Plot of partially adjusted model outputs
@@ -842,7 +844,7 @@ plot_reduced_tbl_subgroup = function(input_tbl, dose4=FALSE) {
   
   ## Set axis breaks depending on outcome
   if (dose4==TRUE) { 
-      g1 = g1 + scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.25,1,4)) 
+      g1 = g1 + scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2)) 
   } else { 
       g1 = g1 + scale_y_continuous(trans="log",limits=c(plot_min, plot_max), breaks=c(0.5,1,2)) 
   }
