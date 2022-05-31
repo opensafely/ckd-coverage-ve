@@ -42,8 +42,11 @@ if(length(args)==0){
   selected_outcome = args[[3]]
 }
 
-input_name = "data_cohort_VE.rds"
-# input_name = glue("data_cohort_VE_{db}.rds")
+if (db == "unmatched") {
+  input_name = "data_cohort_VE.rds"
+} else {
+  input_name = glue("data_cohort_VE_{db}.rds")
+}
 
 if (db == "matched" & timescale == "calendartime") stop("Do not fit matched calendartime model.")
 
@@ -56,10 +59,34 @@ source(here::here("analysis", "functions.R"))
 ## Create directory for full model outputs
 dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
 
+## Import outcomes
+#TODO
+# probs want to do this in an upstream file, but I've put here for now
+outcomes_list <- list(
+  short_name = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death"),
+  clean_name = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death"),
+  date_name = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date")
+)
+dir.create(here::here("output", "lib"), showWarnings = FALSE, recursive=TRUE)
+write_rds(
+  outcomes_list,
+  here::here("output", "lib", "outcomes.rds")
+)
+###
+outcomes_list <- read_rds(
+  here::here("output", "lib", "outcomes.rds")
+)
+
+outcome_index = which(outcomes_list$short_name == selected_outcome)
+selected_outcome_clean = outcomes_list$clean_name[outcome_index]
+
+
 ## Set analysis intervals and last follow-up day
 # TODO
 # specify this upstream?
-postvaxcuts <- 56*0:5
+period_length <- 56
+n_periods <- 6
+postvaxcuts <- period_length*0:(n_periods - 1)
 postvax_periods = c("1-56", "57-112", "113-168", "169-224", "225-280")
 lastfupday <- max(postvaxcuts)
 write_rds(
@@ -84,10 +111,19 @@ logoutput <- function(...){
   cat("\n", file = here::here("output", "model", glue("log_cox_preflight_{db}_{timescale}_{selected_outcome}.txt")), sep = "\n  ", append = TRUE)
 }
 
+logoutput(
+  "args:", 
+  glue("db = {db}"),
+  glue("timescale = {timescale}"),
+  glue("outcome = {selected_outcome_clean}")
+)
+
+
 ### print dataset size ----
 logoutput(
-  glue("data_cohort data size = ", nrow(data_cohort)),
-  glue("data_cohort memory usage = ", format(object.size(data_cohort), units="GB", standard="SI", digits=3L))
+  "data_cohort:",
+  glue("data size = ", nrow(data_cohort)),
+  glue("memory usage = ", format(object.size(data_cohort), units="GB", standard="SI", digits=3L))
 )
 
 # create dataset containing one row per patient per post-vaccination period
@@ -122,78 +158,104 @@ vars2_cat = c("ckd_5cat", "immunosuppression", "care_home", "sex", "imd",
 # prepare time to event data for the given outcome
 ####################################################### 
 # TODO
-# probs want to do this in an upstream file, but I've put here for now
-outcomes_list <- list(
-  short_name = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death"),
-  clean_name = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death"),
-  date_name = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date")
-)
-dir.create(here::here("output", "lib"), showWarnings = FALSE, recursive=TRUE)
-write_rds(
-  outcomes_list,
-  here::here("output", "lib", "outcomes.rds")
-)
-###
-outcomes_list <- read_rds(
-  here::here("output", "lib", "outcomes.rds")
-)
-
-outcome_index = which(outcomes_list$short_name == selected_outcome)
-selected_outcome_clean = outcomes_list$clean_name[outcome_index]
 
 # derive strata_var if using calendar timescale
 if (timescale == "calendartime") {
-  data_cohort <- data_cohort %>% mutate(strata_var = as.character(glue("{jcvi_group}_{region}")))
+  
+  data_cox_strata <- postvax_time %>%
+    left_join(
+      data_cohort %>%
+        rename(
+          outcome_date = outcomes_list$date_name[outcome_index]
+        ) %>%
+        select(patient_id, censor_date, vax2_date, outcome_date),
+      by = "patient_id"
+    ) %>%
+    mutate(
+      # origin date is the day before the earliest vax2 date in dataset
+      min_vax_2_date = min(vax2_date) - days(1),
+      # individual start date for a given period is the day before the vax2 date
+      start_date = vax2_date + (id_postvax - 1)*period_length - days(1),
+      # end date of a period is min of:
+      end_date = pmin(start_date + period_length, censor_date, outcome_date, na.rm=TRUE)
+      ) %>%
+    # remove samples for which end_date<=start_date:
+    filter(start_date < end_date) %>%
+    # outcome indicator
+    mutate(ind_outcome = !is.na(outcome_date) & outcome_date == end_date) %>%
+    # replace outcome_date and censor_date with missing if they don't occur 
+    # between start_date and end_date
+    mutate(across(c(outcome_date, censor_date),
+                  ~if_else(
+                    !is.na(.x) & start_date < .x & .x <= end_date,
+                    .x,
+                    as.Date(NA_character_)
+                  ))) %>%
+    # calendar time-scale: time since min_vax_2_date
+    mutate(across(c(start_date, end_date),
+                  ~ as.integer(.x - min_vax_2_date))) %>%
+    select(patient_id, id_postvax, timesincevax_pw, ind_outcome,
+           tstart = start_date, tstop = end_date) %>%
+    left_join(
+      data_cohort %>%
+        mutate(strata_var = as.character(glue("{jcvi_group}_{region}"))) %>%
+        select(patient_id, all_of(c(expo, vars1, vars2_cont, vars2_cat))),
+      by = "patient_id"
+    )
+  
+} else {
+  
+  data_tte <- data_cohort %>% 
+    mutate(
+      # select dates for outcome in question
+      outcome_date = get(outcomes_list$date_name[outcome_index]),
+      
+      # censor date already defined in data_selection_VE.R script 
+      
+      # calculate tte and ind for outcome in question
+      tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=TRUE),
+      ind_outcome = get(paste0("ind_",selected_outcome)),
+      tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
+      
+      # calculate follow-up time (censor/event)
+      follow_up_time = tte(vax2_date-1, get(outcomes_list$date_name[outcome_index]), censor_date) 
+    ) %>%
+    mutate(across(all_of(vars2_cat), as.factor))
+  
+  data_cox_strata <- tmerge(
+    data1 = data_tte %>% select(-starts_with("ind_"), -ends_with("_date")),
+    data2 = data_tte,
+    id = patient_id,
+    tstart = 0L,
+    tstop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
+    ind_outcome = event(tte_outcome)
+  ) %>%
+    tmerge( # create treatment timescale variables
+      data1 = .,
+      data2 = postvax_time,
+      id = patient_id,
+      timesincevax_pw = tdc(fup_day, timesincevax_pw)
+    ) %>%
+    # set factor levels for postvaccination periods
+    mutate(across(timesincevax_pw, factor, levels = postvax_periods)) %>%
+    # ind_outcome as logical to match data_tte
+    mutate(across(ind_outcome, as.logical)) %>%
+    select(
+      patient_id,
+      any_of(c(surv_strata, expo, vars0, vars1, vars2_cont, vars2_cat))
+    ) %>%
+    as_tibble()
+  
+  data_cox_full <- data_tte %>%
+    select(
+      patient_id,
+      any_of(c(surv_full, expo, vars1, vars2_cont, vars2_cat))
+    ) 
+  
+  rm(data_tte, data_cohort)
+  
 }
 
-data_tte <- data_cohort %>% 
-  mutate(
-    # select dates for outcome in question
-    outcome_date = get(outcomes_list$date_name[outcome_index]),
-    
-    # censor date already defined in data_selection_VE.R script 
-    
-    # calculate tte and ind for outcome in question
-    tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=TRUE),
-    ind_outcome = get(paste0("ind_",selected_outcome)),
-    tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-    
-    # calculate follow-up time (censor/event)
-    follow_up_time = tte(vax2_date-1, get(outcomes_list$date_name[outcome_index]), censor_date) 
-  ) %>%
-  mutate(across(all_of(vars2_cat), as.factor))
-
-data_cox_strata <- tmerge(
-  data1 = data_tte %>% select(-starts_with("ind_"), -ends_with("_date")),
-  data2 = data_tte,
-  id = patient_id,
-  tstart = 0L,
-  tstop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-  ind_outcome = event(tte_outcome)
-) %>%
-  tmerge( # create treatment timescale variables
-    data1 = .,
-    data2 = postvax_time,
-    id = patient_id,
-    timesincevax_pw = tdc(fup_day, timesincevax_pw)
-  ) %>%
-  # set factor levels for postvaccination periods
-  mutate(across(timesincevax_pw, factor, levels = postvax_periods)) %>%
-  # ind_outcome as logical to match data_tte
-  mutate(across(ind_outcome, as.logical)) %>%
-  select(
-    patient_id,
-    any_of(c(surv_strata, expo, vars0, vars1, vars2_cont, vars2_cat))
-    ) %>%
-  as_tibble()
-
-data_cox_full <- data_tte %>%
-  select(
-    patient_id,
-    any_of(c(surv_full, expo, vars1, vars2_cont, vars2_cat))
-    ) 
-
-rm(data_tte, data_cohort)
 
 ### check enough events to model ----
 events_threshold = 2
@@ -467,10 +529,20 @@ if (strata) {
 }
 
 ### print dataset size and save outputs ----
-logoutput(
-  glue(selected_outcome_clean, "\ndata_cox data size = ", nrow(data_cox_strata_merged)),
-  glue("data_cox memory usage = ", format(object.size(data_cox_strata_merged), units="GB", standard="SI", digits=3L))
-)
+if (timescale == "persontime") {
+  logoutput(
+    glue("data_cox_full:"),
+    glue("data size = ", nrow(data_cox_full_merged)),
+    glue("memory usage = ", format(object.size(data_cox_full_merged), units="GB", standard="SI", digits=3L))
+  )
+}
+if (strata) {
+  logoutput(
+    glue("data_cox_strata:"),
+    glue("data size = ", nrow(data_cox_strata_merged)),
+    glue("memory usage = ", format(object.size(data_cox_strata_merged), units="GB", standard="SI", digits=3L))
+  )
+}
 
 # save data and formulas
 # stratified
