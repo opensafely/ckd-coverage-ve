@@ -88,7 +88,11 @@ lastfupday <- max(postvax_list$postvaxcuts)
 
 # # read in incidence rate ratio table
 # irr_name = glue("table_irr_{db}_{timescale}_redacted.rds")
-irr_name = "table_irr_matched_redacted.rds"
+if (db=="unmatched") {
+  irr_name = "table_irr_redacted.rds"
+} else {
+  irr_name = "table_irr_matched_redacted.rds"
+}
 irr_table = read_rds(here::here("output", "tables", irr_name))
 irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
 irr_sub_strata <- irr_sub %>%
