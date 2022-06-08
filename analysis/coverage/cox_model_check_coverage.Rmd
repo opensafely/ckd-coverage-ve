@@ -3,9 +3,6 @@ title: "Check of Cox model assumptions for coverage models"
 output: html_document
 ---
 
-
-### Dose 3 models (primary outcome)
-
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 
@@ -23,46 +20,93 @@ library('glue')
 library('fs')
 library('cowplot')
 
+## Import command-line arguments
+args <- commandArgs(trailingOnly=TRUE)
+
+## Set input and output pathways - default is dose 3 uptake by 20th April 2022
+if(length(args)==0) {
+  outcome_label = "dose3"
+  selected_subgroup = "full"
+} else {
+  if (args[[1]]=="dose3") {
+    outcome_label = "dose3"
+    selected_subgroup = args[[2]]
+  } else if (args[[1]]=="dose4") {
+    outcome_label = "dose4"
+    selected_subgroup = args[[2]]
+  } else {
+    # Print error if no argument specified
+    stop("No outcome specified")
+  }
+}
+
+## Update subgroup selection strings
+if (selected_subgroup=="dialysis") { selected_subgroup = "RRT (dialysis)"}
+if (selected_subgroup=="transplant") { selected_subgroup = "RRT (Tx)"}
 
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
 
-## Import data for dose 2 analyses
-data_cox <- read_rds(here::here("output", "data", "data_cox_coverage_dose3.rds"))
+## Import data 
+data_cox <- read_rds(here::here("output", "data", paste0("data_cox_coverage_",outcome_label,".rds")))
 
-## Set vafriable list
-var_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "rural_urban_group",
-              "sex", "ethnicity", "imd", "ckd_7cat", "any_ckd_flag",
-              "prior_covid", "immunosuppression", "mod_sev_obesity", "diabetes", "any_resp_dis", "chd", "cld", "asplenia", "cancer",
-              "haem_cancer", "non_kidney_transplant", "chronic_neuro_dis_inc_sig_learn_dis","sev_mental_ill",
-              "cev_other") 
+## Select subgroup depending on arg[[2]]
+if (selected_subgroup!="full") {
+  data_cox = subset(data_cox, ckd_5cat==selected_subgroup)
+}
+
+## Set variable list
+var_list <- c("ageband2", "sex", "ethnicity", "imd",  "rural_urban_group",
+              "ckd_5cat", "chronic_kidney_disease_stages_3_5",
+              "care_home", "hscworker", "housebound", "endoflife",
+              "prior_covid_cat", "immunosuppression", "mod_sev_obesity", "diabetes", "any_resp_dis", "chd", "cld", "asplenia", "cancer",
+              "haem_cancer", "other_transplant", "chronic_neuro_dis_inc_sig_learn_dis","sev_mental_ill", "cev_other") 
+
+## Set subset of variables to be used in minimally adjusted models
+min_adj_list <- c("ageband2", "care_home", "hscworker")
 
 ## Set subset of variables to be used in partially adjusted models
 adj_list <- c("ageband2", "care_home", "hscworker", "housebound", "endoflife", "rural_urban_group",
-              "sex", "ethnicity", "imd", "prior_covid")
+              "sex", "ethnicity", "imd", "prior_covid_cat", "haem_cancer", "immunosuppression")
+
+## Select data subset
+if (selected_subgroup!="full") { var_list = var_list[var_list!="ckd_5cat"] }
+  
+## Exclude cev_other from RRT groups given that all will be 0 by definition
+if (selected_subgroup %in% c("RRT (dialysis)", "RRT (Tx)")) { var_list = var_list[var_list!="cev_other"] }
+
+## Exclude other_transplant from RRT (Tx) groups given that all will be 0 by definition
+if (selected_subgroup=="RRT (Tx)") { var_list = var_list[var_list!="other_transplant"] }
 ```
+
+#### Summary of input data
+* Selected subset: `r selected_subgroup`    
+* Selected outcome: `r outcome_label`    
+* N: `r plyr::round_any(nrow(data_cox),5)`    
+<br/><br/>
 
 #### Visualisation of KM curves for each covariate in turn
 ```{r, fig.width=10, fig.height=35}
+## Loop across variable list
 for (i in 1:length(var_list)) {
-  # assign variable
+  ## Assign variable
   data_cox$var = data_cox[,var_list[i]]
   
-  # create survival object
+  ## Create survival object
   surv = survfit(as.formula(paste0("Surv(follow_up_time, covid_vax) ~",var_list[i])), data = data_cox)
   
-  # generate km plot
+  ## Generate km plot
   km_plot = ggsurvplot(surv, censor = FALSE, xlim = c(250,450))[[1]]
   assign(paste0("km_", i), km_plot) # saves plot_i to environment
   
-  # generate survival table for univariate model
+  ## Generate survival table for univariate model
   survival.table <- broom::tidy(surv) %>% 
     filter(n.event > 0) %>% 
     group_by(strata) %>%
     mutate(hazard = n.event / (n.risk * (lead(time) - time)),
            log_cum_hazard = log(cumsum(hazard)))
   
-  # create log plot
+  ## Create log plot
   log_plot = ggplot() +
     geom_step(data = survival.table, aes(x = log(time), y = log_cum_hazard, col = strata)) +
     xlim(log(250),log(450)) +
@@ -74,23 +118,30 @@ for (i in 1:length(var_list)) {
     assign(paste0("log_", i), log_plot) # saves plot_i to environment
 }
 
-plot_grid(
-  km_1, km_2, km_3, km_4, km_5, km_6, km_7, km_8, km_9, km_10,
-  km_11, km_12, km_13, km_14, km_15, km_16, km_17, km_18, km_19, km_20,
-  km_21, km_22, km_23, km_24, km_25,
-  ncol=2
-)
+## Render grid of KM plots (calibrating plot counts depending on variables included)
+if (selected_subgroup=="full") {
+  plot_grid(
+    km_1, km_2, km_3, km_4, km_5, km_6, km_7, km_8, km_9, km_10, km_11, km_12, km_13, km_14, km_15, km_16, km_17, km_18, km_19, km_20, km_21, km_22, km_23, km_24, km_25,
+    ncol=2
+  )
+} else if (selected_subgroup %in% c("CKD3a", "CKD3b", "CKD4-5")) {
+  plot_grid(
+    km_1, km_2, km_3, km_4, km_5, km_6, km_7, km_8, km_9, km_10, km_11, km_12, km_13, km_14, km_15, km_16, km_17, km_18, km_19, km_20, km_21, km_22, km_23, km_24,
+    ncol=2
+  )
+} else if (selected_subgroup %in% c("RRT (dialysis)")) {
+  plot_grid(
+    km_1, km_2, km_3, km_4, km_5, km_6, km_7, km_8, km_9, km_10, km_11, km_12, km_13, km_14, km_15, km_16, km_17, km_18, km_19, km_20, km_21, km_22, km_23,
+    ncol=2
+  )
+} else {
+    plot_grid(
+    km_1, km_2, km_3, km_4, km_5, km_6, km_7, km_8, km_9, km_10, km_11, km_12, km_13, km_14, km_15, km_16, km_17, km_18, km_19, km_20, km_21, km_22, 
+    ncol=2
+  )
+}
 ```
-
-####  Log cumulative hazard plot for each variable in turn
-```{r, fig.width=10, fig.height=35}
-plot_grid(
-  log_1, log_2, log_3, log_4, log_5, log_6, log_7, log_8, log_9, log_10,
-  log_11, log_12, log_13, log_14, log_15, log_16, log_17, log_18, log_19, log_20,
-  log_21, log_22, log_23, log_24, log_25,
-  ncol=2
-)
-```
+<br/><br/>
 
 #### Test for proportional hazards (partially/fully adjusted models)
 ```{r}
@@ -214,76 +265,114 @@ tab$chisq_partial = NA
 tab$df_partial = NA
 tab$p_partial = NA
 
+## Create variables to fill with results from minimally adjusted models
+tab$chisq_minimal = NA
+tab$df_minimal = NA
+tab$p_minimal = NA
+
 ## Fit partially adjusted models in loop and extract proportional test results
 for (i in 1:length(var_list)) {
-  # Create residual plot for variable in question - fully adjusted model
+  ## Create residual plot for variable in question - fully adjusted model
   resid_full = ggcoxzph_mod(test.ph, var=var_list[i], point.alpha=0.005)[[1]]
   assign(paste0("res_f_", i), resid_full) # saves to environment
   
-  # Fit partially adjusted model
+  ## Select variables for minimally adjusted model
   var = var_list[i]
+  if (var %in% min_adj_list) { final_list = min_adj_list } else { final_list = c(var, min_adj_list) }
+  
+  ## Fit model and extract cox.zph outputs 
+  cox_minimal = coxph(as.formula(paste0("Surv(follow_up_time, covid_vax) ~",paste(final_list, collapse="+"),"+ strata(region)")), 
+                        data = data_cox)
+  test.ph_minimal = cox.zph(cox_minimal)
+  tab_minimal = data.frame(test.ph_minimal$table)
+  tab$chisq_minimal[i] = tab_minimal[var,"chisq"]
+  tab$df_minimal[i] = tab_minimal[var,"df"]
+  tab$p_minimal[i] = tab_minimal[var,"p"]
+  
+  ## Create residual plot for variable in question - partially adjusted model
+  resid_minimal = ggcoxzph_mod(test.ph_minimal, var=var_list[i], point.alpha=0.005)[[1]]
+  assign(paste0("res_m_", i), resid_minimal) # saves to environment
+
+  ## Select variables for partially adjusted model
   if (var %in% adj_list) { final_list = adj_list } else { final_list = c(var, adj_list) }
   
-  # Fit model and extract output
+  ## Fit model and extract cox.zph outputs 
   cox_partial = coxph(as.formula(paste0("Surv(follow_up_time, covid_vax) ~",paste(final_list, collapse="+"),"+ strata(region)")), 
                         data = data_cox)
   test.ph_partial = cox.zph(cox_partial)
-  
   tab_partial = data.frame(test.ph_partial$table)
   tab$chisq_partial[i] = tab_partial[var,"chisq"]
   tab$df_partial[i] = tab_partial[var,"df"]
   tab$p_partial[i] = tab_partial[var,"p"]
   
-  # Create residual plot for variable in question - partially adjusted model
+  ## Create residual plot for variable in question - partially adjusted model
   resid_partial = ggcoxzph_mod(test.ph_partial, var=var_list[i], point.alpha=0.005)[[1]]
   assign(paste0("res_p_", i), resid_partial) # saves to environment
 }
-gt(tab)
+gt(tab, rownames_to_stub = T) %>%
+    tab_options(table.font.size = pct(85))
 ```
+<br/>NB. Significant p values may partly reflect overpowered (and therefore) highly sensitive models, so should be interepreted alongside residual plots below.
+<br/><br/>
 
-#### Schoenfeld residuals - partially adjusted models (left) and fully adjusted models (right)
-```{r, fig.width=8, fig.height=60}
-## Create residual plots for partially adjusted models
-plot_grid(
-  res_p_1, res_f_1,
-  res_p_2, res_f_2,
-  res_p_3, res_f_3,
-  res_p_4, res_f_4,
-  res_p_5, res_f_5,
-  res_p_6, res_f_6,
-  res_p_7, res_f_7,
-  res_p_8, res_f_8,
-  res_p_9, res_f_9,
-  res_p_10, res_f_10,
-  res_p_11, res_f_11,
-  res_p_12, res_f_12,
-  res_p_13, res_f_13,
-  res_p_14, res_f_14,
-  res_p_15, res_f_15,
-  res_p_16, res_f_16,
-  res_p_17, res_f_17,
-  res_p_18, res_f_18,
-  res_p_19, res_f_19,
-  res_p_20, res_f_20,
-  res_p_21, res_f_21,
-  res_p_22, res_f_22,
-  res_p_23, res_f_23,
-  res_p_24, res_f_24,
-  res_p_25, res_f_25,
-  ncol=2
-)
+#### Schoenfeld residuals - minimally adjusted (left), partially adjusted (middle), and fully adjusted models (right)
+```{r, fig.width=12, fig.height=60}
+## Render grid of residual plots (calibrating plot counts depending on variables included)
+if (selected_subgroup=="full") {
+  plot_grid(
+    res_m_1, res_p_1, res_f_1, res_m_2, res_p_2, res_f_2, res_m_3, res_p_3, res_f_3,
+    res_m_4, res_p_4, res_f_4, res_m_5, res_p_5, res_f_5, res_m_6, res_p_6, res_f_6,
+    res_m_7, res_p_7, res_f_7, res_m_8, res_p_8, res_f_8, res_m_9, res_p_9, res_f_9, 
+    res_m_10, res_p_10, res_f_10, res_m_11, res_p_11, res_f_11, res_m_12, res_p_12, res_f_12,
+    res_m_13, res_p_13, res_f_13, res_m_14, res_p_14, res_f_14, res_m_15, res_p_15, res_f_15,
+    res_m_16, res_p_16, res_f_16, res_m_17, res_p_17, res_f_17, res_m_18, res_p_18, res_f_18,
+    res_m_19, res_p_19, res_f_19, res_m_20, res_p_20, res_f_20, res_m_21, res_p_21, res_f_21,
+    res_m_22, res_p_22, res_f_22, res_m_23, res_p_23, res_f_23, res_m_24, res_p_24, res_f_24,
+    res_m_25, res_p_25, res_f_25,
+    ncol=3
+  )
+} else if (selected_subgroup %in% c("CKD3a", "CKD3b", "CKD4-5")) {
+  plot_grid(
+    res_m_1, res_p_1, res_f_1, res_m_2, res_p_2, res_f_2, res_m_3, res_p_3, res_f_3,
+    res_m_4, res_p_4, res_f_4, res_m_5, res_p_5, res_f_5, res_m_6, res_p_6, res_f_6,
+    res_m_7, res_p_7, res_f_7, res_m_8, res_p_8, res_f_8, res_m_9, res_p_9, res_f_9, 
+    res_m_10, res_p_10, res_f_10, res_m_11, res_p_11, res_f_11, res_m_12, res_p_12, res_f_12,
+    res_m_13, res_p_13, res_f_13, res_m_14, res_p_14, res_f_14, res_m_15, res_p_15, res_f_15,
+    res_m_16, res_p_16, res_f_16, res_m_17, res_p_17, res_f_17, res_m_18, res_p_18, res_f_18,
+    res_m_19, res_p_19, res_f_19, res_m_20, res_p_20, res_f_20, res_m_21, res_p_21, res_f_21,
+    res_m_22, res_p_22, res_f_22, res_m_23, res_p_23, res_f_23, res_m_24, res_p_24, res_f_24,
+    ncol=3
+  )
+} else if (selected_subgroup %in% c("RRT (dialysis)")) {
+  plot_grid(
+    res_m_1, res_p_1, res_f_1, res_m_2, res_p_2, res_f_2, res_m_3, res_p_3, res_f_3,
+    res_m_4, res_p_4, res_f_4, res_m_5, res_p_5, res_f_5, res_m_6, res_p_6, res_f_6,
+    res_m_7, res_p_7, res_f_7, res_m_8, res_p_8, res_f_8, res_m_9, res_p_9, res_f_9, 
+    res_m_10, res_p_10, res_f_10, res_m_11, res_p_11, res_f_11, res_m_12, res_p_12, res_f_12,
+    res_m_13, res_p_13, res_f_13, res_m_14, res_p_14, res_f_14, res_m_15, res_p_15, res_f_15,
+    res_m_16, res_p_16, res_f_16, res_m_17, res_p_17, res_f_17, res_m_18, res_p_18, res_f_18,
+    res_m_19, res_p_19, res_f_19, res_m_20, res_p_20, res_f_20, res_m_21, res_p_21, res_f_21,
+    res_m_22, res_p_22, res_f_22, res_m_23, res_p_23, res_f_23,
+    ncol=3
+  )
+} else {
+  plot_grid(
+    res_m_1, res_p_1, res_f_1, res_m_2, res_p_2, res_f_2, res_m_3, res_p_3, res_f_3,
+    res_m_4, res_p_4, res_f_4, res_m_5, res_p_5, res_f_5, res_m_6, res_p_6, res_f_6,
+    res_m_7, res_p_7, res_f_7, res_m_8, res_p_8, res_f_8, res_m_9, res_p_9, res_f_9, 
+    res_m_10, res_p_10, res_f_10, res_m_11, res_p_11, res_f_11, res_m_12, res_p_12, res_f_12,
+    res_m_13, res_p_13, res_f_13, res_m_14, res_p_14, res_f_14, res_m_15, res_p_15, res_f_15,
+    res_m_16, res_p_16, res_f_16, res_m_17, res_p_17, res_f_17, res_m_18, res_p_18, res_f_18,
+    res_m_19, res_p_19, res_f_19, res_m_20, res_p_20, res_f_20, res_m_21, res_p_21, res_f_21,
+    res_m_22, res_p_22, res_f_22,
+    ncol=3
+  )
+}
 ```
+<br/><br/>
 
-
-
-
-
-
-Session info {.hidden}
-===================================== 
-
+#### Session info
 ```{r}
 print(sessionInfo())
 ```
 .
-

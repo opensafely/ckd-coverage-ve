@@ -115,13 +115,102 @@ actions:
       moderately_sensitive:
         html: output/markdown/vaccine_coverage.html
         
-  # Coverage summaries ----
-  cox_model_check_coverage:
-    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
+  # Model checks ----
+  # Dose 3 - full
+  cox_model_check_coverage_dose3_full:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose3_full.html")' dose3 full
     needs: [data_selection_coverage, cox_model_dose3]
     outputs:
       moderately_sensitive:
-        html: output/markdown/cox_model_check_coverage.html
+        html: output/markdown/coverage_model_checks/dose3_full.html
+        
+  # Dose 3 - CKD3a
+  cox_model_check_coverage_dose3_CKD3a:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose3_CKD3a.html")' dose3 CKD3a
+    needs: [data_selection_coverage, cox_model_dose3]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/coverage_model_checks/dose3_CKD3a.html
+
+  # Dose 3 - CKD3b
+  cox_model_check_coverage_dose3_CKD3b:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose3_CKD3b.html")' dose3 CKD3b
+    needs: [data_selection_coverage, cox_model_dose3]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/coverage_model_checks/dose3_CKD3b.html
+
+  # Dose 3 - CKD4-5
+  cox_model_check_coverage_dose3_CKD4-5:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose3_CKD4-5.html")' dose3 CKD4-5
+    needs: [data_selection_coverage, cox_model_dose3]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/coverage_model_checks/dose3_CKD4-5.html
+
+  # Dose 3 - dialysis
+  cox_model_check_coverage_dose3_dialysis:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose3_dialysis.html")' dose3 dialysis
+    needs: [data_selection_coverage, cox_model_dose3]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/coverage_model_checks/dose3_dialysis.html
+        
+  # Dose 3 - transplant
+  cox_model_check_coverage_dose3_transplant:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose3_transplant.html")' dose3 transplant
+    needs: [data_selection_coverage, cox_model_dose3]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/coverage_model_checks/dose3_transplant.html
+        
+  # Dose 4 - full
+  cox_model_check_coverage_dose4_full:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose4_full.html")' dose4 full
+    needs: [data_selection_coverage, cox_model_dose4]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/coverage_model_checks/dose4_full.html
+        
+  # Dose 4 - CKD3a
+  cox_model_check_coverage_dose4_CKD3a:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose4_CKD3a.html")' dose4 CKD3a
+    needs: [data_selection_coverage, cox_model_dose4]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/coverage_model_checks/dose4_CKD3a.html
+
+  # Dose 4 - CKD3b
+  cox_model_check_coverage_dose4_CKD3b:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose4_CKD3b.html")' dose4 CKD3b
+    needs: [data_selection_coverage, cox_model_dose4]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/coverage_model_checks/dose4_CKD3b.html
+
+  # Dose 4 - CKD4-5
+  cox_model_check_coverage_dose4_CKD4-5:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose4_CKD4-5.html")' dose4 CKD4-5
+    needs: [data_selection_coverage, cox_model_dose4]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/coverage_model_checks/dose4_CKD4-5.html
+
+  # Dose 4 - dialysis
+  cox_model_check_coverage_dose4_dialysis:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose4_dialysis.html")' dose4 dialysis
+    needs: [data_selection_coverage, cox_model_dose4]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/coverage_model_checks/dose4_dialysis.html
+        
+  # Dose 4 - transplant
+  cox_model_check_coverage_dose4_transplant:
+    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check_coverage.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/coverage_model_checks/", output_file="dose4_transplant.html")' dose4 transplant
+    needs: [data_selection_coverage, cox_model_dose4]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/coverage_model_checks/dose4_transplant.html
 
   # Coverage summaries ----
 #  cox_model_check:
