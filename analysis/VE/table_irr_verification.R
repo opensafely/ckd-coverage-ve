@@ -56,7 +56,7 @@ data_tte <- data_cohort %>%
     postvax_covid_death_date,
     end_date,
     censor_date,
-    tte_enddate,
+    # tte_enddate,
     tte_censor,
     tte_covid_postest, 
     ind_covid_postest, 
