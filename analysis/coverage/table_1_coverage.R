@@ -201,7 +201,7 @@ for (i in 1:length(ckd_levels)) {
     }
 }
 
-# Save as html/csv
+## Save as html/rds
 if (outcome_label=="dose3") {
   gt::gtsave(gt(collated_table), here::here("output","tables", "table1_coverage_redacted_by_CKD.html"))
   write_rds(collated_table, here::here("output", "tables", "table1_coverage_redacted_by_CKD.rds"), compress = "gz")

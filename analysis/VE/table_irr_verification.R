@@ -2,9 +2,7 @@
 # This script creates a table of incidence rates for different outcomes, stratified by vaccine type and times since vaccination.
 # # # # # # # # # # # # # # # # # # # # #
 
-# Preliminaries ----
-
-## Import libraries ----
+## Import libraries 
 library('tidyverse')
 library('here')
 library('glue')
@@ -17,35 +15,17 @@ library('lubridate')
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
 
-# args <- commandArgs(trailingOnly=TRUE)
-# if(length(args)==0){
-#   # use for interactive testing
-#   removeobs <- FALSE
-# } else {
-#   removeobs <- TRUE
-# }
-# 
-# 
-# 
-# ## import metadata ----
-# var_labels <- read_rds(here("output", "data", "metadata_labels.rds"))
-# 
-# list_formula <- read_rds(here("output", "data", "metadata_formulas.rds"))
-# list2env(list_formula, globalenv())
-postvaxcuts_8week <- c(56*0:5)
+## Specify follow-up windows
+postvaxcuts_8week <- c(28*0:6)
 lastfupday <- max(postvaxcuts_8week)
 
-#metadata_outcomes <- read_rds(here("output", "data", "metadata_outcomes.rds"))
-
-## create output directory ----
-# fs::dir_create(here("output", "descriptive", "tables"))
+## Create output directory
+fs::dir_create(here("output", "descriptive", "tables"))
 
 ## Import processed data ----
 data_cohort <- read_rds(here("output", "data", "data_cohort_VE.rds"))
-#data_comp <- read_rds(here("output", "data", "data_cohort_comp.rds"))
 
-# create pt data ----
-
+## Create pt data
 data_tte <- data_cohort %>%
   transmute(
     patient_id,
@@ -56,7 +36,6 @@ data_tte <- data_cohort %>%
     postvax_covid_death_date,
     end_date,
     censor_date,
-    # tte_enddate,
     tte_censor,
     tte_covid_postest, 
     ind_covid_postest, 
@@ -65,9 +44,10 @@ data_tte <- data_cohort %>%
     tte_covid_hosp, 
     ind_covid_hosp,
     tte_covid_death,
-    ind_covid_death) 
+    ind_covid_death
+    ) 
 
-# one row per patient per post-vaccination week
+## One row per patient per post-vaccination week
 postvax_time <- data_tte %>%
   select(patient_id, tte_censor) %>%
   mutate(
@@ -76,8 +56,7 @@ postvax_time <- data_tte %>%
   ) %>%
   unnest(c(fup_day, timesincevax))
 
-# create dataset that splits follow-up time by
-# time since vaccination (using postvaxcuts cutoffs)
+## Create dataset that splits follow-up time by time since vaccination (using postvaxcuts cutoffs)
 data_cox_split <- tmerge(
   data1 = data_tte %>% select(-starts_with("ind_"), -ends_with("_date")),
   data2 = data_tte,
@@ -94,7 +73,7 @@ data_cox_split <- tmerge(
   status_covid_hosp = tdc(tte_covid_hosp),
   status_covid_death = tdc(tte_covid_death)
 ) %>%
-  tmerge( # create treatment timescale variables
+  tmerge( ## Create treatment timescale variables
     data1 = .,
     data2 = postvax_time,
     id = patient_id,
@@ -104,7 +83,7 @@ data_cox_split <- tmerge(
     pt = tstop - tstart
   )
 
-## create person-time table ----
+## Create person-time table 
 format_ratio = function(numer,denom, width=7){
   paste0(
     replace_na(scales::comma_format(accuracy=1)(numer), "--"),
@@ -113,10 +92,9 @@ format_ratio = function(numer,denom, width=7){
   )
 }
 
+## Create function to summarise IRRs
 pt_summary <- function(data, event){
 
-  #data=data_cox_split
-  #event = "test"
   unredacted <- data_cox_split %>%
     mutate(
       timesincevax,
@@ -155,7 +133,6 @@ pt_summary <- function(data, event){
       timesincevax=forcats::fct_explicit_na(timesincevax, na_level="All")
     )
 
-
   unredacted_wide <-
     unredacted_add_all %>%
     pivot_wider(
@@ -190,6 +167,7 @@ pt_summary <- function(data, event){
     )
 }
 
+## Collate IRRs by outcome
 data_summary <- bind_rows(
   temp1 <- pt_summary(data_cox_split, "covid_postest"),
   temp2 <- pt_summary(data_cox_split, "covid_emergency"),
@@ -197,98 +175,5 @@ data_summary <- bind_rows(
   temp4 <- pt_summary(data_cox_split, "covid_death")
 )
 
+## Write csv
 write_csv(data_summary, here("output", "tables", "table_irr_redacted_verification.csv"))
-
-# tab_summary <- data_summary %>%
-#   select(-ends_with("_n"), -ends_with("_yearsatrisk"), -rrE) %>%
-#   gt() %>%
-#   cols_label(
-#     event = "Outcome",
-#     timesincevax = "Time since first dose",
-# 
-#     pfizer_q = "Events / person-years",
-#     az_q   = "Events / person-years",
-# 
-#     pfizer_rate = "Incidence",
-#     az_rate = "Incidence",
-#     rr = "Incidence rate ratio",
-# 
-#     rrCI = "95% CI"
-#   ) %>%
-#   tab_spanner(
-#     label = "BNT162b2",
-#     columns = starts_with("pfizer")
-#   ) %>%
-#   tab_spanner(
-#     label = "ChAdOx1",
-#     columns = starts_with("az")
-#   ) %>%
-#   fmt_number(
-#     columns = ends_with(c("rr", "_rate")),
-#     decimals = 2
-#   ) %>%
-#   fmt_missing(
-#     everything(),
-#     missing_text="--"
-#   ) %>%
-#   cols_align(
-#     align = "right",
-#     columns = everything()
-#   ) %>%
-#   cols_align(
-#     align = "left",
-#     columns = "timesincevax"
-#   )
-# 
-# write_rds(tab_summary, here("output", "descriptive", "tables", "table_irr.rds"))
-# gtsave(tab_summary, here("output", "descriptive", "tables", "table_irr.html"))
-
-# 
-# tab_summary_simple <-
-#   data_summary %>%
-#   filter(
-#     event %in% c(
-#       "covid_postest",
-#       "covid_emergency",
-#       "covid_hosp",
-#       "covid_death"
-#     )
-#   ) %>%
-#   transmute(
-#     event, timesincevax,
-#     pfizer_q,
-#     pfizer_rate_fmt = if_else(pfizer_rate<0.001, "<0.001", number_format(0.001)(pfizer_rate)),
-#     pfizer_rate_fmt = if_else(pfizer_rate==0, "0", pfizer_rate_fmt),
-#     az_q,
-#     az_rate_fmt = if_else(az_rate<0.001, "<0.001", number_format(0.001)(az_rate)),
-#     az_rate_fmt = if_else(az_rate==0, "0", az_rate_fmt)
-#   ) %>%
-#   gt(
-#     groupname_col = "event"
-#   ) %>%
-#   cols_label(
-#     event = "Outcome",
-#     timesincevax = "Time since first dose",
-# 
-#     pfizer_q = "BNT162b2\nEvents / person-years",
-#     pfizer_rate_fmt = "BNT162b2\nIncidence",
-# 
-#     az_q   = "ChAdOx1\nEvents / person-years",
-#     az_rate_fmt = "ChAdOx1\nIncidence"
-#   ) %>%
-#   fmt_missing(
-#     everything(),
-#     missing_text="--"
-#   ) %>%
-#   cols_align(
-#     align = "right",
-#     columns = everything()
-#   ) %>%
-#   cols_align(
-#     align = "left",
-#     columns = "timesincevax"
-#   )
-# 
-# # write_rds(tab_summary_simple, here("output", "tables", "table_irr_simple.rds"))
-# gtsave(tab_summary_simple, here("output", "tables", "table_irr_simple.html"))
-

@@ -5,7 +5,7 @@
 version: '3.0'
 
 expectations:
-  population_size: 100000
+  population_size: 500000
 
 actions:
 
@@ -211,14 +211,6 @@ actions:
     outputs:
       moderately_sensitive:
         html: output/markdown/coverage_model_checks/dose4_transplant.html
-
-  # Coverage summaries ----
-#  cox_model_check:
-#    run: r:latest -e 'rmarkdown::render("analysis/coverage/cox_model_check.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-#    needs: [data_selection_coverage, cox_model]
-#    outputs:
-#      moderately_sensitive:
-#        html: output/markdown/cox_model_check.html
 
 #############################
 ### VE - unmatched analyses
