@@ -143,7 +143,7 @@ data_flowchart <- data_criteria %>%
       crit == "c2" ~ "  with eGFR<60 or UKRR 2020 population", 
       crit == "c3" ~ "  with no RRT mismatch (primary care dialysis/Tx code but absent from UKRR 2020 population)", 
       crit == "c4" ~ "  with no missing demographic information",
-      crit == "c5" ~ "  with maximum of 5 doses recorded up to 20 April 2022",
+      crit == "c5" ~ "  with maximum of 5 doses recorded up to analysis cut-off",
       crit == "c6" ~ "  with no vaccines administered at an interval of <14 days (primary analysis subset)",
       crit == "c7" ~ "  alive throughout follow-up period (logistic regression sensitivity subset only)",
       crit == "c8" ~ "  registered throughout follow-up period (logistic regression sensitivity subset only)",
