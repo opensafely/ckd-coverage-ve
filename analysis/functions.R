@@ -76,7 +76,7 @@ redact_table = function(table_input, multiple=TRUE) {
   
   # Redact any remaining cell counts <=10
   table_input$Freq[(table_input$Freq>0 & table_input$Freq<=10) | (table_input$Non_Freq>0 & table_input$Non_Freq<=10)] = "[Redacted]"
-  table_input$Prop[(table_input$Freq>0 & table_input$Freq<=10) | (table_input$Non_Freq>0 &table_input$Non_Freq<=10)] = "[Redacted]"
+  table_input$Prop[table_input$Freq=="[Redacted]"] = "(-)"
   table_input <- table_input %>% select(-Non_Freq)
   
   names(table_input) = c("Combination", "Frequency", "Percent")
