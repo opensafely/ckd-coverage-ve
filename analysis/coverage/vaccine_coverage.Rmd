@@ -377,7 +377,7 @@ km_collated$Population = "Full"
 km_collated$Population[km_collated$dose %in% c("4 (subset)", "5 (subset)")] = "Subset"
 
 ## Generate plot
-km_plot = ggplot(km_collated, aes(x = date, y = cum.in.floor*100, colour = factor(dose_plot))) + geom_line(aes(linetype=Population)) +
+km_plot = ggplot(subset(km_collated, dose!="5 (subset)"), aes(x = date, y = cum.in.floor*100, colour = factor(dose_plot))) + geom_line(aes(linetype=Population)) +
           theme_bw()+ scale_colour_manual(values = palette[c(1,2,3,4,5)]) +
           theme(legend.position="right") + scale_x_date(date_labels = "%b %Y") +
           ylim(0,100) + xlab("Date") + ylab("Cumulative coverage (%)") + labs(colour="Dose") +
