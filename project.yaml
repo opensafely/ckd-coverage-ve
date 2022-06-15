@@ -299,13 +299,151 @@ actions:
   # model
   cox_model_unmatched_calendartime_covid_postest_VE:
     run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_postest
-    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_postest_VE, table_irr]
+    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_postest_VE, table_irr]
     outputs:
       highly_sensitive:
         data: output/model/modelcox*unmatched_calendartime_covid_postest.rds
       moderately_sensitive:
         csv: output/model/modelcox*unmatched_calendartime_covid_postest.csv
         logs: output/model/log_cox_model_unmatched_calendartime_covid_postest.txt
+        
+  # unmatched_persontime_covid_emergency
+  # preflight
+  cox_preflight_unmatched_persontime_covid_emergency_VE:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_emergency
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/data*unmatched_persontime_covid_emergency.rds
+        formulas: output/model/formulas*unmatched_persontime_covid_emergency.rds
+      moderately_sensitive:
+        logs: output/model/log_cox_preflight_unmatched_persontime_covid_emergency.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_emergency_VE:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_emergency
+    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_emergency_VE, table_irr]
+    outputs:
+      highly_sensitive:
+        data: output/model/modelcox*unmatched_persontime_covid_emergency.rds
+      moderately_sensitive:
+        csv: output/model/modelcox*unmatched_persontime_covid_emergency.csv
+        logs: output/model/log_cox_model_unmatched_persontime_covid_emergency.txt
+
+  # unmatched_calendartime_covid_emergency
+  # preflight
+  cox_preflight_unmatched_calendartime_covid_emergency_VE:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_emergency
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/data*unmatched_calendartime_covid_emergency.rds
+        formulas: output/model/formulas*unmatched_calendartime_covid_emergency.rds
+      moderately_sensitive:
+        logs: output/model/log_cox_preflight_unmatched_calendartime_covid_emergency.txt
+  
+  # model
+  cox_model_unmatched_calendartime_covid_emergency_VE:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_emergency
+    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_emergency_VE, table_irr]
+    outputs:
+      highly_sensitive:
+        data: output/model/modelcox*unmatched_calendartime_covid_emergency.rds
+      moderately_sensitive:
+        csv: output/model/modelcox*unmatched_calendartime_covid_emergency.csv
+        logs: output/model/log_cox_model_unmatched_calendartime_covid_emergency.txt
+        
+  # unmatched_persontime_covid_hosp
+  # preflight
+  cox_preflight_unmatched_persontime_covid_hosp_VE:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_hosp
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/data*unmatched_persontime_covid_hosp.rds
+        formulas: output/model/formulas*unmatched_persontime_covid_hosp.rds
+      moderately_sensitive:
+        logs: output/model/log_cox_preflight_unmatched_persontime_covid_hosp.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_hosp_VE:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_hosp
+    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_hosp_VE, table_irr]
+    outputs:
+      highly_sensitive:
+        data: output/model/modelcox*unmatched_persontime_covid_hosp.rds
+      moderately_sensitive:
+        csv: output/model/modelcox*unmatched_persontime_covid_hosp.csv
+        logs: output/model/log_cox_model_unmatched_persontime_covid_hosp.txt
+
+  # unmatched_calendartime_covid_hosp
+  # preflight
+  cox_preflight_unmatched_calendartime_covid_hosp_VE:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_hosp
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/data*unmatched_calendartime_covid_hosp.rds
+        formulas: output/model/formulas*unmatched_calendartime_covid_hosp.rds
+      moderately_sensitive:
+        logs: output/model/log_cox_preflight_unmatched_calendartime_covid_hosp.txt
+  
+  # model
+  cox_model_unmatched_calendartime_covid_hosp_VE:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_hosp
+    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_hosp_VE, table_irr]
+    outputs:
+      highly_sensitive:
+        data: output/model/modelcox*unmatched_calendartime_covid_hosp.rds
+      moderately_sensitive:
+        csv: output/model/modelcox*unmatched_calendartime_covid_hosp.csv
+        logs: output/model/log_cox_model_unmatched_calendartime_covid_hosp.txt
+        
+  # unmatched_persontime_covid_death
+  # preflight
+  cox_preflight_unmatched_persontime_covid_death_VE:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_death
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/data*unmatched_persontime_covid_death.rds
+        formulas: output/model/formulas*unmatched_persontime_covid_death.rds
+      moderately_sensitive:
+        logs: output/model/log_cox_preflight_unmatched_persontime_covid_death.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_death_VE:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_death
+    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_death_VE, table_irr]
+    outputs:
+      highly_sensitive:
+        data: output/model/modelcox*unmatched_persontime_covid_death.rds
+      moderately_sensitive:
+        csv: output/model/modelcox*unmatched_persontime_covid_death.csv
+        logs: output/model/log_cox_model_unmatched_persontime_covid_death.txt
+
+  # unmatched_calendartime_covid_death
+  # preflight
+  cox_preflight_unmatched_calendartime_covid_death_VE:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_death
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/data*unmatched_calendartime_covid_death.rds
+        formulas: output/model/formulas*unmatched_calendartime_covid_death.rds
+      moderately_sensitive:
+        logs: output/model/log_cox_preflight_unmatched_calendartime_covid_death.txt
+  
+  # model
+  cox_model_unmatched_calendartime_covid_death_VE:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_death
+    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_death_VE, table_irr]
+    outputs:
+      highly_sensitive:
+        data: output/model/modelcox*unmatched_calendartime_covid_death.rds
+      moderately_sensitive:
+        csv: output/model/modelcox*unmatched_calendartime_covid_death.csv
+        logs: output/model/log_cox_model_unmatched_calendartime_covid_death.txt
 
 #   # Cox VE summaries for unmatched analysis ----
 #   cox_VE_summary:
