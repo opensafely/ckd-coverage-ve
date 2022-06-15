@@ -288,6 +288,7 @@ model = rbind(
 
 ## Set factor levels
 model$model_name = factor(model$model_name, levels = c("unadjusted", "region/date adjusted", "fully adjusted"))
+model$outcome_clean = factor(model$outcome_clean, levels = clean_list)
 
 ## Remove redacted components from plot
 model$estimate = as.numeric(model$estimate)
@@ -366,6 +367,7 @@ model_cal = rbind(
 
 ## Set factor levels
 model_cal$model_name = factor(model_cal$model_name, levels = c("unadjusted", "region/date adjusted", "fully adjusted"))
+model_cal$outcome_clean = factor(model_cal$outcome_clean, levels = clean_list)
 
 ## Remove redacted components from plot
 model_cal$estimate = as.numeric(model_cal$estimate)
@@ -511,6 +513,9 @@ HR_summary <- merged %>%
   ) %>%
   select(-c(estimate.x, estimate.y, conf.low.x, conf.low.y, conf.high.x, conf.high.y)) %>%
   rename(`Period (days)` = term)
-HR_summary
+HR_summary %>% 
+    gt(groupname_col = "outcome_clean") %>%
+   tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
+   tab_options(table.font.size = pct(85))
 ```
 .
