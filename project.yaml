@@ -445,13 +445,14 @@ actions:
         csv: output/model/modelcox*unmatched_calendartime_covid_death.csv
         logs: output/model/log_cox_model_unmatched_calendartime_covid_death.txt
 
-#   # Cox VE summaries for unmatched analysis ----
-#   cox_VE_summary:
-#     run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-#     needs: [data_selection_VE, table_1_VE, table_irr, cox_model_VE]
-#     outputs:
-#       moderately_sensitive:
-#         html: output/markdown/cox_VE_summary.html
+ # Cox VE summaries for unmatched analysis ----
+  cox_VE_summary:
+    run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
+    needs: [data_selection_VE, table_1_VE, table_irr, cox_model_unmatched_persontime_covid_postest_VE, cox_model_unmatched_calendartime_covid_postest_VE, cox_model_unmatched_persontime_covid_emergency_VE, cox_model_unmatched_calendartime_covid_emergency_VE, cox_model_unmatched_persontime_covid_hosp_VE, cox_model_unmatched_calendartime_covid_hosp_VE, cox_model_unmatched_persontime_covid_death_VE, cox_model_unmatched_calendartime_covid_death_VE]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/cox_VE_summary.html
+        
         
 # # PLR models - comparative VE unmatched ----
 #   plr_model_VE:
