@@ -7,20 +7,11 @@
 
 ######################################
 
-
-### Preliminaries ----
-
 ## Import libraries
-# library('here')
-# library('tidyr')
 library('tidyverse')
 library('lubridate')
 library('survival')
-# library('gtsummary')
-# library('gt')
-# library('survminer')
 library('glue')
-# library('fs')
 library('splines')
 sessionInfo()
 
@@ -34,7 +25,7 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
-  timescale = "calendartime"
+  timescale = "persontime"
   selected_outcome = "covid_postest"
 } else {
   db = args[[1]]
@@ -45,25 +36,25 @@ if(length(args)==0){
 ## Import data
 full = timescale != "calendartime"
 if (full) {
-  # get data for full model
+  ## Get data for full model
   data_cox_full <- read_rds(here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{selected_outcome}.rds")))
-  # check dataset not empty
+  ## Check dataset not empty
   if (nrow(data_cox_full) == 0) {
     # log
     try(stop("Not enough events to fit model."))
   }
 }
 
-# read data for stratified model
+## Read data for stratified model
 data_cox_strata <- read_rds(here::here("output", "model", glue("data_cox_strata_{db}_{timescale}_{selected_outcome}.rds")))
 strata = nrow(data_cox_strata) > 0
-# check dataset not empty
+## Check dataset not empty
 if (!strata & timescale == "calendartime") {
   # log
   try(stop("Not enough events to fit model with calendar timescale."))
 }
 
-## Import formulas 
+## Import formulae 
 if (full) {
   formulas_full <- read_rds(
     here::here("output", "model", glue("formulas_full_{db}_{timescale}_{selected_outcome}.rds")))
@@ -80,14 +71,13 @@ outcomes_list <- read_rds(
 outcome_index = which(outcomes_list$short_name == selected_outcome)
 selected_outcome_clean = outcomes_list$clean_name[outcome_index]
 
-##Import postvax_list
+## Import postvax_list
 postvax_list <- read_rds(
   here::here("output", "lib", "postvax_list.rds")
 )
 lastfupday <- max(postvax_list$postvaxcuts)
 
-# # read in incidence rate ratio table
-# irr_name = glue("table_irr_{db}_{timescale}_redacted.rds")
+## Read in incidence rate ratio table
 if (db=="unmatched") {
   irr_name = "table_irr_redacted.rds"
 } else {
@@ -100,21 +90,18 @@ irr_sub_strata <- irr_sub %>%
 irr_sub_full <- irr_sub %>%
   filter(!(period %in% postvax_list$postvax_periods))
 
-## Import custom user functions and packages
-# source(here::here("analysis", "functions.R"))
-
 ## Create directory for full model outputs
 dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
 
-## create special log file ----
+## Create log file
 cat(
-  glue("## script info for cox models ##"), 
+  glue("## Script info for cox models ##"), 
   "  \n", 
   file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}.txt")), 
   append = FALSE
   )
 
-## function to pass additional log text
+## Function to pass additional log text
 logoutput <- function(...){
   cat(..., file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}.txt")), sep = "\n  ", append = TRUE)
   cat("\n", file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}.txt")), sep = "\n  ", append = TRUE)
@@ -146,7 +133,7 @@ cox_model_VE <- function(number, stratified=TRUE) {
   if (timescale == "calendartime" & !stratified) stop("Must set stratified=TRUE if using calendar timescale")
   
   if (stratified) {
-    # if stratified = FALSE, fit cox model stratified by follow-up window
+    ## If stratified = FALSE, fit cox model stratified by follow-up window
     coxmod <- coxph(
       formula = formula_cox,
       data = data_cox_strata,
@@ -156,34 +143,29 @@ cox_model_VE <- function(number, stratified=TRUE) {
       control = coxph.control(iter.max = 50)
     )
   } else {
-    # if stratified = FALSE, fit model on full dataset
+    ## If stratified = FALSE, fit model on full dataset
     coxmod <- coxph(
       formula = formula_cox,
       data = data_cox_full,
       control = coxph.control(iter.max = 50)
       )
   }
-  # print warnings
+  ## Print warnings
   print(warnings())
   
-  # print output status to log file
+  ## Print output status to log file
   logoutput(
     glue("model{number} data size = ", coxmod$n),
-    glue("model{number} memory usage = ", format(object.size(coxmod), units="GB", standard="SI", digits=3L))
+    glue("model{number} memory usage = ", format(object.size(coxmod), units="GB", standard="SI", digits=3L)),
+    glue("model{number} iterations required = ", coxmod$iter)
   )
 
-  if (stratified) {
-    logoutput(
-      glue("convergence status: ", coxmod$info[["convergence"]])
-    )
-  }
-
-  # return model summary
+  ## Return model summary
   tidy <- broom.helpers::tidy_plus_plus(coxmod, exponentiate = FALSE) %>%
     add_column(model_name = model_type, .before=1) %>%
     add_column(model = number, .before=1)
   
-  # return brief model summary
+  ## Return brief model summary
   glance <- broom::glance(coxmod) %>%
     add_column(
       model_name = model_type,
@@ -191,24 +173,25 @@ cox_model_VE <- function(number, stratified=TRUE) {
       ram = format(object.size(coxmod), units="GB", standard="SI", digits=3L),
       .before = 1
     )
-
-  if (stratified) {
+  glance$convergence_iter = coxmod$iter
+  
+  ## Add whether model stratified or full
+  if (stratified) { 
     tidy$level = glance$level = "stratified"
-    glance$convergence = coxmod$info[["convergence"]]
   } else {
     tidy$level = glance$level = "full"
-    glance$convergence = NA # why?
   }
 
-  # model outputs
+  ## Model outputs
   coxmod$data <- NULL
   #write_rds(coxmod, here("output", "model","VE", glue("modelcox_model{number}_",selected_outcome,".rds")), compress="gz")
   lst(glance, tidy)
 }
 
 #######################################################
-# fit cox models
+## Fit cox models
 #######################################################
+
 ## Redact statistical outputs if <=10 events in glance
 redact_glance <- function(.data) {
   redaction_columns = c(
@@ -227,7 +210,7 @@ if (full) {
   summary1_full <- cox_model_VE(1, stratified=FALSE)
   summary2_full <- cox_model_VE(2, stratified=FALSE)
   
-  # glance
+  ## Collate glance
   model_glance_full <- bind_rows(
     summary0_full$glance, 
     summary1_full$glance, 
@@ -239,9 +222,7 @@ if (full) {
       ) %>%
     redact_glance()
   
-
-  
-  # tidy
+  ## Collate tidy
   model_tidy_full <- bind_rows(
     summary0_full$tidy, 
     summary1_full$tidy, 
@@ -252,14 +233,12 @@ if (full) {
       outcome_clean = selected_outcome_clean
     )
   
-
-  
 } else {
-  # empty outputs
+  ## Empty outputs
   model_glance_full <- tibble()
   model_tidy_full <- tibble()
 }
-# save model summary
+## Save model summary
 write_csv(
   model_glance_full,
   here::here("output", "model", glue("modelcox_glance_full_{db}_{timescale}_{selected_outcome}.csv"))
@@ -275,7 +254,7 @@ if (strata) {
   summary1_strata <- cox_model_VE(1, stratified=TRUE)
   summary2_strata <- cox_model_VE(2, stratified=TRUE)
   
-  # glance
+  ## Collate glance
   model_glance_strata <- bind_rows(
     summary0_strata$glance, 
     summary1_strata$glance, 
@@ -287,7 +266,7 @@ if (strata) {
     ) %>%
     redact_glance()
   
-  # tidy
+  ## Collate tidy
   model_tidy_strata <- bind_rows(
     summary0_strata$tidy, 
     summary1_strata$tidy, 
@@ -298,13 +277,13 @@ if (strata) {
       outcome_clean = selected_outcome_clean
     )
   
-  
 } else {
-  # empty outputs
+  ## Empty outputs
   model_glance_strata <- tibble()
   model_tidy_strata <- tibble()
 }
-# save model summary
+
+## Save model summary
 write_csv(
   model_glance_strata,
   here::here("output", "model", glue("modelcox_glance_strata_{db}_{timescale}_{selected_outcome}.csv"))
@@ -329,9 +308,9 @@ reduce_tidy <- function(stratified=FALSE) {
     mutate(across(term, 
                   ~if_else(
                     str_detect(.x, "timesincevax_pw"),
-                    # for the stratified model extract the time period from term:
+                    ## For the stratified model extract the time period from term:
                     str_extract(.x, "\\d+-\\d+$"), 
-                    # for the full model extract the time period from irr_sub_full:
+                    ## For the full model extract the time period from irr_sub_full:
                     irr_sub_full$period 
                     ))) 
   
@@ -360,16 +339,14 @@ reduce_tidy <- function(stratified=FALSE) {
     "n_event", "exposure", "estimate", "std.error", "robust.se", "statistic", 
     "p.value", "conf.low", "conf.high")
   
-  # add event counts from IRR table to unadjusted model
+  ## Add event counts from IRR table to unadjusted model
   # Elsie note: join is safer, in case some periods are not included in the model due to few events
   model_tidy_reduced <- model_tidy_reduced %>%
-    # Elsie note: didn't seem necessary to keep all columns as some were all missing, 
-    # and some were redundant, I selected the following, but feel free to change
     select(
       model, model_name, term, variable, label, outcome,
       any_of(redaction_columns), starts_with(c("term_", "BNT_", "AZ_"))
     ) %>%
-    # all redaction columns as character, otherwise error in following loop
+    ## All redaction columns as character, otherwise error in following loop
     mutate(across(any_of(redaction_columns), as.character))
   
   for (i in 1:nrow(model_tidy_reduced)) {
@@ -391,7 +368,7 @@ reduce_tidy <- function(stratified=FALSE) {
   
 }
 
-# combine and save model summary (full - simplified)
+## Combine and save model summary (full - simplified)
 model_tidy_final <- tibble()
 if (strata) {
   model_tidy_final <- bind_rows(model_tidy_final, reduce_tidy(TRUE))
@@ -403,7 +380,7 @@ model_tidy_final <- model_tidy_final %>%
   mutate(across(term, fct_inorder)) %>%
   arrange(model, term)
 
-# save outputs
+## Save outputs
 write_csv(
   model_tidy_final, 
   here::here("output", "model", glue("modelcox_tidy_reduced_{db}_{timescale}_{selected_outcome}.csv"))

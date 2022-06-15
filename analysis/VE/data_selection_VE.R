@@ -29,9 +29,31 @@ first_az = as_date("2021-01-04")
 ## Set analysis end date
 data_processed$end_date = as_date("2021-10-14")
 
-## Set analysis intervals
-postvaxcuts <- 28*0:6
+## Set and store outcomes list
+outcomes_list <- list(
+  short_name = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death"),
+  clean_name = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death"),
+  date_name = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date")
+)
+dir.create(here::here("output", "lib"), showWarnings = FALSE, recursive=TRUE)
+write_rds(
+  outcomes_list,
+  here::here("output", "lib", "outcomes.rds")
+)
+
+## Set and store analysis intervals and last follow-up day
+period_length <- 28
+n_periods <- 6
+postvaxcuts <- period_length*0:(n_periods)
+postvax_periods = paste0(postvaxcuts[1:((length(postvaxcuts)-1))]+1,"-",postvaxcuts[2:length(postvaxcuts)])
 lastfupday <- max(postvaxcuts)
+write_rds(
+  list(
+    postvaxcuts = postvaxcuts,
+    postvax_periods = postvax_periods
+  ),
+  here::here("output", "lib", "postvax_list.rds")
+)
 
 ## Create cohort data with tte calculations ----
 data_processed <- data_processed %>%

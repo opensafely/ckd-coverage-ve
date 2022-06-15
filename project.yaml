@@ -224,6 +224,8 @@ actions:
       highly_sensitive:
         data1: output/data/data_cohort_VE.rds
         data2: output/data/data_cohort_VE_matched.rds
+        data3: output/lib/outcomes.rds
+        data4: output/lib/postvax_list.rds
         csv1: output/data/data_cohort_VE.csv
         csv2: output/data/data_cohort_VE_matched.csv
       moderately_sensitive:
@@ -274,7 +276,7 @@ actions:
   # model
   cox_model_unmatched_persontime_covid_postest_VE:
     run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_postest
-    needs: [cox_preflight_unmatched_persontime_covid_postest_VE, table_irr]
+    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_postest_VE, table_irr]
     outputs:
       highly_sensitive:
         data: output/model/modelcox*unmatched_persontime_covid_postest.rds
@@ -297,7 +299,7 @@ actions:
   # model
   cox_model_unmatched_calendartime_covid_postest_VE:
     run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_postest
-    needs: [cox_preflight_unmatched_calendartime_covid_postest_VE, table_irr]
+    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_postest_VE, table_irr]
     outputs:
       highly_sensitive:
         data: output/model/modelcox*unmatched_calendartime_covid_postest.rds
