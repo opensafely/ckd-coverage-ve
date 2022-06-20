@@ -2,7 +2,7 @@
 
 This is the code and configuration for OpenSAFELY.
 
-* A preprint  [here](https://docs.google.com/document/d/1w48W-bCMfn0RdkfxlU6fbRkPv3MnIYd3/edit#heading=h.gjdgxs)
+* A preprint of the coverage analyses is available [here](https://www.medrxiv.org/content/10.1101/2022.06.14.22276391v1)
 * The protocol draft is [here](https://docs.google.com/document/d/1w48W-bCMfn0RdkfxlU6fbRkPv3MnIYd3/edit#heading=h.gjdgxs)
 * If you are interested in how we defined our variables, take a look at the [study definition](analysis/study_definition.py); this is written in `python`, but non-programmers should be able to get a relatively good idea of what is going on here
 * If you are interested in how we defined our code lists, look in the [codelists folder](./codelists/).
