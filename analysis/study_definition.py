@@ -544,9 +544,13 @@ study = StudyDefinition(
     },
   ),
   
-  ## Age for booster JCVI definitions if needed
+  ## Age for booster JCVI definitions (extract in case needed)
   age_august2021=patients.age_as_of(
     "2020-08-31",
+    return_expectations = {
+      "rate": "universal",
+      "int": {"distribution": "population_ages"},
+    },
   ),
   
   ## Sex
@@ -749,31 +753,6 @@ study = StudyDefinition(
     on_or_before = "index_date - 1 day",
   ),
   
-  ## Blood pressure
-  bp_sys = patients.mean_recorded_value(
-    systolic_blood_pressure_codes,
-    on_most_recent_day_of_measurement = True,
-    on_or_before = "index_date - 1 day",
-    include_measurement_date = True,
-    date_format = "YYYY-MM-DD", #include_month=True,
-    return_expectations = {
-      "incidence": 0.6,
-      "float": {"distribution": "normal", "mean": 80, "stddev": 10},
-    },
-  ),
-  
-  bp_dias = patients.mean_recorded_value(
-    diastolic_blood_pressure_codes,
-    on_most_recent_day_of_measurement = True,
-    on_or_before = "index_date - 1 day",
-    include_measurement_date = True,
-    date_format = "YYYY-MM-DD", #include_month=True,
-    return_expectations ={
-      "incidence": 0.6,
-      "float": {"distribution": "normal", "mean": 120, "stddev": 10},
-    },
-  ),
-  
   ## Cancer (non-haematological)
   cancer = patients.with_these_clinical_events(
     combine_codelists(
@@ -848,7 +827,7 @@ study = StudyDefinition(
     immunosuppression_medication_codes,
     returning = "date",
     find_last_match_in_period = True,
-    between=["index_date - 182 days", "index_date - 1 day"]
+    between=["index_date - 182 days", "index_date - 1 day"],
     date_format = "YYYY-MM-DD",
   ),
   

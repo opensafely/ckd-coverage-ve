@@ -12,12 +12,6 @@
       "downloaded_at": "2022-01-13 11:13:06.488354Z",
       "sha": "36e4eacba898e6ec72da8ff66e8c673bfd9aa8e4"
     },
-    "opensafely-smoking-clear.csv": {
-      "id": "opensafely/smoking-clear/2020-04-29",
-      "url": "https://codelists.opensafely.org/codelist/opensafely/smoking-clear/2020-04-29/",
-      "downloaded_at": "2022-01-13 11:13:06.655549Z",
-      "sha": "0b5f3afe1db96dcce5141220e893a42ba2e5a8f7"
-    },
     "primis-covid19-vacc-uptake-ast.csv": {
       "id": "primis-covid19-vacc-uptake/ast/v1",
       "url": "https://codelists.opensafely.org/codelist/primis-covid19-vacc-uptake/ast/v1/",
@@ -114,11 +108,11 @@
       "downloaded_at": "2022-01-13 11:13:10.002070Z",
       "sha": "8523d6c40d34eeedaab6bf7e550a4b295b83b7dd"
     },
-    "nhsd-primary-care-domain-refsets-ld_cod.csv": {
-      "id": "nhsd-primary-care-domain-refsets/ld_cod/20210127",
-      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/ld_cod/20210127/",
-      "downloaded_at": "2022-01-13 11:13:10.172797Z",
-      "sha": "0c5bc3b050a55c2090e16932fd7364a0be775cb4"
+    "primis-covid19-vacc-uptake-learndis.csv": {
+      "id": "primis-covid19-vacc-uptake/learndis/v1",
+      "url": "https://codelists.opensafely.org/codelist/primis-covid19-vacc-uptake/learndis/v1/",
+      "downloaded_at": "2022-06-21 21:57:24.541495Z",
+      "sha": "41f81fcb9fadb082a77cadd6cf60614d7c8d860f"
     },
     "primis-covid19-vacc-uptake-sev_mental.csv": {
       "id": "primis-covid19-vacc-uptake/sev_mental/v1",
@@ -185,6 +179,24 @@
       "url": "https://codelists.opensafely.org/codelist/opensafely/no-longer-housebound/29a88ca6/",
       "downloaded_at": "2022-03-02 11:00:27.436719Z",
       "sha": "cedcdcc0354885c1aa08224072718ff6bdae7450"
+    },
+    "primis-covid19-vacc-uptake-bmi.csv": {
+      "id": "primis-covid19-vacc-uptake/bmi/v1",
+      "url": "https://codelists.opensafely.org/codelist/primis-covid19-vacc-uptake/bmi/v1/",
+      "downloaded_at": "2022-06-21 21:57:27.099890Z",
+      "sha": "6e96c04ee1a647905be2b410fa2c33d770576bf0"
+    },
+    "primis-covid19-vacc-uptake-bmi_stage.csv": {
+      "id": "primis-covid19-vacc-uptake/bmi_stage/v1.2",
+      "url": "https://codelists.opensafely.org/codelist/primis-covid19-vacc-uptake/bmi_stage/v1.2/",
+      "downloaded_at": "2022-06-21 21:57:27.313984Z",
+      "sha": "7fd744bb94c1789632247a3fc1780910f421b172"
+    },
+    "primis-covid19-vacc-uptake-sev_obesity.csv": {
+      "id": "primis-covid19-vacc-uptake/sev_obesity/v1.2",
+      "url": "https://codelists.opensafely.org/codelist/primis-covid19-vacc-uptake/sev_obesity/v1.2/",
+      "downloaded_at": "2022-06-21 21:57:27.540631Z",
+      "sha": "dfe3662bed703c590d1449e604e892cdd7a360c1"
     }
   }
 }
