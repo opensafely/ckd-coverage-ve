@@ -65,20 +65,6 @@ ethnicity_6_codes = codelist_from_csv(
   category_column="grouping_6_id",
 )
 
-## Smoking
-clear_smoking_codes = codelist_from_csv(
-    "codelists/opensafely-smoking-clear.csv",
-    system="ctv3",
-    column="CTV3Code",
-    category_column="Category",
-)
-#unclear_smoking_codes = codelist_from_csv(
-#    "codelists/opensafely-smoking-unclear.csv",
-#    system="ctv3",
-#    column="CTV3Code",
-#    category_column="Category",
-#)
-
 ## Asthma Diagnosis code
 asthma_codes = codelist_from_csv(
     "codelists/primis-covid19-vacc-uptake-ast.csv",
@@ -92,10 +78,6 @@ spln_codes = codelist_from_csv(
     system = "snomed",
     column = "code",
 )
-
-## Blood pressure
-systolic_blood_pressure_codes = codelist(["2469."], system = "ctv3")
-diastolic_blood_pressure_codes = codelist(["246A."], system = "ctv3")
 
 ## Cancer
 lung_cancer_codes = codelist_from_csv(
@@ -161,13 +143,6 @@ chronic_kidney_disease_diagnostic_codes = codelist_from_csv(
     column = "code",
 )
 
-## Chronic kidney disease codes - all stages
-#chronic_kidney_disease_all_stages_codes = codelist_from_csv(
-#    "codelists/primis-covid19-vacc-uptake-ckd15.csv",
-#    system="snomed",
-#    column="code",
-#)
-
 ## Chronic kidney disease codes-stages 3 - 5
 chronic_kidney_disease_stages_3_5_codes = codelist_from_csv(
     "codelists/primis-covid19-vacc-uptake-ckd35.csv",
@@ -205,7 +180,7 @@ immunosuppression_medication_codes = codelist_from_csv(
 
 ## Learning disabilities
 learning_disability_codes = codelist_from_csv(
-  "codelists/nhsd-primary-care-domain-refsets-ld_cod.csv",
+  "codelists/primis-covid19-vacc-uptake-learndis.csv",
   system = "snomed",
   column = "code",
 )
@@ -229,6 +204,27 @@ non_kidney_transplant_codes = codelist_from_csv(
     "codelists/opensafely-other-organ-transplant.csv",
     system = "ctv3",
     column = "CTV3ID",
+)
+
+## BMI
+bmi_codes = codelist_from_csv(
+  "codelists/primis-covid19-vacc-uptake-bmi.csv",
+  system="snomed",
+  column="code",
+)
+
+# All BMI coded terms
+bmi_stage_codes = codelist_from_csv(
+  "codelists/primis-covid19-vacc-uptake-bmi_stage.csv",
+  system="snomed",
+  column="code",
+)
+
+# Severe Obesity code recorded
+sev_obesity_codes = codelist_from_csv(
+  "codelists/primis-covid19-vacc-uptake-sev_obesity.csv",
+  system="snomed",
+  column="code",
 )
 
 ## Covid-related codes

@@ -166,7 +166,7 @@ study = StudyDefinition(
 
     # Date of first COVID vaccination - astrazeneca
     az_date_1=patients.with_tpp_vaccination_record(
-        product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
+        product_name_matches="COVID-19 Vaccine Vaxzevria 0.5ml inj multidose vials (AstraZeneca)",
         between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
         find_first_match_in_period=True,
         returning="date",
@@ -175,7 +175,7 @@ study = StudyDefinition(
     
     # Date of second COVID vaccination - astrazeneca
     az_date_2=patients.with_tpp_vaccination_record(
-        product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
+        product_name_matches="COVID-19 Vaccine Vaxzevria 0.5ml inj multidose vials (AstraZeneca)",
         between=["az_date_1 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
@@ -184,7 +184,7 @@ study = StudyDefinition(
     
     # Date of third COVID vaccination - astrazeneca
     az_date_3=patients.with_tpp_vaccination_record(
-        product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
+        product_name_matches="COVID-19 Vaccine Vaxzevria 0.5ml inj multidose vials (AstraZeneca)",
         between=["az_date_2 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
@@ -193,7 +193,7 @@ study = StudyDefinition(
     
     # Date of fourth COVID vaccination - astrazeneca
     az_date_4=patients.with_tpp_vaccination_record(
-        product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
+        product_name_matches="COVID-19 Vaccine Vaxzevria 0.5ml inj multidose vials (AstraZeneca)",
         between=["az_date_3 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
@@ -202,7 +202,7 @@ study = StudyDefinition(
     
     # Date of fourth COVID vaccination - astrazeneca
     az_date_5=patients.with_tpp_vaccination_record(
-        product_name_matches="COVID-19 Vac AstraZeneca (ChAdOx1 S recomb) 5x10000000000 viral particles/0.5ml dose sol for inj MDV",
+        product_name_matches="COVID-19 Vaccine Vaxzevria 0.5ml inj multidose vials (AstraZeneca)",
         between=["az_date_4 + 1 day",end_date], # from day after previous dose
         find_first_match_in_period=True,
         returning="date",
@@ -544,6 +544,11 @@ study = StudyDefinition(
     },
   ),
   
+  ## Age for booster JCVI definitions if needed
+  age_august2021=patients.age_as_of(
+    "2020-08-31",
+  ),
+  
   ## Sex
   sex = patients.sex(
     return_expectations = {
@@ -553,6 +558,7 @@ study = StudyDefinition(
   ),
   
   ## BMI
+  # https://github.com/opensafely/risk-factors-research/issues/51
   bmi = patients.categorised_as(
     {
       "Not obese": "DEFAULT",
@@ -576,35 +582,6 @@ study = StudyDefinition(
         }
       },
     },
-  ),
-  
-  ## Smoking
-  smoking_status = patients.categorised_as(
-    {
-      "S": "most_recent_smoking_code = 'S'",
-      "E": """
-                 most_recent_smoking_code = 'E' OR (
-                 most_recent_smoking_code = 'N' AND ever_smoked
-                 )
-            """,
-      "N": "most_recent_smoking_code = 'N' AND NOT ever_smoked",
-      "M": "DEFAULT",
-    },
-    return_expectations = {
-      "category": {"ratios": {"S": 0.6, "E": 0.1, "N": 0.2, "M": 0.1}}
-    },
-    
-    most_recent_smoking_code = patients.with_these_clinical_events(
-      clear_smoking_codes,
-      find_last_match_in_period = True,
-      on_or_before = "index_date - 1 day",
-      returning="category",
-    ),
-    
-    ever_smoked=patients.with_these_clinical_events(
-      filter_codes_by_category(clear_smoking_codes, include=["S", "E"]),
-      on_or_before = "index_date - 1 day",
-    ),
   ),
   
   ## Ethnicity
@@ -656,6 +633,29 @@ study = StudyDefinition(
     },
   ),
   
+  # STP (NHS administration region based on geography)
+  stp=patients.registered_practice_as_of(
+    "index_date - 1 day",
+    returning="stp_code",
+    return_expectations={
+      "rate": "universal",
+      "category": {
+        "ratios": {
+          "STP1": 0.1,
+          "STP2": 0.1,
+          "STP3": 0.1,
+          "STP4": 0.1,
+          "STP5": 0.1,
+          "STP6": 0.1,
+          "STP7": 0.1,
+          "STP8": 0.1,
+          "STP9": 0.1,
+          "STP10": 0.1,
+        }
+      },
+    },
+  ),
+  
   ## Region - NHS England 9 regions
   region = patients.registered_practice_as_of(
     "index_date - 1 day",
@@ -689,7 +689,50 @@ study = StudyDefinition(
 ###############################################################################
 # COMORBIDITIES
 ###############################################################################
+  
+  ## Severe obesity
+    sev_obesity = patients.satisfying(
+    """
+      sev_obesity_date > bmi_date OR
+      bmi_value1 >= 40
+      """,
 
+    bmi_stage_date=patients.with_these_clinical_events(
+      bmi_stage_codes,
+      returning="date",
+      find_last_match_in_period=True,
+      on_or_before="index_date - 1 day",
+      date_format="YYYY-MM-DD",
+    ),
+
+    sev_obesity_date=patients.with_these_clinical_events(
+      sev_obesity_codes,
+      returning="date",
+      find_last_match_in_period=True,
+      ignore_missing_values=True,
+      between= ["bmi_stage_date", "index_date - 1 day"],
+      date_format="YYYY-MM-DD",
+    ),
+
+    bmi_date=patients.with_these_clinical_events(
+      bmi_codes,
+      returning="date",
+      ignore_missing_values=True,
+      find_last_match_in_period=True,
+      on_or_before="index_date - 1 day",
+      date_format="YYYY-MM-DD",
+    ),
+
+    bmi_value1=patients.with_these_clinical_events(
+      bmi_codes,
+      returning="numeric_value",
+      ignore_missing_values=True,
+      find_last_match_in_period=True,
+      on_or_before="index_date - 1 day",
+    ),
+
+  ),
+  
   ## Asthma
   asthma = patients.with_these_clinical_events(
     asthma_codes,
@@ -805,7 +848,7 @@ study = StudyDefinition(
     immunosuppression_medication_codes,
     returning = "date",
     find_last_match_in_period = True,
-    on_or_before = "index_date - 1 day",
+    between=["index_date - 182 days", "index_date - 1 day"]
     date_format = "YYYY-MM-DD",
   ),
   
