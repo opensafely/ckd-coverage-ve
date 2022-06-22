@@ -1099,7 +1099,7 @@ study = StudyDefinition(
   ),
   
   ## Covid-related A&E in pre-vaccination period
-  prevax_covid_emergency_date_boost = patients.attended_emergency_care(
+  prevax_covid_emergency_date = patients.attended_emergency_care(
     returning="date_arrived",
     with_these_diagnoses = covid_emergency,
     between=["covid_vax_date_1 - 90 days","covid_vax_date_1 - 1 day"], # anything post dose 1 may be linked with comparative VE
