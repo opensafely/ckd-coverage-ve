@@ -20,20 +20,25 @@ source(here::here("analysis", "functions.R"))
 ## Create output directory
 fs::dir_create(here::here("output", "tables"))
 
-## Import processed data ----
-data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))
+## Import processed data
+data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))  %>%
+  # to avoid timestamps causing inequalities for dates on the same day
+  mutate(across(where(is.Date), 
+                ~ floor_date(
+                  as.Date(.x, format="%Y-%m-%d"),
+                  unit = "days")))
 
-## vaccine initiation dates
+## Vaccine initiation dates
 first_az = as_date("2021-01-04")
 
 ## Set analysis end date
-data_processed$end_date = as_date("2021-10-14")
+data_processed$end_date = as_date("2021-11-14")
 
 ## Set and store outcomes list
 outcomes_list <- list(
-  short_name = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death"),
-  clean_name = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death"),
-  date_name = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date")
+  short_name = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death", "noncovid_death"),
+  clean_name = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death", "non-COVID death"),
+  date_name = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date", "noncoviddeath_date")
 )
 dir.create(here::here("output", "lib"), showWarnings = FALSE, recursive=TRUE)
 write_rds(
@@ -42,20 +47,22 @@ write_rds(
 )
 
 ## Set and store analysis intervals and last follow-up day
-period_length <- 28
-n_periods <- 6
-postvaxcuts <- period_length*0:(n_periods)
+period_length <- 56 # 56-day periods allows more event accrual per period so more robust estimation in adjusted and matched models
+n_periods <- 3
+postvaxcuts <- period_length*0:(n_periods)+14
 postvax_periods = paste0(postvaxcuts[1:((length(postvaxcuts)-1))]+1,"-",postvaxcuts[2:length(postvaxcuts)])
+postvax_periods_weeks = paste0((postvaxcuts/7)[1:((length(postvaxcuts)-1))]+1,"-",(postvaxcuts/7)[2:length(postvaxcuts)])
 lastfupday <- max(postvaxcuts)
 write_rds(
   list(
     postvaxcuts = postvaxcuts,
-    postvax_periods = postvax_periods
+    postvax_periods = postvax_periods,
+    postvax_periods_weeks = postvax_periods_weeks
   ),
   here::here("output", "lib", "postvax_list.rds")
 )
 
-## Create cohort data with tte calculations ----
+## Create cohort data with tte calculations
 data_processed <- data_processed %>%
   mutate(
     # set censor date (last follow-up day, end date, deregistration, death, 3rd)
@@ -83,6 +90,11 @@ data_processed <- data_processed %>%
     tte_covid_death_or_censor = tte(vax2_date - 1, postvax_covid_death_date, censor_date, na.censor=FALSE),
     ind_covid_death = dplyr::if_else((postvax_covid_death_date>censor_date) | is.na(postvax_covid_death_date), FALSE, TRUE),
     
+    # time to non-COVID-19 death
+    tte_noncovid_death = tte(vax2_date - 1, noncoviddeath_date, censor_date, na.censor=TRUE),
+    tte_noncovid_death_or_censor = tte(vax2_date - 1, noncoviddeath_date, censor_date, na.censor=FALSE),
+    ind_covid_death = dplyr::if_else((noncoviddeath_date>censor_date) | is.na(noncoviddeath_date), FALSE, TRUE),
+
     # time dose 2 to cut-off
     tte_dose2_to_cutoff = as.numeric(date(end_date)-date(vax2_date-1))
     )
@@ -113,14 +125,15 @@ data_criteria <- data_processed %>%
     
     # Vaccine profile
     vax_pfi_az = (!is.na(vax12_type)) & (vax12_type=="az-az" | vax12_type=="pfizer-pfizer"),
-    vax_date_valid = (!is.na(vax1_date)) & vax1_date>first_az,
-    vax_interval_valid = (!is.na(tbv1_2)) & tbv1_2>=(8*7) & tbv1_2<(16*7),
+    vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_az,
+    vax_interval_valid = (!is.na(tbv1_2)) & tbv1_2>=(8*7) & tbv1_2<=(14*7),
     
     # Postvax events
     positive_test_date_check = is.na(postvax_positive_test_date) | postvax_positive_test_date>=vax2_date,
     emergency_date_check = is.na(postvax_covid_emergency_date) | postvax_covid_emergency_date>=vax2_date,
     hospitalisation_date_check = is.na(postvax_covid_hospitalisation_date) | postvax_covid_hospitalisation_date>=vax2_date,
     death_date_check = is.na(postvax_covid_death_date) | postvax_covid_death_date>=vax2_date,
+    noncoviddeath_date_check = is.na(noncoviddeath_date) | noncoviddeath_date>=vax2_date,
     
     # Population exclusions
     isnot_hscworker = !hscworker,
@@ -140,7 +153,7 @@ data_criteria <- data_processed %>%
       has_valid_creatinine_or_ukrr & has_ckd_egfr_ukrr & has_no_rrt_mismatch &
       has_sex & has_imd & has_ethnicity & has_region &
       vax_pfi_az & vax_date_valid & vax_interval_valid &
-      positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check &
+      positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check &
       isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & 
       isnot_censored_early &
       noprevax_covid
@@ -156,9 +169,10 @@ data_cohort <- data_criteria %>%
   droplevels() %>%
   # Additional vaccine/time covariates
   mutate(
-    vax1_day = as.integer(date(vax1_date) - min(date(vax1_date), na.rm=TRUE) + 1), # day 1 is the day first dose 1 given
-    vax2_day = as.integer(date(vax2_date) - min(date(vax2_date), na.rm=TRUE) + 1), # day 1 is the day first dose 2 given
-    vax2_week = as.integer(((date(vax2_date) - min(date(vax2_date)))/7)+1), # week 1 is week first dose 2 given
+    vax1_day = as.integer(floor((vax1_date - first_az))+1), # day 1 is the day first dose 1 given
+    vax2_day = as.integer(floor((vax2_date - first_az))+1), # day 1 is the day first dose 1 given
+    vax1_week = as.integer(floor((vax1_date - first_az)/7)+1), # week 1 is days 1-7
+    vax2_week = as.integer(floor((vax2_date - first_az)/7)+1), # week 1 is days 1-7
     week_region = paste0(vax2_week, "__", region),
     vax2_az = (vax2_type=="az")*1
   )
@@ -178,7 +192,7 @@ data_flowchart <- data_criteria %>%
     c5 = c4 & (vax_pfi_az),
     c6 = c5 & (vax_date_valid),
     c7 = c6 & (vax_interval_valid),
-    c8 = c7 & (positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check),
+    c8 = c7 & (positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check),
     c9 = c8 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound),
     c10 = c9 & isnot_censored_early,
     c11 = c10 & noprevax_covid
@@ -225,19 +239,21 @@ write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE.csv"))
 
 ## Specify exact matching variables
 exact_variables <- c(
-  "jcvi_group",
   "region",
-  "immunosuppression",
+  "jcvi_group",
+  "imd",
   "ckd_5cat",
+  "cev",
   "prior_covid_cat",
+  "any_immunosuppression",
   NULL
 )
 
 ## Specify caliper variables
 caliper_variables <- c(
-  age = 5,
-  vax2_day = 7,
-  tbv1_2 = 7,
+  age = 3,
+  vax2_day = 3,
+  vax1_day = 7,
   NULL
 )
 

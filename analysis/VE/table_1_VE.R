@@ -18,26 +18,25 @@ library('reshape2')
 ## Import command-line arguments (specifying whether or not to run matched analysis)
 args <- commandArgs(trailingOnly=TRUE)
 
-## Set input and output pathways for matched/unmatched data - default is unmatched
 if(length(args)==0){
   # default (unmatched) file names
-  input_name = "data_cohort_VE.rds"
-  output_html = "table1_VE_redacted.html"
-  output_rds = "table1_VE_redacted.rds"
+  matching_status = "unmatched"
+  subgroup = "all"
 } else {
-  if (args[[1]]=="unmatched") { 
-    input_name = "data_cohort_VE.rds"
-    output_html = "table1_VE_redacted.html"
-    output_rds = "table1_VE_redacted.rds"
-  } else if (args[[1]]=="matched") {
-    input_name = "data_cohort_VE_matched.rds"
-    output_html = "table1_VE_matched_redacted.html"
-    output_rds = "table1_VE_matched_redacted.rds"
-  } else {
-    ## Print error if no argument specified
-    print("No matching argument specified")
-  }
+  matching_status = args[[1]] # can be unmatched or matched
+  subgroup = args[[2]] # can be all, CKD, dialysis, or transplant
 }
+
+## Import data
+if (matching_status=="unmatched") { 
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE.rds"))
+  } else { 
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_matched.rds"))
+  }
+
+## Specify output path names
+output_html = paste0("table1_VE_redacted_",matching_status,"_",subgroup,".html")
+output_rds = paste0("table1_VE_redacted_",matching_status,"_",subgroup,".rds")
 
 ## Set rounding and redaction thresholds
 rounding_threshold = 5
@@ -46,8 +45,16 @@ redaction_threshold = 10
 ## Create output directory
 fs::dir_create(here::here("output", "tables"))
 
-## Import data
-data_cohort <- read_rds(here::here("output", "data", input_name))
+## Select subset
+if (subgroup=="all") {
+  data_cohort = data_cohort
+} else if (subgroup=="CKD") {
+  data_cohort = subset(data_cohort, ckd_5cat %in% c("CKD3a", "CKD3b", "CKD4-5"))
+} else if (subgroup=="dialysis") {
+  data_cohort = subset(data_cohort, ckd_5cat == "RRT (dialysis)")
+} else if (subgroup=="transplant") {
+  data_cohort = subset(data_cohort, ckd_5cat == "RRT (Tx)")
+}
 
 ## Format data
 data_cohort <- data_cohort %>%
@@ -55,7 +62,7 @@ data_cohort <- data_cohort %>%
     N = 1,
   ) 
 
-## baseline variables
+## Baseline variables
 counts0 <- data_cohort %>%
   select(vax12_type,
          N,
@@ -76,18 +83,22 @@ counts0 <- data_cohort %>%
          ## Risk group (clinical)
          prior_covid_cat,
          immunosuppression, 
-         mod_sev_obesity,
+         sev_obesity,
          diabetes,
          any_resp_dis,
          chd, 
          cld,
          asplenia,
-         cancer,
          haem_cancer,
          other_transplant,
          chronic_neuro_dis_inc_sig_learn_dis,
+         learning_disability,
          sev_mental_ill,
-         cev_other,
+         cev,
+         
+         ## Summary comorbidity metrics
+         any_immunosuppression,
+         multimorb,
          
          ## Other descriptors of interest
          region,
@@ -113,21 +124,22 @@ colnames(table1) = c("Group", "Variable", "Count_az", "Count_pfizer")
 # Relabel variables for plotting
 table1$Variable[table1$Variable=="prior_covid_cat"] = "Prior SARS-CoV-2"
 table1$Variable[table1$Variable=="immunosuppression"] = "Immunosuppression"
-table1$Variable[table1$Variable=="mod_sev_obesity"] = "Moderate/severe obesity"
+table1$Variable[table1$Variable=="sev_obesity"] = "Severe obesity"
 table1$Variable[table1$Variable=="diabetes"] = "Diabetes"
 table1$Variable[table1$Variable=="any_resp_dis"] = "Chronic respiratory disease (inc. asthma)"
 table1$Variable[table1$Variable=="chd"] = "Chronic heart disease"
 table1$Variable[table1$Variable=="cld"] = "Chronic liver disease"
 table1$Variable[table1$Variable=="asplenia"] = "Asplenia"
-table1$Variable[table1$Variable=="cancer"] = "Cancer (non-haematologic)"
 table1$Variable[table1$Variable=="haem_cancer"] = "Haematologic cancer"
 table1$Variable[table1$Variable=="other_transplant"] = "Organ transplant (non-kidney)"
-table1$Variable[table1$Variable=="chronic_neuro_dis_inc_sig_learn_dis"] = "Chronic neurological disease (inc. learning disability)"
+table1$Variable[table1$Variable=="chronic_neuro_dis_inc_sig_learn_dis"] = "Chronic neurological disease"
+table1$Variable[table1$Variable=="learning_disability"] = "Learning disability"
 table1$Variable[table1$Variable=="sev_mental_ill"] = "Severe mental illness"
-table1$Variable[table1$Variable=="cev_other"] = "Clinically extremely vulnerable (other)"
+table1$Variable[table1$Variable=="cev"] = "Clinically extremely vulnerable"
 table1$Variable[table1$Variable=="chronic_kidney_disease_stages_3_5"] = "CKD3-5 code"
 table1$Variable[table1$Variable=="dialysis"] = "Dialysis code"
 table1$Variable[table1$Variable=="kidney_transplant"] = "Kidney transplant code"
+table1$Variable[table1$Variable=="any_immunosuppression"] = "Any immunosuppression"
 
 # Relabel groups for plotting
 table1$Group[table1$Group=="ageband2"] = "Age"
@@ -138,12 +150,13 @@ table1$Group[table1$Group=="region"] = "Region"
 table1$Group[table1$Group=="jcvi_group"] = "JCVI group"
 table1$Group[table1$Group=="rural_urban_group"] = "Setting"
 table1$Group[table1$Group=="ckd_5cat"] = "Kidney disease subgroup"
+table1$Group[table1$Group=="multimorb"] = "Comorbidity count"
 table1$Group[(table1$Variable %in% c("CKD3-5 code", "Dialysis code", "Kidney transplant code"))] = "Primary care coding of kidney disease"
 table1$Group[(table1$Variable %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care"))] = "Risk group (occupation/access)"
-table1$Group[table1$Variable %in% c("Prior SARS-CoV-2", "Immunosuppression", "Moderate/severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
-                                              "Chronic heart disease", "Chronic liver disease","Asplenia", "Cancer (non-haematologic)", "Haematologic cancer", "Obesity", 
-                                              "Organ transplant (non-kidney)", "Chronic neurological disease (inc. learning disability)", "Severe mental illness", 
-                                              "Clinically extremely vulnerable (other)")] = "Risk group (clinical)"
+table1$Group[table1$Variable %in% c("Prior SARS-CoV-2", "Immunosuppression", "Severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
+                                              "Chronic heart disease", "Chronic liver disease","Asplenia", "Haematologic cancer", "Obesity", 
+                                              "Organ transplant (non-kidney)", "Chronic neurological disease", "Learning disability", "Severe mental illness", 
+                                              "Clinically extremely vulnerable")] = "Risk group (clinical)"
 table1$Group[table1$Variable=="N"] = "N"
 
 ## Calculate rounded total
