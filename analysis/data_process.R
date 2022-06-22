@@ -63,20 +63,21 @@ data_extract <- read_csv(
     creatinine_date = col_date(format="%Y-%m-%d"),
     death_date = col_date(format="%Y-%m-%d"),
     dereg_date = col_date(format="%Y-%m-%d"),
-    bp_sys_date_measured = col_date(format="%Y-%m-%d"),
-    bp_dias_date_measured = col_date(format="%Y-%m-%d"),
     immunosuppression_diagnosis_date = col_date(format="%Y-%m-%d"),
     immunosuppression_medication_date = col_date(format="%Y-%m-%d"),
     
     # Dates for Covid-related variables
     prior_positive_test_date = col_date(format="%Y-%m-%d"),
     prior_primary_care_covid_case_date = col_date(format="%Y-%m-%d"),
+    prior_covid_emergency_date = col_date(format="%Y-%m-%d"),
     prior_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
     prior_positive_test_date_boost = col_date(format="%Y-%m-%d"),
     prior_primary_care_covid_case_date_boost = col_date(format="%Y-%m-%d"),
+    prior_covid_emergency_date_boost = col_date(format="%Y-%m-%d"),
     prior_covid_hospitalisation_date_boost = col_date(format="%Y-%m-%d"),
     prevax_positive_test_date	= col_date(format="%Y-%m-%d"),
     prevax_primary_care_covid_case_date	= col_date(format="%Y-%m-%d"),
+    prevax_covid_emergency_date	= col_date(format="%Y-%m-%d"),
     prevax_covid_hospitalisation_date	= col_date(format="%Y-%m-%d"),
     postvax_positive_test_date = col_date(format="%Y-%m-%d"),
     postvax_covid_emergency_date = col_date(format="%Y-%m-%d"),
@@ -98,6 +99,7 @@ data_extract <- read_csv(
     ukrr_2020 = col_logical(), 
     ukrr_2020_mod = col_character(), 
     creatinine_operator = col_character(), 
+    age_creatinine = col_integer(),
     
     # Priority groups
     care_home_type =  col_character(),
@@ -111,19 +113,18 @@ data_extract <- read_csv(
     # Clinical/demographic variables
     age = col_integer(),    
     age_index = col_integer(),
-    age_creatinine = col_integer(),
+    age_august2021 = col_integer(),
     sex = col_character(),
     bmi = col_character(),
-    smoking_status =  col_character(),
     ethnicity_6 = col_character(),
     ethnicity_6_sus = col_character(),
     imd = col_character(),
+    stp = col_character(),
     region = col_character(),
     rural_urban = col_integer(),
+    sev_obesity = col_logical(),
     asthma = col_logical(),
     asplenia = col_logical(),
-    bp_sys = col_double(),
-    bp_dias = col_double(),
     cancer = col_logical(),
     haem_cancer = col_logical(),
     chd = col_logical(),
@@ -303,13 +304,23 @@ data_processed <- data_extract %>%
     # Any care home flag
     care_home = ifelse(care_home_tpp==1 | care_home_code==1, 1, 0), 
     
-    # JCVI group - https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1007737/Greenbook_chapter_14a_30July2021.pdf#page=12
+    # Original JCVI priority groups: https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1007737/Greenbook_chapter_14a_30July2021.pdf#page=15
     jcvi_group = fct_case_when(
       care_home==1 & age>=65 ~ "1 (65+ care home resident)",
       care_home==0 & (age>=80 | hscworker==1) ~ "2 (80+ or health/social care worker)",
       care_home==0 & (age>=75 & age<80) ~ "3 (75+)",
       care_home==0 & ((age>=70 & age<75) | (cev==1 & age>=16 & age<70)) ~ "4 (70+ or clinically extremely vulnerable)",
       care_home==0 & cev==0 & (age>=65 & age<70) ~ "5 (65+)",
+      TRUE ~ "6 (16-65 and clinically vulnerable)" # Since CKD patients would be classified as clinically vulnerable, 6 is maximum JCVI group for this population
+    ),
+    
+    # Updated JCVI priority groups: https://www.england.nhs.uk/coronavirus/wp-content/uploads/sites/52/2021/07/C1327-covid-19-vaccination-autumn-winter-phase-3-planning.pdf
+    jcvi_group_update = fct_case_when(
+      care_home==1 | hscworker==1  ~ "1 (care home resident or health/social care worker)",
+      care_home==0 & age_august2021>=80 ~ "2 (80+)",
+      care_home==0 & age_august2021>=75 ~ "3 (75+)",
+      care_home==0 & (age_august2021>=70 | (cev & (age_august2021>=16))) ~ "4 (70+ or clinically extremely vulnerable)",
+      care_home==0 & age_august2021>=65 ~ "5 (65+)",
       TRUE ~ "6 (16-65 and clinically vulnerable)" # Since CKD patients would be classified as clinically vulnerable, 6 is maximum JCVI group for this population
     ),
     
@@ -324,21 +335,15 @@ data_processed <- data_extract %>%
     obesity = ifelse(bmi == "Not obese",0,1),
     mod_sev_obesity = ifelse(bmi == "Obese II (35-39.9)" | bmi == "Obese III (40+)", 1, 0),
     
-    # Smoking status
-    smoking_status = ifelse(smoking_status == "E" | smoking_status == "S","S&E", smoking_status),
-    smoking_status = ifelse(smoking_status == "S&E", "S&E", "N&M"),
-    smoking_status = ifelse(is.na(smoking_status), "N&M", smoking_status),
-    smoking_status = ifelse(smoking_status=="S&E", 1, 0),
-    
     # Ethnicity
     ethnicity_filled = ifelse(is.na(ethnicity_6), ethnicity_6_sus, ethnicity_6),
     ethnicity = ifelse(is.na(ethnicity_filled), 6, ethnicity_filled),
     ethnicity = fct_case_when(
       ethnicity == "1" ~ "White",
+      ethnicity == "4" ~ "Black",
+      ethnicity == "3" ~ "South Asian",
       ethnicity == "2" ~ "Mixed",
-      ethnicity == "3" ~ "Asian or Asian British",
-      ethnicity == "4" ~ "Black or Black British",
-      ethnicity == "5" ~ "Other ethnic groups",
+      ethnicity == "5" ~ "Other",
       TRUE ~ NA_character_),
     
     # IMD
@@ -353,17 +358,16 @@ data_processed <- data_extract %>%
     ),
     
     # Region
-    region = fct_case_when(
-      region == "London" ~ "London",
-      region == "East" ~ "East of England",
-      region == "East Midlands" ~ "East Midlands",
-      region == "North East" ~ "North East",
-      region == "North West" ~ "North West",
-      region == "South East" ~ "South East",
-      region == "South West" ~ "South West",
-      region == "West Midlands" ~ "West Midlands",
-      region == "Yorkshire and The Humber" ~ "Yorkshire and the Humber",
-      TRUE ~ NA_character_),
+    region = fct_collapse(
+      region,
+      `East of England` = "East",
+      `London` = "London",
+      `Midlands` = c("West Midlands", "East Midlands"),
+      `North East and Yorkshire` = c("Yorkshire and The Humber", "North East"),
+      `North West` = "North West",
+      `South East` = "South East",
+      `South West` = "South West"
+    ),
     
     # Rurality
     rural_urban_group = fct_case_when(
@@ -371,19 +375,6 @@ data_processed <- data_extract %>%
       rural_urban %in% c(1,2) ~ "Urban conurbation",
       rural_urban %in% c(5,6,7,8) ~ "Rural town or village",
       TRUE ~ "Unknown"
-    ),
-    
-    # Blood pressure
-    bpcat = ifelse(bp_sys < 120 & bp_dias < 80, 1, NA),
-    bpcat = ifelse(bp_sys >= 120 & bp_sys < 130 & bp_dias < 80, 2, bpcat),
-    bpcat = ifelse(bp_sys >= 130 & bp_dias >= 90, 3, bpcat),
-    bpcat = ifelse(is.na(bpcat), 4, bpcat),
-    bpcat = fct_case_when(
-      bpcat == 1 ~ "Normal",
-      bpcat == 2 ~ "Elevated",
-      bpcat == 3 ~ "High",
-      bpcat == 4 ~ "Unknown",
-      TRUE ~ NA_character_
     ),
     
     # Immunosuppression
@@ -401,34 +392,38 @@ data_processed <- data_extract %>%
     # CEV other
     rrt_2020 = ifelse(ukrr_2020_group=="Tx" | ukrr_2020_group=="Dialysis", 1, 0),
     any_comorb = pmax(rrt_2020, 
-                      immunosuppression, mod_sev_obesity, diabetes, any_resp_dis,
+                      immunosuppression, sev_obesity, diabetes, any_resp_dis,
                       chd, cld, asplenia, any_cancer, other_transplant, chronic_neuro_dis_inc_sig_learn_dis, sev_mental_ill),
     cev_other = ifelse(cev==1 & any_comorb==0, 1, 0),
     
     # Multiple comorbidities (non-CKD-related) - 0, 1, or 2+
     multimorb =
-      (mod_sev_obesity) +
-      (diabetes) +
-      (any_resp_dis) +
+      (sev_obesity) +
       (chd) +
+      (diabetes) +
       (cld) +
-      (asplenia) +
-      (any_cancer) +
-      (other_transplant),
+      (any_resp_dis) +
+      (chronic_neuro_dis_inc_sig_learn_dis),
     multimorb = cut(multimorb, breaks = c(0, 1, 2, Inf), labels=c("0", "1", "2+"), right=FALSE),
     
+    # Any immunosuppression (transplant, cancer, haematologic cancer, asplenia)
+    any_immunosuppression = ifelse(ukrr_2020_group=="Tx" | other_transplant==1 | immunosuppression==1 | haem_cancer==1 | asplenia==1, 1, 0), 
+    
     # Prior COVID - index
-    prior_covid_cat = as.numeric(!is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_hospitalisation_date, na.rm=TRUE))),
+    prior_covid_cat = as.numeric(!is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_emergency_date, prior_covid_hospitalisation_date, na.rm=TRUE))),
     
     # Prior COVID - boost index
-    prior_covid_cat_boost = as.numeric(!is.na(pmin(prior_positive_test_date_boost, prior_primary_care_covid_case_date_boost, prior_covid_hospitalisation_date_boost, na.rm=TRUE))),
+    prior_covid_cat_boost = as.numeric(!is.na(pmin(prior_positive_test_date_boost, prior_primary_care_covid_case_date_boost, prior_covid_emergency_date_boost, prior_covid_hospitalisation_date_boost, na.rm=TRUE))),
 
     # COVID in window spanning 90 days pre dose 1
-    prevax_covid_cat = as.numeric(!is.na(pmin(prevax_positive_test_date, prevax_primary_care_covid_case_date, prevax_covid_hospitalisation_date, na.rm=TRUE))),
+    prevax_covid_cat = as.numeric(!is.na(pmin(prevax_positive_test_date, prevax_primary_care_covid_case_date, prevax_covid_emergency_date, prevax_covid_hospitalisation_date, na.rm=TRUE))),
 
     # Number of tests in pre-vaccination period
     prevax_tests_conducted_any = ifelse(is.na(prevax_tests_conducted_any), 0, prevax_tests_conducted_any),
-    prevax_tests_cat = cut(prevax_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE)
+    prevax_tests_cat = cut(prevax_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
+    
+    # Non-COVID death date
+    noncoviddeath_date = if_else(!is.na(death_date) & is.na(postvax_covid_death_date), death_date, as.Date(NA_character_)),
   ) %>%
   # Drop superseded variables
   select(-c(care_home_code, care_home_tpp, ethnicity_6, ethnicity_filled, 
