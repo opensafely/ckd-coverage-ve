@@ -1,6 +1,10 @@
 primis-covid19-vacc-uptake/longres/v1
-primis-covid19-vacc-uptake/eth2001/v1
+primis-covid19-vacc-uptake/shield/v1
+primis-covid19-vacc-uptake/nonshield/v1
+opensafely/ethnicity/2020-04-27
 primis-covid19-vacc-uptake/ast/v1
+primis-covid19-vacc-uptake/astadm/v1
+primis-covid19-vacc-uptake/astrx/v1
 primis-covid19-vacc-uptake/spln_cov/v1
 opensafely/lung-cancer/2020-04-15
 opensafely/haematological-cancer/2020-04-15
@@ -14,10 +18,12 @@ opensafely/dialysis/3ce108ac
 opensafely/kidney-transplant/2020-07-15
 primis-covid19-vacc-uptake/cld/v1
 primis-covid19-vacc-uptake/diab/v1
+primis-covid19-vacc-uptake/dmres/v1
 primis-covid19-vacc-uptake/immdx_cov/v1
 primis-covid19-vacc-uptake/immrx/v1
 primis-covid19-vacc-uptake/learndis/v1
 primis-covid19-vacc-uptake/sev_mental/v1
+primis-covid19-vacc-uptake/smhres/v1
 opensafely/solid-organ-transplantation-snomed/2020-04-10
 opensafely/other-organ-transplant/79caeeee
 opensafely/covid-identification/2020-06-03

@@ -22,12 +22,18 @@ carehome_primis_codes = codelist_from_csv(
 )
 
 ## Shielding
-high_risk_codes = codelist(
-  ['1300561000000107'], system="snomed")
+shield_codes = codelist_from_csv(
+    "codelists/primis-covid19-vacc-uptake-shield.csv",
+    system="snomed",
+    column="code",
+)
 
 ## Lower Risk from COVID-19 codes
-not_high_risk_codes = codelist(
-  ['1300591000000101', '1300571000000100'], system="snomed")
+nonshield_codes = codelist_from_csv(
+    "codelists/primis-covid19-vacc-uptake-nonshield.csv",
+    system="snomed",
+    column="code",
+)
 
 ## Midazolam
 midazolam = codelist_from_csv(
@@ -59,17 +65,31 @@ no_longer_housebound = codelist_from_csv(
 
 ## Ethnicity
 ethnicity_6_codes = codelist_from_csv(
-  "codelists/primis-covid19-vacc-uptake-eth2001.csv",
-  system = "snomed",
-  column = "code",
-  category_column="grouping_6_id",
+    "codelists/opensafely-ethnicity.csv",
+    system="ctv3",
+    column="Code",
+    category_column="Grouping_6",
 )
 
 ## Asthma Diagnosis code
-asthma_codes = codelist_from_csv(
-    "codelists/primis-covid19-vacc-uptake-ast.csv",
-    system = "snomed",
-    column = "code",
+ast_codes = codelist_from_csv(
+  "codelists/primis-covid19-vacc-uptake-ast.csv",
+  system="snomed",
+  column="code",
+)
+
+# Asthma Admission codes
+astadm_codes = codelist_from_csv(
+  "codelists/primis-covid19-vacc-uptake-astadm.csv",
+  system="snomed",
+  column="code",
+)
+
+# Asthma systemic steroid prescription codes
+astrx_codes = codelist_from_csv(
+  "codelists/primis-covid19-vacc-uptake-astrx.csv",
+  system="snomed",
+  column="code",
 )
 
 ## Asplenia or Dysfunction of the Spleen codes
@@ -164,6 +184,13 @@ diab_codes = codelist_from_csv(
     column = "code",
 )
 
+# Diabetes resolved codes
+dmres_codes = codelist_from_csv(
+  "codelists/primis-covid19-vacc-uptake-dmres.csv",
+  system="snomed",
+  column="code",
+)
+
 ## Immunosuppression diagnosis codes
 immunosuppression_diagnosis_codes = codelist_from_csv(
   "codelists/primis-covid19-vacc-uptake-immdx_cov.csv",
@@ -190,6 +217,13 @@ sev_mental_ill_codes = codelist_from_csv(
   "codelists/primis-covid19-vacc-uptake-sev_mental.csv",
   system = "snomed",
   column = "code",
+)
+
+## Remission codes relating to Severe Mental Illness
+smhres_codes = codelist_from_csv(
+  "codelists/primis-covid19-vacc-uptake-smhres.csv",
+  system="snomed",
+  column="code",
 )
 
 ## Organ transplant

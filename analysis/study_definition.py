@@ -450,7 +450,7 @@ study = StudyDefinition(
     
     ### SHIELDED GROUP - first flag all patients with "high risk" codes
     severely_clinically_vulnerable = patients.with_these_clinical_events(
-      high_risk_codes,
+      shield_codes, # NB. the shielded patient list was retired in March/April 2021 when shielding ended
       returning="binary_flag",
       on_or_before = "index_date - 1 day",
       find_last_match_in_period = True,
@@ -465,7 +465,7 @@ study = StudyDefinition(
     
     ### NOT SHIELDED GROUP (medium and low risk) - only flag if later than 'shielded'
     less_vulnerable = patients.with_these_clinical_events(
-      not_high_risk_codes,
+      nonshield_codes,
       between=["date_severely_clinically_vulnerable + 1 day", "index_date - 1 day",],
       return_expectations = {"incidence": 0.01,},
     ),
@@ -600,6 +600,7 @@ study = StudyDefinition(
     },
   ),
   
+  # ethnicity variable that takes data from SUS
   ethnicity_6_sus = patients.with_ethnicity_from_sus(
     returning = "group_6",
     use_most_frequent_code = True,
@@ -738,11 +739,42 @@ study = StudyDefinition(
   ),
   
   ## Asthma
-  asthma = patients.with_these_clinical_events(
-    asthma_codes,
-    returning = "binary_flag",
-    find_last_match_in_period = True,
-    on_or_before = "index_date - 1 day",
+  asthma = patients.satisfying(
+    """
+      astadm OR
+      (ast AND astrxm1 AND astrxm2 AND astrxm3)
+      """,
+    # Asthma Admission codes
+    astadm=patients.with_these_clinical_events(
+      astadm_codes,
+      returning="binary_flag",
+      on_or_before="index_date - 1 day",
+    ),
+    # Asthma Diagnosis code
+    ast = patients.with_these_clinical_events(
+      ast_codes,
+      returning="binary_flag",
+      on_or_before="index_date - 1 day",
+    ),
+    # Asthma systemic steroid prescription code in month 1
+    astrxm1=patients.with_these_medications(
+      astrx_codes,
+      returning="binary_flag",
+      between=["index_date - 30 days", "index_date - 1 day"],
+    ),
+    # Asthma systemic steroid prescription code in month 2
+    astrxm2=patients.with_these_medications(
+      astrx_codes,
+      returning="binary_flag",
+      between=["index_date - 60 days", "index_date - 31 days"],
+    ),
+    # Asthma systemic steroid prescription code in month 3
+    astrxm3=patients.with_these_medications(
+      astrx_codes,
+      returning="binary_flag",
+      between= ["index_date - 90 days", "index_date - 61 days"],
+    ),
+
   ),
   
   ## Asplenia or Dysfunction of the Spleen codes
@@ -806,11 +838,24 @@ study = StudyDefinition(
   ),
   
   ## Diabetes diagnosis codes
-  diabetes = patients.with_these_clinical_events(
-    diab_codes,
-    returning = "binary_flag",
-    find_last_match_in_period = True,
-    on_or_before = "index_date - 1 day",
+  diabetes = patients.satisfying(
+    "(dmres_date < diab_date) OR (diab_date AND (NOT dmres_date))",
+    
+    diab_date=patients.with_these_clinical_events(
+      diab_codes,
+      returning="date",
+      find_last_match_in_period=True,
+      on_or_before="index_date - 1 day",
+      date_format="YYYY-MM-DD",
+    ),
+
+    dmres_date=patients.with_these_clinical_events(
+      dmres_codes,
+      returning="date",
+      find_last_match_in_period=True,
+      on_or_before="index_date - 1 day",
+      date_format="YYYY-MM-DD",
+    ),
   ),
   
   ## Immunosuppression diagnosis
@@ -840,12 +885,25 @@ study = StudyDefinition(
   ),
   
   ### Severe mental illness
-  sev_mental_ill = patients.with_these_clinical_events(
-    sev_mental_ill_codes,
-    returning = "binary_flag",
-    find_last_match_in_period = True,
-    on_or_before = "index_date - 1 day",
-    date_format = "YYYY-MM-DD",
+  sev_mental_ill = patients.satisfying(
+    "(smhres_date < sev_mental_date) OR (sev_mental_date AND (NOT smhres_date))",
+
+    # Severe Mental Illness codes
+    sev_mental_date=patients.with_these_clinical_events(
+      sev_mental_ill_codes,
+      returning="date",
+      find_last_match_in_period=True,
+      on_or_before="index_date - 1 day",
+      date_format="YYYY-MM-DD",
+    ),
+    # Remission codes relating to Severe Mental Illness
+    smhres_date=patients.with_these_clinical_events(
+      smhres_codes,
+      returning="date",
+      find_last_match_in_period=True,
+      on_or_before="index_date - 1 day",
+      date_format="YYYY-MM-DD",
+    ),
   ),
   
   ## Organ transplant
@@ -868,7 +926,7 @@ study = StudyDefinition(
   ############ pre-index COVID events ############
   ################################################
   
-  ## Positive test prior to study period
+  ## Covid-related positive test prior to study period
   prior_positive_test_date = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "positive",
@@ -884,7 +942,7 @@ study = StudyDefinition(
     },
   ),
   
-  ## Positive case identification prior to study period
+  ## Covid-related case identification prior to study period
   prior_primary_care_covid_case_date = patients.with_these_clinical_events(
     combine_codelists(
       covid_primary_care_code,
@@ -902,10 +960,25 @@ study = StudyDefinition(
     },
   ),
 
-  ## Positive covid admission prior to study period
+  ## Covid-related A&E prior to study period
+  prior_covid_emergency_date = patients.attended_emergency_care(
+    returning="date_arrived",
+    with_these_diagnoses = covid_emergency,
+    on_or_before = "index_date - 1 day",
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2020-02-01", "latest": "index_date - 1 day"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
+      "incidence": 0.005,
+    },
+  ),
+  
+  ## Covid-related admission prior to study period
   prior_covid_hospitalisation_date = patients.admitted_to_hospital(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
+    with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
     on_or_before = "index_date - 1 day",
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
@@ -920,7 +993,7 @@ study = StudyDefinition(
   ############ pre-boost COVID events ############
   ################################################
   
-  ## Positive test prior to study period
+  ## Covid-related positive test prior to study period
   prior_positive_test_date_boost = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "positive",
@@ -936,7 +1009,7 @@ study = StudyDefinition(
     },
   ),
   
-  ## Positive case identification prior to study period
+  ## Covid-related case identification prior to study period
   prior_primary_care_covid_case_date_boost = patients.with_these_clinical_events(
     combine_codelists(
       covid_primary_care_code,
@@ -954,10 +1027,25 @@ study = StudyDefinition(
     },
   ),
 
-  ## Positive covid admission prior to study period
+  ## Covid-related A&E prior to study period
+  prior_covid_emergency_date_boost = patients.attended_emergency_care(
+    returning="date_arrived",
+    with_these_diagnoses = covid_emergency,
+    on_or_before = "2021-08-31", # day before JCVI extended series recommendations
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2020-02-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
+      "incidence": 0.005,
+    },
+  ),
+  
+  ## Covid-related admission prior to study period
   prior_covid_hospitalisation_date_boost = patients.admitted_to_hospital(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
+    with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
     on_or_before = "2021-08-31", # day before JCVI extended series recommendations
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
@@ -976,7 +1064,7 @@ study = StudyDefinition(
   ############ pre-vaccine events ################
   ################################################
   
-  ## Positive test in pre-vaccination period
+  ## Covid-related positive test in pre-vaccination period
   prevax_positive_test_date = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "positive",
@@ -992,7 +1080,7 @@ study = StudyDefinition(
     },
   ),
   
-  ## Positive case identification in pre-vaccination period
+  ## Covid-related case identification in pre-vaccination period
   prevax_primary_care_covid_case_date = patients.with_these_clinical_events(
     combine_codelists(
       covid_primary_care_code,
@@ -1010,10 +1098,25 @@ study = StudyDefinition(
     },
   ),
   
-  ## Positive covid admission in pre-vaccination period
+  ## Covid-related A&E in pre-vaccination period
+  prevax_covid_emergency_date_boost = patients.attended_emergency_care(
+    returning="date_arrived",
+    with_these_diagnoses = covid_emergency,
+    between=["covid_vax_date_1 - 90 days","covid_vax_date_1 - 1 day"], # anything post dose 1 may be linked with comparative VE
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2020-09-02", "latest": "2020-11-30"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
+      "incidence": 0.005,
+    },
+  ),
+  
+  ## Covid-related admission in pre-vaccination period
   prevax_covid_hospitalisation_date = patients.admitted_to_hospital(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
+    with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
     between=["covid_vax_date_1 - 90 days","covid_vax_date_1 - 1 day"], # anything post dose 1 may be linked with comparative VE
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
@@ -1057,7 +1160,7 @@ study = StudyDefinition(
     },
   ),
   
-  ## Covid-related emergency admission after second dose
+  ## Covid-related A&E after second dose
   postvax_covid_emergency_date = patients.attended_emergency_care(
     returning = "date_arrived",
     with_these_diagnoses = covid_emergency,
@@ -1071,7 +1174,7 @@ study = StudyDefinition(
     },
   ),
     
-  ## Covid-related unplanned admission after second dose
+  ## Covid-related admission after second dose
   postvax_covid_hospitalisation_date = patients.admitted_to_hospital(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
@@ -1135,6 +1238,7 @@ study = StudyDefinition(
   ## Any unplanned admission after second dose
   postvax_any_hospitalisation_date = patients.admitted_to_hospital(
     returning = "date_admitted",
+    with_these_diagnoses = covid_icd10,
     with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
     between=["covid_vax_date_2",end_date],
     date_format = "YYYY-MM-DD",
