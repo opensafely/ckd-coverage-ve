@@ -263,7 +263,7 @@ actions:
         table: output/tables/table1_VE_redacted_unmatched_CKD4-5.html
  
    # Table 1 (RRT unmatched)
-  table_1_VE_RRT_unmatched:
+  table_1_VE_rrt_unmatched:
     run: r:latest analysis/VE/table_1_VE.R unmatched RRT
     needs: [data_selection_VE]
     outputs:

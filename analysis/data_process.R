@@ -283,6 +283,11 @@ data_processed <- data_extract %>%
     ckd_5cat = ckd_6cat,
     ckd_5cat = ifelse(ckd_6cat == "CKD4" | ckd_6cat == "CKD5", "CKD4-5", ckd_5cat),
     
+    # CKD 3-levels (merging 3a/3b and RRT)
+    ckd_3cat = ckd_5cat,
+    ckd_3cat = ifelse(ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b", "CKD3", ckd_3cat),
+    ckd_3cat = ifelse(ckd_5cat=="RRT (dialysis)" | ckd_5cat=="RRT (Tx)", "RRT (any)", ckd_3cat),
+
     # Flag individuals with mismatch between UKRR and primary care data
     rrt_mismatch = ifelse((ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b" | ckd_5cat=="CKD4-5") & (dialysis==1 | kidney_transplant==1), 1, 0),
     
@@ -592,6 +597,7 @@ data_processed_updated <- data_processed_updated %>%
     ukrr_index_group = factor(ukrr_index_group, levels = c("None", "Dialysis", "Tx")),
     ckd_6cat = factor(ckd_6cat, levels = c("No CKD", "CKD3a", "CKD3b", "CKD4", "CKD5", "RRT (dialysis)", "RRT (Tx)")),
     ckd_5cat = factor(ckd_5cat, levels = c("No CKD", "CKD3a", "CKD3b", "CKD4-5", "RRT (dialysis)", "RRT (Tx)")),
+    ckd_3cat = factor(ckd_3cat, levels = c("No CKD", "CKD3", "CKD4-5", "RRT (any)")),
   )
 
 ## Save dataset

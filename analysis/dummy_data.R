@@ -27,11 +27,19 @@ end_date <- date("2022-05-11")
 # Set distribution of CKD groups
 data_processed$ckd_6cat <- rcat(n=nsamples, c("No CKD", "CKD3a", "CKD3b", "CKD4", "CKD5",
                                               "RRT (dialysis)", "RRT (Tx)"), c(0.10,0.50,0.25,0.06,0.03,0.03,0.03))
-# Recalculate CKD5 categories and RRT mismatch based on random assignments above
+# Recalculate CKD categories and RRT mismatch based on random assignments above
 data_processed <- data_processed %>%
   mutate(
+    # ckd 5-cat
     ckd_5cat = ckd_6cat,
     ckd_5cat = ifelse(ckd_6cat == "CKD4" | ckd_6cat == "CKD5", "CKD4-5", ckd_5cat),
+    
+    # ckd 3-cat
+    ckd_3cat = ckd_5cat,
+    ckd_3cat = ifelse(ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b", "CKD3", ckd_3cat),
+    ckd_3cat = ifelse(ckd_5cat=="RRT (dialysis)" | ckd_5cat=="RRT (Tx)", "RRT (any)", ckd_3cat),
+    
+    # rrt mismatch
     rrt_mismatch = ifelse((ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b" | ckd_5cat=="CKD4-5") & (dialysis==1 | kidney_transplant==1), 1, 0)
   )
 
