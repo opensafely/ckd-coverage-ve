@@ -26,7 +26,15 @@ data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))  
   mutate(across(where(is.Date), 
                 ~ floor_date(
                   as.Date(.x, format="%Y-%m-%d"),
-                  unit = "days")))
+                  unit = "days"))) %>%
+  # simplified CKD groupings for VE subgroup analyses
+  mutate(
+    ckd_3cat = ckd_5cat,
+    ckd_3cat = ifelse(ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b", "CKD3", ckd_3cat),
+    ckd_3cat = ifelse(ckd_5cat=="RRT (dialysis)" | ckd_5cat=="RRT (Tx)", "RRT (any)", ckd_3cat),
+    ckd_3cat = factor(ckd_5cat, levels = c("No CKD", "CKD3", "CKD4-5", "RRT (any)")) 
+  ) %>%
+  droplevels() 
 
 ## Vaccine initiation dates
 first_az = as_date("2021-01-04")
@@ -242,10 +250,11 @@ exact_variables <- c(
   "region",
   "jcvi_group",
   "imd",
-  "ckd_5cat",
+  "ethnicity",
+  "ckd_3cat",
   "cev",
   "prior_covid_cat",
-  "any_immunosuppression",
+  #"any_immunosuppression", # overlaps with ckd_3cat and cev
   NULL
 )
 

@@ -242,35 +242,35 @@ actions:
       moderately_sensitive:
         table: output/tables/table1_VE_redacted_unmatched_all.html
   
-  # Table 1 (CKD unmatched)
-  table_1_VE_ckd_unmatched:
-    run: r:latest analysis/VE/table_1_VE.R unmatched CKD
+  # Table 1 (CKD3 unmatched)
+  table_1_VE_ckd3_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched CKD3
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
-        data: output/tables/table1_VE_redacted_unmatched_CKD.rds
+        data: output/tables/table1_VE_redacted_unmatched_CKD3.rds
       moderately_sensitive:
-        table: output/tables/table1_VE_redacted_unmatched_CKD.html
+        table: output/tables/table1_VE_redacted_unmatched_CKD3.html
  
-   # Table 1 (dialysis unmatched)
-  table_1_VE_dialysis_unmatched:
-    run: r:latest analysis/VE/table_1_VE.R unmatched dialysis
+   # Table 1 (CKD4-5 unmatched)
+  table_1_VE_ckd4_5_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched CKD4-5
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
-        data: output/tables/table1_VE_redacted_unmatched_dialysis.rds
+        data: output/tables/table1_VE_redacted_unmatched_CKD4-5.rds
       moderately_sensitive:
-        table: output/tables/table1_VE_redacted_unmatched_dialysis.html
+        table: output/tables/table1_VE_redacted_unmatched_CKD4-5.html
  
-   # Table 1 (transplant unmatched)
-  table_1_VE_transplant_unmatched:
-    run: r:latest analysis/VE/table_1_VE.R unmatched transplant
+   # Table 1 (RRT unmatched)
+  table_1_VE_RRT_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched RRT
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
-        data: output/tables/table1_VE_redacted_unmatched_transplant.rds
+        data: output/tables/table1_VE_redacted_unmatched_RRT.rds
       moderately_sensitive:
-        table: output/tables/table1_VE_redacted_unmatched_transplant.html
+        table: output/tables/table1_VE_redacted_unmatched_RRT.html
         
   # Table 1 (all matched)
   table_1_VE_all_matched:
@@ -281,7 +281,17 @@ actions:
         data: output/tables/table1_VE_redacted_matched_all.rds
       moderately_sensitive:
         table: output/tables/table1_VE_redacted_matched_all.html
-
+  
+  # Table 1 (RRT matched)
+  table_1_VE_rrt_matched:
+    run: r:latest analysis/VE/table_1_VE.R matched RRT
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table1_VE_redacted_matched_RRT.rds
+      moderately_sensitive:
+        table: output/tables/table1_VE_redacted_matched_RRT.html
+        
   # Table IRR (VE unmatched)
   table_irr:
     run: r:latest analysis/VE/table_irr.R unmatched

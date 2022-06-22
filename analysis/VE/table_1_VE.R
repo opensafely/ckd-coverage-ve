@@ -48,12 +48,12 @@ fs::dir_create(here::here("output", "tables"))
 ## Select subset
 if (subgroup=="all") {
   data_cohort = data_cohort
-} else if (subgroup=="CKD") {
-  data_cohort = subset(data_cohort, ckd_5cat %in% c("CKD3a", "CKD3b", "CKD4-5"))
-} else if (subgroup=="dialysis") {
-  data_cohort = subset(data_cohort, ckd_5cat == "RRT (dialysis)")
-} else if (subgroup=="transplant") {
-  data_cohort = subset(data_cohort, ckd_5cat == "RRT (Tx)")
+} else if (subgroup=="CKD3") {
+  data_cohort = subset(data_cohort, ckd_3cat == "CKD3")
+} else if (subgroup=="CKD4-5") {
+  data_cohort = subset(data_cohort, ckd_3cat == "CKD4-5")
+} else if (subgroup=="RRT") {
+  data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
 }
 
 ## Format data
