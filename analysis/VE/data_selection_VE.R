@@ -26,15 +26,7 @@ data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))  
   mutate(across(where(is.Date), 
                 ~ floor_date(
                   as.Date(.x, format="%Y-%m-%d"),
-                  unit = "days"))) %>%
-  # simplified CKD groupings for VE subgroup analyses
-  mutate(
-    ckd_3cat = ckd_5cat,
-    ckd_3cat = ifelse(ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b", "CKD3", ckd_3cat),
-    ckd_3cat = ifelse(ckd_5cat=="RRT (dialysis)" | ckd_5cat=="RRT (Tx)", "RRT (any)", ckd_3cat),
-    ckd_3cat = factor(ckd_5cat, levels = c("No CKD", "CKD3", "CKD4-5", "RRT (any)")) 
-  ) %>%
-  droplevels() 
+                  unit = "days"))) 
 
 ## Vaccine initiation dates
 first_az = as_date("2021-01-04")
@@ -45,7 +37,7 @@ data_processed$end_date = as_date("2021-11-14")
 ## Set and store outcomes list
 outcomes_list <- list(
   short_name = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death", "noncovid_death"),
-  clean_name = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death", "non-COVID death"),
+  clean_name = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death", "Non-COVID death"),
   date_name = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date", "noncoviddeath_date")
 )
 dir.create(here::here("output", "lib"), showWarnings = FALSE, recursive=TRUE)
@@ -101,7 +93,7 @@ data_processed <- data_processed %>%
     # time to non-COVID-19 death
     tte_noncovid_death = tte(vax2_date - 1, noncoviddeath_date, censor_date, na.censor=TRUE),
     tte_noncovid_death_or_censor = tte(vax2_date - 1, noncoviddeath_date, censor_date, na.censor=FALSE),
-    ind_covid_death = dplyr::if_else((noncoviddeath_date>censor_date) | is.na(noncoviddeath_date), FALSE, TRUE),
+    ind_noncovid_death = dplyr::if_else((noncoviddeath_date>censor_date) | is.na(noncoviddeath_date), FALSE, TRUE),
 
     # time dose 2 to cut-off
     tte_dose2_to_cutoff = as.numeric(date(end_date)-date(vax2_date-1))
