@@ -181,10 +181,15 @@ irr_collated$outcome_clean[irr_collated$outcome=="tte_covid_death"] = "COVID-rel
 irr_collated$outcome_clean[irr_collated$outcome=="tte_noncovid_death"] = "Non-COVID death"
 
 ## Remove event counts and person-years for summary metric so that redacted counts cannot be back-calculated
-irr_collated$BNT_events[irr_collated$period=="15-182"] = "--"
-irr_collated$BNT_personyears[irr_collated$period=="15-182"] = "--"
-irr_collated$AZ_events[irr_collated$period=="15-182"] = "--"
-irr_collated$AZ_personyears[irr_collated$period=="15-182"] = "--"
+# irr_collated$BNT_events[irr_collated$period=="15-182"] = "--"
+# irr_collated$BNT_personyears[irr_collated$period=="15-182"] = "--"
+# irr_collated$AZ_events[irr_collated$period=="15-182"] = "--"
+# irr_collated$AZ_personyears[irr_collated$period=="15-182"] = "--"
+
+## Simplify output to report on whole study period in subgroup analyses
+if (subgroup!="all") {
+  irr_collated = subset(irr_collated, period=="15-182")
+}
 
 ## Save output
 write_csv(irr_collated, here::here("output", "tables", output_csv))
