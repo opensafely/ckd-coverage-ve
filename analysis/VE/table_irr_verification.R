@@ -15,9 +15,14 @@ library('lubridate')
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
 
-## Specify follow-up windows
-postvaxcuts_8week <- c(28*0:6)
-lastfupday <- max(postvaxcuts_8week)
+## Import outcome time periods
+postvax_list <- read_rds(
+  here::here("output", "lib", "postvax_list.rds")
+)
+postvaxcuts = postvax_list$postvaxcuts
+postvax_periods = postvax_list$postvax_periods
+period_length = postvaxcuts[2]-postvaxcuts[1]
+lastfupday = max(postvaxcuts)
 
 ## Create output directory
 fs::dir_create(here("output", "descriptive", "tables"))
@@ -44,15 +49,17 @@ data_tte <- data_cohort %>%
     tte_covid_hosp, 
     ind_covid_hosp,
     tte_covid_death,
-    ind_covid_death
-    ) 
+    ind_covid_death,
+    tte_noncovid_death,
+    ind_noncovid_death
+  ) 
 
 ## One row per patient per post-vaccination week
 postvax_time <- data_tte %>%
   select(patient_id, tte_censor) %>%
   mutate(
-    fup_day = list(postvaxcuts_8week),
-    timesincevax = map(fup_day, ~droplevels(timesince_cut_end(.x+1, postvaxcuts_8week)))
+    fup_day = list(postvaxcuts),
+    timesincevax = map(fup_day, ~droplevels(timesince_cut_end(.x+1, postvaxcuts)))
   ) %>%
   unnest(c(fup_day, timesincevax))
 
@@ -95,7 +102,7 @@ format_ratio = function(numer,denom, width=7){
 ## Create function to summarise IRRs
 pt_summary <- function(data, event){
 
-  unredacted <- data_cox_split %>%
+  unredacted <- data %>%
     mutate(
       timesincevax,
       status_event = .[[paste0("status_", event)]],
@@ -108,7 +115,8 @@ pt_summary <- function(data, event){
       n=sum(ind_event),
       rate=n/yearsatrisk
     ) %>%
-    ungroup()
+    ungroup() %>%
+    filter(!is.na(timesincevax)) # Line added to remove periods after final follow-up dat
 
   unredacted_all <- data %>%
     mutate(
@@ -176,4 +184,4 @@ data_summary <- bind_rows(
 )
 
 ## Write csv
-write_csv(data_summary, here("output", "tables", "table_irr_redacted_verification.csv"))
+write_csv(data_summary, here("output", "tables", "table_irr_redacted_verification_unmatched_all.csv"))

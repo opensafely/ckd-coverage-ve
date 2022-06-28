@@ -2,7 +2,7 @@
 # This script creates a table of incidence rates for diffferent outcomes, stratified by vaccine type and time since vaccination
 # # # # # # # # # # # # # # # # # # # # #
 
-## Import libraries ----
+## Import libraries 
 library('tidyverse')
 library('here')
 library('glue')
@@ -20,39 +20,55 @@ redaction_threshold = 10
 ## Import command-line arguments (specifying whether or not to run matched analysis)
 args <- commandArgs(trailingOnly=TRUE)
 
-## Set input and output pathways for matched/unmatched data - default is unmatched
 if(length(args)==0){
-  ## Default (unmatched) file names
-  input_name = "data_cohort_VE.rds"
-  output_csv = "table_irr_redacted.csv"
-  output_rds = "table_irr_redacted.rds"
+  # default (unmatched) file names
+  matching_status = "unmatched"
+  subgroup = "all"
 } else {
-  if (args[[1]]=="unmatched") { 
-    ## Unmatched file names    
-    input_name = "data_cohort_VE.rds"
-    output_csv = "table_irr_redacted.csv"
-    output_rds = "table_irr_redacted.rds"
-  } else if (args[[1]]=="matched") {
-    ## Matched file names
-    input_name = "data_cohort_VE_matched.rds"
-    output_csv = "table_irr_matched_redacted.csv"
-    output_rds = "table_irr_matched_redacted.rds"  
-  } else {
-    ## Print error if no argument specified
-    print("No matching argument specified")
-  }
+  matching_status = args[[1]] # can be unmatched or matched
+  subgroup = args[[2]] # can be all, CKD, dialysis, or transplant
+}
+
+## Import data
+if (matching_status=="unmatched") { 
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE.rds"))
+} else { 
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_matched.rds"))
+}
+
+# Modify dates to avoid timestamps causing inequalities for dates on the same day
+data_cohort <- data_cohort %>%
+  mutate(across(where(is.Date), 
+              ~ floor_date(
+                as.Date(.x, format="%Y-%m-%d"),
+                unit = "days")))
+
+## Specify output path names
+output_csv = paste0("table_irr_redacted_",matching_status,"_",subgroup,".csv")
+output_rds = paste0("table_irr_redacted_",matching_status,"_",subgroup,".rds")
+
+## Select subset
+if (subgroup=="all") {
+  data_cohort = data_cohort
+} else if (subgroup=="CKD3") {
+  data_cohort = subset(data_cohort, ckd_3cat == "CKD3")
+} else if (subgroup=="CKD4-5") {
+  data_cohort = subset(data_cohort, ckd_3cat == "CKD4-5")
+} else if (subgroup=="RRT") {
+  data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
 }
 
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
 
-## Set analysis intervals
-postvaxcuts <- 28*0:6
-window_length = 28
-lastfupday <- max(postvaxcuts)
-
-## Import processed data
-data_cohort <- read_rds(here::here("output", "data", input_name))
+## Import outcome time periods
+postvax_list <- read_rds(
+  here::here("output", "lib", "postvax_list.rds")
+)
+postvaxcuts = postvax_list$postvaxcuts
+postvax_periods = postvax_list$postvax_periods
+period_length = postvaxcuts[2]-postvaxcuts[1]
+lastfupday = max(postvaxcuts)
 
 ## Split into vaccine-specific data frames
 data_cohort_AZ <- subset(data_cohort, vax2_type=="az")
@@ -73,30 +89,18 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
       tte_exclusion = tte(vax2_date - 1, exclusion_date, exclusion_date),
       
       ## Person-days contributed to window 1
-      persondays_window1 = ifelse(tte_exclusion>postvaxcuts[1] & tte_exclusion<=postvaxcuts[2], tte_exclusion, window_length),
+      persondays_window1 = ifelse(tte_exclusion>postvaxcuts[1] & tte_exclusion<=postvaxcuts[2], tte_exclusion, period_length),
       
       ## Person-days contributed to window 2
-      persondays_window2 = ifelse(tte_exclusion>postvaxcuts[2] & tte_exclusion<=postvaxcuts[3], tte_exclusion-postvaxcuts[2], window_length),
+      persondays_window2 = ifelse(tte_exclusion>postvaxcuts[2] & tte_exclusion<=postvaxcuts[3], tte_exclusion-postvaxcuts[2], period_length),
       persondays_window2 = ifelse(tte_exclusion<=postvaxcuts[2], 0, persondays_window2),
       
       ## Person-days contributed to window 3
-      persondays_window3 = ifelse(tte_exclusion>postvaxcuts[3] & tte_exclusion<=postvaxcuts[4], tte_exclusion-postvaxcuts[3], window_length),
+      persondays_window3 = ifelse(tte_exclusion>postvaxcuts[3] & tte_exclusion<=postvaxcuts[4], tte_exclusion-postvaxcuts[3], period_length),
       persondays_window3 = ifelse(tte_exclusion<=postvaxcuts[3], 0, persondays_window3),
       
-      ## Person-days contributed to window 4
-      persondays_window4 = ifelse(tte_exclusion>postvaxcuts[4] & tte_exclusion<=postvaxcuts[5], tte_exclusion-postvaxcuts[4], window_length),
-      persondays_window4 = ifelse(tte_exclusion<=postvaxcuts[4], 0, persondays_window4),
-      
-      ## Person-days contributed to window 5
-      persondays_window5 = ifelse(tte_exclusion>postvaxcuts[5] & tte_exclusion<=postvaxcuts[6], tte_exclusion-postvaxcuts[5], window_length),
-      persondays_window5 = ifelse(tte_exclusion<=postvaxcuts[5], 0, persondays_window5),
-      
-      ## Person-days contributed to window 6
-      persondays_window6 = ifelse(tte_exclusion>postvaxcuts[6] & tte_exclusion<=postvaxcuts[7], tte_exclusion-postvaxcuts[6], 56),
-      persondays_window6 = ifelse(tte_exclusion<=postvaxcuts[6], 0, persondays_window6),
-
-      ## Person-days contributed to window 7 (all follow-up)
-      persondays_window7 = tte_exclusion
+      ## Person-days contributed to window 4 (all follow-up)
+      persondays_window4 = tte_exclusion
     )
   
   ## Split into vaccine-specific data frames
@@ -105,9 +109,9 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
   
   ## Create IRR dataframe to fill in
   postvax_irr <- data.frame(
-    period = c("1-28", "29-56", "57-84", "85-112", "113-140", "141-168", "1-168"),
-    period_start = c(postvaxcuts[1:6]+1,1),
-    period_end = c(postvaxcuts[2:7], 168)
+    period = c(postvax_periods, paste0(postvaxcuts[1]+1,"-",lastfupday)),
+    period_start = c(postvaxcuts[1:3]+1,postvaxcuts[1]+1),
+    period_end = c(postvaxcuts[2:4], lastfupday)
   )
   
 ## Calculate vaccine-specific N, event rates, person-time, and rates
@@ -165,7 +169,8 @@ irr_collated = rbind(
   redacted_irr_table(ind_endpoint = "ind_covid_postest", endpoint_date = "postvax_positive_test_date", tte_endpoint = "tte_covid_postest"),
   redacted_irr_table(ind_endpoint = "ind_covid_emergency", endpoint_date = "postvax_covid_emergency_date", tte_endpoint = "tte_covid_emergency"),
   redacted_irr_table(ind_endpoint = "ind_covid_hosp", endpoint_date = "postvax_covid_hospitalisation_date", tte_endpoint = "tte_covid_hosp"),
-  redacted_irr_table(ind_endpoint = "ind_covid_death", endpoint_date = "postvax_covid_death_date", tte_endpoint = "tte_covid_death")
+  redacted_irr_table(ind_endpoint = "ind_covid_death", endpoint_date = "postvax_covid_death_date", tte_endpoint = "tte_covid_death"),
+  redacted_irr_table(ind_endpoint = "ind_noncovid_death", endpoint_date = "noncoviddeath_date", tte_endpoint = "tte_noncovid_death")
 )
 
 ## Add clean names
@@ -173,12 +178,13 @@ irr_collated$outcome_clean = "Positive SARS-CoV-2 test"
 irr_collated$outcome_clean[irr_collated$outcome=="tte_covid_emergency"] = "COVID-related A&E admission"
 irr_collated$outcome_clean[irr_collated$outcome=="tte_covid_hosp"] = "COVID-related hospitalisation"
 irr_collated$outcome_clean[irr_collated$outcome=="tte_covid_death"] = "COVID-related death"
+irr_collated$outcome_clean[irr_collated$outcome=="tte_noncovid_death"] = "Non-COVID death"
 
 ## Remove event counts and person-years for summary metric so that redacted counts cannot be back-calculated
-irr_collated$BNT_events[irr_collated$period=="1-168"] = "--"
-irr_collated$BNT_personyears[irr_collated$period=="1-168"] = "--"
-irr_collated$AZ_events[irr_collated$period=="1-168"] = "--"
-irr_collated$AZ_personyears[irr_collated$period=="1-168"] = "--"
+irr_collated$BNT_events[irr_collated$period=="15-182"] = "--"
+irr_collated$BNT_personyears[irr_collated$period=="15-182"] = "--"
+irr_collated$AZ_events[irr_collated$period=="15-182"] = "--"
+irr_collated$AZ_personyears[irr_collated$period=="15-182"] = "--"
 
 ## Save output
 write_csv(irr_collated, here::here("output", "tables", output_csv))

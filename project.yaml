@@ -213,7 +213,7 @@ actions:
         html: output/markdown/coverage_model_checks/dose4_transplant.html
 
 #############################
-### VE - unmatched analyses
+### VE cohort selection - matched/unmatched
 #############################
 
 # Select cohort (single script used for both matched and unmatched analyses)
@@ -232,6 +232,10 @@ actions:
         csv1: output/tables/flowchart_VE.csv
         csv2: output/tables/flowchart_VE_matched.csv
 
+#############################
+### VE table 1 - all, CKD3, CKD4-5, RRT - matched,unmatched
+#############################
+
   # Table 1 (all unmatched)
   table_1_VE_all_unmatched:
     run: r:latest analysis/VE/table_1_VE.R unmatched all
@@ -243,7 +247,7 @@ actions:
         table: output/tables/table1_VE_redacted_unmatched_all.html
   
   # Table 1 (CKD3 unmatched)
-  table_1_VE_ckd3_unmatched:
+  table_1_VE_CKD3_unmatched:
     run: r:latest analysis/VE/table_1_VE.R unmatched CKD3
     needs: [data_selection_VE]
     outputs:
@@ -253,7 +257,7 @@ actions:
         table: output/tables/table1_VE_redacted_unmatched_CKD3.html
  
    # Table 1 (CKD4-5 unmatched)
-  table_1_VE_ckd4_5_unmatched:
+  table_1_VE_CKD4_5_unmatched:
     run: r:latest analysis/VE/table_1_VE.R unmatched CKD4-5
     needs: [data_selection_VE]
     outputs:
@@ -263,7 +267,7 @@ actions:
         table: output/tables/table1_VE_redacted_unmatched_CKD4-5.html
  
    # Table 1 (RRT unmatched)
-  table_1_VE_rrt_unmatched:
+  table_1_VE_RRT_unmatched:
     run: r:latest analysis/VE/table_1_VE.R unmatched RRT
     needs: [data_selection_VE]
     outputs:
@@ -283,7 +287,7 @@ actions:
         table: output/tables/table1_VE_redacted_matched_all.html
   
   # Table 1 (RRT matched)
-  table_1_VE_rrt_matched:
+  table_1_VE_RRT_matched:
     run: r:latest analysis/VE/table_1_VE.R matched RRT
     needs: [data_selection_VE]
     outputs:
@@ -291,16 +295,90 @@ actions:
         data: output/tables/table1_VE_redacted_matched_RRT.rds
       moderately_sensitive:
         table: output/tables/table1_VE_redacted_matched_RRT.html
-        
-  # Table IRR (VE unmatched)
-  table_irr:
-    run: r:latest analysis/VE/table_irr.R unmatched
+   
+#############################
+### IRR - all, CKD3, CKD4-5, RRT - matched,unmatched
+#############################
+   
+  # Table IRR (all unmatched)
+  table_irr_all_unmatched:
+    run: r:latest analysis/VE/table_irr.R unmatched all
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
-        data: output/tables/table_irr_redacted.rds
+        data: output/tables/table_irr_redacted_unmatched_all.rds
       moderately_sensitive:
-        csv: output/tables/table_irr_redacted.csv
+        csv: output/tables/table_irr_redacted_unmatched_all.csv
+        
+  # Table IRR (CKD3 unmatched)
+  table_irr_CKD3_unmatched:
+    run: r:latest analysis/VE/table_irr.R unmatched CKD3
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_redacted_unmatched_CKD3.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_redacted_unmatched_CKD3.csv
+ 
+  # Table IRR (CKD4-5 unmatched)
+  table_irr_CKD4_5_unmatched:
+    run: r:latest analysis/VE/table_irr.R unmatched CKD4-5
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_redacted_unmatched_CKD4-5.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_redacted_unmatched_CKD4-5.csv
+        
+  # Table IRR (RRT unmatched)
+  table_irr_RRT_unmatched:
+    run: r:latest analysis/VE/table_irr.R unmatched RRT
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_redacted_unmatched_RRT.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_redacted_unmatched_RRT.csv
+
+  # Table IRR (all matched)
+  table_irr_all_matched:
+    run: r:latest analysis/VE/table_irr.R matched all
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_redacted_matched_all.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_redacted_matched_all.csv
+        
+  # Table IRR (CKD3 matched)
+  table_irr_CKD3_matched:
+    run: r:latest analysis/VE/table_irr.R matched CKD3
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_redacted_matched_CKD3.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_redacted_matched_CKD3.csv
+ 
+  # Table IRR (CKD4-5 matched)
+  table_irr_CKD4_5_matched:
+    run: r:latest analysis/VE/table_irr.R matched CKD4-5
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_redacted_matched_CKD4-5.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_redacted_matched_CKD4-5.csv
+        
+  # Table IRR (RRT matched)
+  table_irr_RRT_matched:
+    run: r:latest analysis/VE/table_irr.R matched RRT
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_redacted_matched_RRT.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_redacted_matched_RRT.csv
         
   # Table IRR - verification (adapted from prior scripts)
   table_irr_verification:
@@ -308,7 +386,7 @@ actions:
     needs: [data_selection_VE]
     outputs:
       moderately_sensitive:
-        csv: output/tables/table_irr_redacted_verification.csv
+        csv: output/tables/table_irr_redacted_verification_unmatched_all.csv
   
   # Cox models - comparative VE ----
   # unmatched_persontime_covid_postest
@@ -326,7 +404,7 @@ actions:
   # model
   cox_model_unmatched_persontime_covid_postest_VE:
     run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_postest
-    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_postest_VE, table_irr]
+    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_postest_VE]
     outputs:
       highly_sensitive:
         data: output/model/modelcox*unmatched_persontime_covid_postest.rds
@@ -349,7 +427,7 @@ actions:
   # model
   cox_model_unmatched_calendartime_covid_postest_VE:
     run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_postest
-    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_postest_VE, table_irr]
+    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_postest_VE]
     outputs:
       highly_sensitive:
         data: output/model/modelcox*unmatched_calendartime_covid_postest.rds
@@ -372,7 +450,7 @@ actions:
   # model
   cox_model_unmatched_persontime_covid_emergency_VE:
     run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_emergency
-    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_emergency_VE, table_irr]
+    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_emergency_VE]
     outputs:
       highly_sensitive:
         data: output/model/modelcox*unmatched_persontime_covid_emergency.rds
@@ -395,7 +473,7 @@ actions:
   # model
   cox_model_unmatched_calendartime_covid_emergency_VE:
     run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_emergency
-    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_emergency_VE, table_irr]
+    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_emergency_VE]
     outputs:
       highly_sensitive:
         data: output/model/modelcox*unmatched_calendartime_covid_emergency.rds
@@ -418,7 +496,7 @@ actions:
   # model
   cox_model_unmatched_persontime_covid_hosp_VE:
     run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_hosp
-    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_hosp_VE, table_irr]
+    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_hosp_VE]
     outputs:
       highly_sensitive:
         data: output/model/modelcox*unmatched_persontime_covid_hosp.rds
@@ -441,7 +519,7 @@ actions:
   # model
   cox_model_unmatched_calendartime_covid_hosp_VE:
     run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_hosp
-    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_hosp_VE, table_irr]
+    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_hosp_VE]
     outputs:
       highly_sensitive:
         data: output/model/modelcox*unmatched_calendartime_covid_hosp.rds
@@ -464,7 +542,7 @@ actions:
   # model
   cox_model_unmatched_persontime_covid_death_VE:
     run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_death
-    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_death_VE, table_irr]
+    needs: [data_selection_VE, cox_preflight_unmatched_persontime_covid_death_VE]
     outputs:
       highly_sensitive:
         data: output/model/modelcox*unmatched_persontime_covid_death.rds
@@ -487,7 +565,7 @@ actions:
   # model
   cox_model_unmatched_calendartime_covid_death_VE:
     run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_death
-    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_death_VE, table_irr]
+    needs: [data_selection_VE, cox_preflight_unmatched_calendartime_covid_death_VE]
     outputs:
       highly_sensitive:
         data: output/model/modelcox*unmatched_calendartime_covid_death.rds
@@ -498,30 +576,10 @@ actions:
  # Cox VE summaries for unmatched analysis ----
   cox_VE_summary:
     run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
-    needs: [data_selection_VE, table_1_VE_all_unmatched, table_1_VE_all_matched, table_irr, cox_model_unmatched_persontime_covid_postest_VE, cox_model_unmatched_calendartime_covid_postest_VE, cox_model_unmatched_persontime_covid_emergency_VE, cox_model_unmatched_calendartime_covid_emergency_VE, cox_model_unmatched_persontime_covid_hosp_VE, cox_model_unmatched_calendartime_covid_hosp_VE, cox_model_unmatched_persontime_covid_death_VE, cox_model_unmatched_calendartime_covid_death_VE]
+    needs: [data_selection_VE, table_1_VE_all_unmatched, table_1_VE_all_matched, cox_model_unmatched_persontime_covid_postest_VE, cox_model_unmatched_calendartime_covid_postest_VE, cox_model_unmatched_persontime_covid_emergency_VE, cox_model_unmatched_calendartime_covid_emergency_VE, cox_model_unmatched_persontime_covid_hosp_VE, cox_model_unmatched_calendartime_covid_hosp_VE, cox_model_unmatched_persontime_covid_death_VE, cox_model_unmatched_calendartime_covid_death_VE]
     outputs:
       moderately_sensitive:
         html: output/markdown/cox_VE_summary.html
-        
-        
-# # PLR models - comparative VE unmatched ----
-#   plr_model_VE:
-#     run: r:latest analysis/VE/plr_model_VE.R unmatched
-#     needs: [data_selection_VE, table_irr]
-#     outputs:
-#       highly_sensitive:
-#         data: output/model/VE_plr/modelplr*.rds
-#       moderately_sensitive:
-#         csv: output/model/VE_plr/modelplr*.csv
-#         txt: output/model/VE_plr/modelplr*.txt
-
-#   # PLR VE summaries for unmatched analysis ----
-#   plr_VE_summary:
-#     run: r:latest -e 'rmarkdown::render("analysis/VE/plr_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-#     needs: [data_selection_VE, table_1_VE, table_irr, plr_model_VE]
-#     outputs:
-#       moderately_sensitive:
-#         html: output/markdown/plr_VE_summary.html
 
 # #############################
 # ### VE - matched analyses
@@ -551,7 +609,7 @@ actions:
 #   # Cox models - comparative VE matched ----
 #   cox_model_VE_matched:
 #     run: r:latest analysis/VE/cox_model_VE.R matched
-#     needs: [data_selection_VE, table_irr_matched]
+#     needs: [data_selection_VE]
 #     outputs:
 #       highly_sensitive:
 #         data: output/model/VE_matched/modelcox*.rds
@@ -562,7 +620,7 @@ actions:
 #   # Cox VE summaries for matched analysis ----
 #   cox_VE_summary_matched:
 #     run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary_matched.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown")'
-#     needs: [data_selection_VE, table_1_VE_matched, table_irr_matched, cox_model_VE_matched]
+#     needs: [data_selection_VE, table_1_VE_matched, cox_model_VE_matched]
 #     outputs:
 #       moderately_sensitive:
 #         html: output/markdown/cox_VE_summary_matched.html
