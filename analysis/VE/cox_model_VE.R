@@ -2,7 +2,7 @@
 
 # This script:
 # - imports processed data
-# - fit univariate and multivariable stratified cox model(s) using the coxph package
+# - fits univariate and multivariable stratified cox model(s) using the coxph package
 # - saves models
 
 ######################################
@@ -19,25 +19,29 @@ sessionInfo()
 args <- commandArgs(trailingOnly=TRUE)
 
 ## Set input and output pathways for matched/unmatched data - default is unmatched
-# arg1 = db = matched / unmatched
-# arg2 = timescale = persontime / calendartime
-# arg3 = outcome = covid_postest / covid_emergency / covid_hosp / covid_death
+# arg1: db = matched / unmatched
+# arg2: timescale = persontime / calendartime
+# arg3: outcome = covid_postest / covid_emergency / covid_hosp / covid_death / noncovid_death
+# arg4: subset = all / CKD3 / CKD4-5 / RRT
+
 if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
   timescale = "persontime"
   selected_outcome = "covid_postest"
+  subgroup = "CKD3"
 } else {
   db = args[[1]]
   timescale = args[[2]]
   selected_outcome = args[[3]]
+  subgroup = args[[4]]
 }
 
 ## Import data
 full = timescale != "calendartime"
 if (full) {
   ## Get data for full model
-  data_cox_full <- read_rds(here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{selected_outcome}.rds")))
+  data_cox_full <- read_rds(here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
   ## Check dataset not empty
   if (nrow(data_cox_full) == 0) {
     # log
@@ -46,7 +50,7 @@ if (full) {
 }
 
 ## Read data for stratified model
-data_cox_strata <- read_rds(here::here("output", "model", glue("data_cox_strata_{db}_{timescale}_{selected_outcome}.rds")))
+data_cox_strata <- read_rds(here::here("output", "model", glue("data_cox_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
 strata = nrow(data_cox_strata) > 0
 ## Check dataset not empty
 if (!strata & timescale == "calendartime") {
@@ -54,14 +58,14 @@ if (!strata & timescale == "calendartime") {
   try(stop("Not enough events to fit model with calendar timescale."))
 }
 
-## Import formulae 
+## Import formulas 
 if (full) {
   formulas_full <- read_rds(
-    here::here("output", "model", glue("formulas_full_{db}_{timescale}_{selected_outcome}.rds")))
+    here::here("output", "model", glue("formulas_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
 }
 if (strata) {
   formulas_strata <- read_rds(
-    here::here("output", "model", glue("formulas_strata_{db}_{timescale}_{selected_outcome}.rds")))
+    here::here("output", "model", glue("formulas_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
 }
 
 ## Import outcomes
@@ -75,15 +79,10 @@ selected_outcome_clean = outcomes_list$clean_name[outcome_index]
 postvax_list <- read_rds(
   here::here("output", "lib", "postvax_list.rds")
 )
-lastfupday <- max(postvax_list$postvaxcuts)
+lastfupday = max(postvax_list$postvaxcuts)
 
 ## Read in incidence rate ratio table
-if (db=="unmatched") {
-  irr_name = "table_irr_redacted.rds"
-} else {
-  irr_name = "table_irr_matched_redacted.rds"
-}
-irr_table = read_rds(here::here("output", "tables", irr_name))
+irr_table = read_rds(here::here("output", "tables", glue("table_irr_redacted_{db}_{subgroup}.rds")))
 irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
 irr_sub_strata <- irr_sub %>%
   filter(period %in% postvax_list$postvax_periods)
@@ -97,25 +96,26 @@ dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
 cat(
   glue("## Script info for cox models ##"), 
   "  \n", 
-  file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}.txt")), 
+  file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), 
   append = FALSE
   )
 
 ## Function to pass additional log text
 logoutput <- function(...){
-  cat(..., file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}.txt")), sep = "\n  ", append = TRUE)
-  cat("\n", file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}.txt")), sep = "\n  ", append = TRUE)
+  cat(..., file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), sep = "\n  ", append = TRUE)
+  cat("\n", file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), sep = "\n  ", append = TRUE)
 }
 
 logoutput(
   "args:", 
   glue("db = {db}"),
   glue("timescale = {timescale}"),
-  glue("outcome = {selected_outcome_clean}")
+  glue("outcome = {selected_outcome_clean}"),
+  glue("subset = {subgroup}")
 )
 
 ####################################################### 
-### function to fit cox model for specified formula 
+### Function to fit cox model for specified formula 
 ####################################################### 
 # number = 0; stratified = TRUE
 
@@ -133,7 +133,7 @@ cox_model_VE <- function(number, stratified=TRUE) {
   if (timescale == "calendartime" & !stratified) stop("Must set stratified=TRUE if using calendar timescale")
   
   if (stratified) {
-    ## If stratified = FALSE, fit cox model stratified by follow-up window
+    ## If stratified = TRUE, fit cox model stratified by follow-up window
     coxmod <- coxph(
       formula = formula_cox,
       data = data_cox_strata,
@@ -199,39 +199,61 @@ redact_glance <- function(.data) {
     "statistic.wald", "p.value.wald", "statistic.robust", "p.value.robust", 
     "r.squared", "r.squared.max", "concordance", "std.error.concordance", 
     "logLik", "AIC", "BIC")
+  .data = .data %>%
+    ## All redaction columns as character, otherwise error in following loop
+    mutate(across(any_of(redaction_columns), as.character))
   for (i in 1:nrow(.data)) {
-    if (.data$nevent[i]>0 & .data$nevent[i]<=10) { .data[i,names(.data) %in% redaction_columns] = "[Redacted]" }
+    if (as.numeric(.data$nevent[i])>0 & as.numeric(.data$nevent[i])<=10) { .data[i,names(.data) %in% redaction_columns] = "[Redacted]" }
   }
   return(.data)
 }
 
 if (full) {
-  summary0_full <- cox_model_VE(0, stratified=FALSE)
-  summary1_full <- cox_model_VE(1, stratified=FALSE)
-  summary2_full <- cox_model_VE(2, stratified=FALSE)
-  
-  ## Collate glance
-  model_glance_full <- bind_rows(
-    summary0_full$glance, 
-    summary1_full$glance, 
-    summary2_full$glance
-    ) %>%
-    mutate(
-      outcome = selected_outcome, 
-      outcome_clean = selected_outcome_clean
+  if (db == "matched") {
+    summary0_full <- cox_model_VE(0, stratified=FALSE)
+    
+    model_glance_full <- summary0_full$glance %>%
+      mutate(
+        outcome = selected_outcome, 
+        outcome_clean = selected_outcome_clean
       ) %>%
-    redact_glance()
-  
-  ## Collate tidy
-  model_tidy_full <- bind_rows(
-    summary0_full$tidy, 
-    summary1_full$tidy, 
-    summary2_full$tidy
-  ) %>%
-    mutate(
-      outcome = selected_outcome, 
-      outcome_clean = selected_outcome_clean
-    )
+      redact_glance()
+    
+    ## Collate tidy
+    model_tidy_full <- summary0_full$tidy %>%
+      mutate(
+        outcome = selected_outcome, 
+        outcome_clean = selected_outcome_clean
+      )
+    
+  } else {
+    summary0_full <- cox_model_VE(0, stratified=FALSE)
+    summary1_full <- cox_model_VE(1, stratified=FALSE)
+    summary2_full <- cox_model_VE(2, stratified=FALSE)
+    
+    ## Collate glance
+    model_glance_full <- bind_rows(
+      summary0_full$glance, 
+      summary1_full$glance, 
+      summary2_full$glance
+    ) %>%
+      mutate(
+        outcome = selected_outcome, 
+        outcome_clean = selected_outcome_clean
+      ) %>%
+      redact_glance()
+    
+    ## Collate tidy
+    model_tidy_full <- bind_rows(
+      summary0_full$tidy, 
+      summary1_full$tidy, 
+      summary2_full$tidy
+    ) %>%
+      mutate(
+        outcome = selected_outcome, 
+        outcome_clean = selected_outcome_clean
+      )
+  }
   
 } else {
   ## Empty outputs
@@ -241,41 +263,61 @@ if (full) {
 ## Save model summary
 write_csv(
   model_glance_full,
-  here::here("output", "model", glue("modelcox_glance_full_{db}_{timescale}_{selected_outcome}.csv"))
+  here::here("output", "model", glue("modelcox_glance_full_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
 )
 write_csv(
   model_tidy_full, 
-  here::here("output", "model", glue("modelcox_tidy_full_{db}_{timescale}_{selected_outcome}.csv"))
+  here::here("output", "model", glue("modelcox_tidy_full_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
 )
 
 
 if (strata) {
-  summary0_strata <- cox_model_VE(0, stratified=TRUE)
-  summary1_strata <- cox_model_VE(1, stratified=TRUE)
-  summary2_strata <- cox_model_VE(2, stratified=TRUE)
-  
-  ## Collate glance
-  model_glance_strata <- bind_rows(
-    summary0_strata$glance, 
-    summary1_strata$glance, 
-    summary2_strata$glance
-  ) %>%
-    mutate(
-      outcome = selected_outcome, 
-      outcome_clean = selected_outcome_clean
+  if (db == "matched") {
+    summary0_strata <- cox_model_VE(0, stratified=TRUE)
+
+    ## Collate glance
+    model_glance_strata <- summary0_strata$glance %>%
+      mutate(
+        outcome = selected_outcome, 
+        outcome_clean = selected_outcome_clean
+      ) %>%
+      redact_glance()
+    
+    ## Collate tidy
+    model_tidy_strata <- summary0_strata$tidy %>%
+      mutate(
+        outcome = selected_outcome, 
+        outcome_clean = selected_outcome_clean
+      )
+    
+  } else {
+    summary0_strata <- cox_model_VE(0, stratified=TRUE)
+    summary1_strata <- cox_model_VE(1, stratified=TRUE)
+    summary2_strata <- cox_model_VE(2, stratified=TRUE)
+    
+    ## Collate glance
+    model_glance_strata <- bind_rows(
+      summary0_strata$glance, 
+      summary1_strata$glance, 
+      summary2_strata$glance
     ) %>%
-    redact_glance()
-  
-  ## Collate tidy
-  model_tidy_strata <- bind_rows(
-    summary0_strata$tidy, 
-    summary1_strata$tidy, 
-    summary2_strata$tidy
-  ) %>%
-    mutate(
-      outcome = selected_outcome, 
-      outcome_clean = selected_outcome_clean
-    )
+      mutate(
+        outcome = selected_outcome, 
+        outcome_clean = selected_outcome_clean
+      ) %>%
+      redact_glance()
+    
+    ## Collate tidy
+    model_tidy_strata <- bind_rows(
+      summary0_strata$tidy, 
+      summary1_strata$tidy, 
+      summary2_strata$tidy
+    ) %>%
+      mutate(
+        outcome = selected_outcome, 
+        outcome_clean = selected_outcome_clean
+      ) 
+  }
   
 } else {
   ## Empty outputs
@@ -286,11 +328,11 @@ if (strata) {
 ## Save model summary
 write_csv(
   model_glance_strata,
-  here::here("output", "model", glue("modelcox_glance_strata_{db}_{timescale}_{selected_outcome}.csv"))
+  here::here("output", "model", glue("modelcox_glance_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
 )
 write_csv(
   model_tidy_strata, 
-  here::here("output", "model", glue("modelcox_tidy_strata_{db}_{timescale}_{selected_outcome}.csv"))
+  here::here("output", "model", glue("modelcox_tidy_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
 )
 
 reduce_tidy <- function(stratified=FALSE) {
@@ -340,7 +382,6 @@ reduce_tidy <- function(stratified=FALSE) {
     "p.value", "conf.low", "conf.high")
   
   ## Add event counts from IRR table to unadjusted model
-  # Elsie note: join is safer, in case some periods are not included in the model due to few events
   model_tidy_reduced <- model_tidy_reduced %>%
     select(
       model, model_name, term, variable, label, outcome,
@@ -383,10 +424,10 @@ model_tidy_final <- model_tidy_final %>%
 ## Save outputs
 write_csv(
   model_tidy_final, 
-  here::here("output", "model", glue("modelcox_tidy_reduced_{db}_{timescale}_{selected_outcome}.csv"))
+  here::here("output", "model", glue("modelcox_tidy_reduced_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
   )
 write_rds(
   model_tidy_final,
-  here::here("output", "model", glue("modelcox_tidy_reduced_{db}_{timescale}_{selected_outcome}.rds")), 
+  here::here("output", "model", glue("modelcox_tidy_reduced_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")), 
   compress="gz"
   )
