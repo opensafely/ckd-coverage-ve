@@ -27,9 +27,9 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
-  timescale = "persontime"
+  timescale = "calendartime"
   selected_outcome = "covid_postest"
-  subgroup = "CKD3"
+  subgroup = "all"
 } else {
   db = args[[1]]
   timescale = args[[2]]
@@ -82,7 +82,9 @@ postvax_list <- read_rds(
 lastfupday = max(postvax_list$postvaxcuts)
 
 ## Read in incidence rate ratio table
-irr_table = read_rds(here::here("output", "tables", glue("table_irr_redacted_{db}_{subgroup}.rds")))
+irr_table = read_rds(here::here("output", "tables", glue("table_irr_redacted_{db}_{subgroup}.rds"))) %>%
+  mutate_all(as.character)
+
 irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
 irr_sub_strata <- irr_sub %>%
   filter(period %in% postvax_list$postvax_periods)
@@ -359,8 +361,6 @@ reduce_tidy <- function(stratified=FALSE) {
   n_models <- n_distinct(model_tidy_reduced$model)
   n_periods <- n_distinct(.irr$period)
   model_tidy_reduced <- model_tidy_reduced %>%
-    # Elsie note: full_join to make sure all time periods included
-    # join is safer, in case some periods dropped from models
     full_join(.irr %>% 
                  mutate(model = n_models) %>%
                  uncount(model) %>%
@@ -392,16 +392,14 @@ reduce_tidy <- function(stratified=FALSE) {
   
   for (i in 1:nrow(model_tidy_reduced)) {
     if (
-      model_tidy_reduced$BNT_events[i]=="[Redacted]" |
-      model_tidy_reduced$AZ_events[i]=="[Redacted]"
+      model_tidy_reduced$BNT_events[i]=="[Redacted]" | model_tidy_reduced$AZ_events[i]=="[Redacted]"
     ) { 
       model_tidy_reduced[i,names(model_tidy_reduced) %in% redaction_columns] = "[Redacted]"
       }
     if (
-      model_tidy_reduced$BNT_events[i]=="0" & 
-      model_tidy_reduced$AZ_events[i]=="0"
+      model_tidy_reduced$BNT_events[i]=="0" & model_tidy_reduced$AZ_events[i]=="0"
     ) {
-      model_tidy_reduced[i,names(model_tidy_reduced)%in%redaction_columns] = "[No events]" 
+      model_tidy_reduced[i,names(model_tidy_reduced) %in% redaction_columns] = "[No events]" 
       }
   }
   
