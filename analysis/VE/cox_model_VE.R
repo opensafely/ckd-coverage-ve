@@ -149,7 +149,7 @@ cox_model_VE <- function(number, stratified=TRUE) {
     coxmod <- coxph(
       formula = formula_cox,
       data = data_cox_full,
-      control = coxph.control(iter.max = 100)
+      control = coxph.control(iter.max = 50)
       )
   }
   ## Print warnings

@@ -16,7 +16,7 @@ library('glue')
 sessionInfo()
 
 ### Specify event threshold for preflight checks
-events_threshold = 2
+events_threshold = 3
 
 ## Import command-line arguments (specifying whether or not to run matched analysis)
 args <- commandArgs(trailingOnly=TRUE)
