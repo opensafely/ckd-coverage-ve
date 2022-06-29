@@ -663,11 +663,18 @@ if (db == "matched" & timescale == "persontime") {
     glue("memory usage = ", format(object.size(data_cox_full), units="GB", standard="SI", digits=3L))
   )
 }
-if (strata) {
+if (db == "unmatched" & strata) {
   logoutput(
     glue("data_cox_strata:"),
     glue("data size = ", nrow(data_cox_strata_merged)),
     glue("memory usage = ", format(object.size(data_cox_strata_merged), units="GB", standard="SI", digits=3L))
+  )
+}
+if (db == "matched" & strata) {
+  logoutput(
+    glue("data_cox_strata:"),
+    glue("data size = ", nrow(data_cox_strata_keep)),
+    glue("memory usage = ", format(object.size(data_cox_strata_keep), units="GB", standard="SI", digits=3L))
   )
 }
 
