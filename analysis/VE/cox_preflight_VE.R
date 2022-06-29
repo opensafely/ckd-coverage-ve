@@ -293,6 +293,7 @@ if (!full) {
 if (subgroup=="all") {
   ## Only keep postvaxcuts during which there are >2 events for each level of expo
   data_cox_strata_keep <- data_cox_strata %>%
+    filter(!is.na(timesincevax_pw) & timesincevax_pw!="183+") %>% ## Added to cut periods of 1-14d and 183d+
     group_by(across(all_of(c(vars0, expo)))) %>%
     mutate(check_events_strata = sum(ind_outcome)) %>%
     ungroup() %>%
@@ -301,7 +302,6 @@ if (subgroup=="all") {
     ungroup() %>%
     filter(check_events_strata > events_threshold) %>%
     select(-check_events_strata) %>%
-    filter(!is.na(timesincevax_pw)) %>% ## Added to cut period with tstart 0, tstop 14, and timesincevax_pw NA
     droplevels() 
   
   ## Strata controls whether to process data for stratified models
