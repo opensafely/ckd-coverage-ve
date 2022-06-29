@@ -1104,10 +1104,45 @@ actions:
         csv: output/model/modelcox*unmatched_persontime_noncovid_death_RRT.csv
         logs: output/model/log_cox_model_unmatched_persontime_noncovid_death_RRT.txt
 
- # Cox VE summaries for unmatched analysis ----
- # cox_VE_summary:
- #   run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
- #   needs: [data_selection_VE, table_1_VE_all_unmatched, table_1_VE_all_matched]
- #   outputs:
- #     moderately_sensitive:
- #       html: output/markdown/cox_VE_summary.html
+  # model
+  cox_VE_summary:
+    run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
+    needs:
+    - data_selection_VE
+    - table_1_VE_all_unmatched
+    - table_1_VE_CKD3_unmatched
+    - table_1_VE_CKD4_5_unmatched
+    - table_1_VE_RRT_unmatched
+    - table_1_VE_all_matched
+    - table_irr_unmatched_all
+    - table_irr_unmatched_CKD3
+    - table_irr_unmatched_CKD4_5
+    - table_irr_unmatched_RRT
+    - table_irr_matched_all
+    - cox_model_unmatched_persontime_covid_postest_VE_all
+    - cox_model_matched_persontime_covid_postest_VE_all
+    - cox_model_unmatched_calendartime_covid_postest_VE_all
+    - cox_model_unmatched_persontime_covid_postest_VE_CKD3
+    - cox_model_unmatched_persontime_covid_postest_VE_CKD4_5
+    - cox_model_unmatched_persontime_covid_postest_VE_RRT
+    - cox_model_unmatched_persontime_covid_hosp_VE_all
+    - cox_model_matched_persontime_covid_hosp_VE_all
+    - cox_model_unmatched_calendartime_covid_hosp_VE_all
+    - cox_model_unmatched_persontime_covid_hosp_VE_CKD3
+    - cox_model_unmatched_persontime_covid_hosp_VE_CKD4_5
+    - cox_model_unmatched_persontime_covid_hosp_VE_RRT
+    - cox_model_unmatched_persontime_covid_death_VE_all
+    - cox_model_matched_persontime_covid_death_VE_all
+    - cox_model_unmatched_calendartime_covid_death_VE_all
+    - cox_model_unmatched_persontime_covid_death_VE_CKD3
+    - cox_model_unmatched_persontime_covid_death_VE_CKD4_5
+    - cox_model_unmatched_persontime_covid_death_VE_RRT
+    - cox_model_unmatched_persontime_noncovid_death_VE_all
+    - cox_model_matched_persontime_noncovid_death_VE_all
+    - cox_model_unmatched_calendartime_noncovid_death_VE_all
+    - cox_model_unmatched_persontime_noncovid_death_VE_CKD3
+    - cox_model_unmatched_persontime_noncovid_death_VE_CKD4_5
+    - cox_model_unmatched_persontime_noncovid_death_VE_RRT
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/cox_VE_summary.html

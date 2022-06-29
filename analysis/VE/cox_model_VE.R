@@ -27,7 +27,7 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
-  timescale = "calendartime"
+  timescale = "persontime"
   selected_outcome = "covid_postest"
   subgroup = "all"
 } else {

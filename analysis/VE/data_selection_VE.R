@@ -219,7 +219,7 @@ data_flowchart <- data_criteria %>%
       crit == "c4" ~ "  with no missing demographic information",
       crit == "c5" ~ "  received 2 x ChAdOx1-S or 2 x BNT162b2",
       crit == "c6" ~ "  received first dose after 04 January 2021",
-      crit == "c7" ~ "  dose interval of 8-16 weeks",
+      crit == "c7" ~ "  dose interval of 8-14 weeks",
       crit == "c8" ~ "  post-vaccination outcomes recorded after second dose",
       crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, or housebound",
       crit == "c10" ~ "  not censored before second dose",

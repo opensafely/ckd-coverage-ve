@@ -389,8 +389,13 @@ study = StudyDefinition(
     between=["index_date",end_date],
     returning = "date_of_death",
     date_format = "YYYY-MM-DD",
+    return_expectations = {
+      "date": {"earliest": "2020-12-01", "latest" : "2022-05-11"},
+      "rate": "uniform",
+      "incidence": 0.05
+    },
   ),
-  
+
   ## De-registration
   dereg_date = patients.date_deregistered_from_all_supported_practices(
     between=["index_date",end_date],
@@ -1158,7 +1163,7 @@ study = StudyDefinition(
     return_expectations = {
       "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
-      "incidence": 0.15,
+      "incidence": 0.4,
     },
   ),
   
@@ -1172,7 +1177,7 @@ study = StudyDefinition(
     return_expectations = {
       "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
-      "incidence": 0.05,
+      "incidence": 0.2,
     },
   ),
     
@@ -1187,7 +1192,7 @@ study = StudyDefinition(
     return_expectations = {
       "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
-      "incidence": 0.05,
+      "incidence": 0.2,
     },
   ),
   
@@ -1200,7 +1205,7 @@ study = StudyDefinition(
     return_expectations = {
       "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
-      "incidence": 0.02
+      "incidence": 0.1
     },
   ),
   
@@ -1233,7 +1238,7 @@ study = StudyDefinition(
     return_expectations = {
       "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
-      "incidence": 0.05,
+      "incidence": 0.2,
     },
   ),
   
@@ -1248,7 +1253,7 @@ study = StudyDefinition(
     return_expectations = {
       "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
-      "incidence": 0.05,
+      "incidence": 0.2,
     },
   ),
   
@@ -1260,7 +1265,7 @@ study = StudyDefinition(
     return_expectations = {
       "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
       "rate": "uniform",
-      "incidence": 0.02
+      "incidence": 0.1
     },
   ),
   
