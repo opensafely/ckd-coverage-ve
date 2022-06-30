@@ -305,7 +305,7 @@ model_persontime = rbind(
   read_rds(here::here("output", "model", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[5],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[5])
   ) %>% 
-  mutate(model_group = "Person-time")
+  mutate(model_group = ifelse(model_name=="unadjusted", "Person-time (unadjusted)", "Person-time (adjusted)"))
 
 ## Read in calendartime models
 model_calendartime = rbind(
@@ -318,7 +318,7 @@ model_calendartime = rbind(
   read_rds(here::here("output", "model", paste0("modelcox_tidy_reduced_unmatched_calendartime_",outcome_list[5],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[5])
   ) %>% 
-  mutate(model_group = "Calendar-time")
+  mutate(model_group = "Calendar-time (adjusted)")
 
 ## Read in matched models
 model_matched = rbind(
@@ -358,8 +358,8 @@ model$redaction[model$n_event==0 & model$model==0] = "[N]"
 #write.csv(model, "model.csv")
 
 ## Selected fully adjusted models
-model_subset = subset(model, model_name=="fully adjusted" | model_group=="Matched")
-model_subset$model_group = factor(model_subset$model_group, levels = c("Person-time", "Calendar-time", "Matched"))
+model_subset = subset(model, model_name=="fully adjusted" | model_group=="Matched" | model_group=="Person-time (unadjusted)")
+model_subset$model_group = factor(model_subset$model_group, levels = c("Person-time (unadjusted)", "Person-time (adjusted)", "Calendar-time (adjusted)", "Matched"))
 
 ## Generate HR plot for 4 ouctomes
 g2 = ggplot(data = model_subset) +
@@ -373,7 +373,7 @@ g2 = ggplot(data = model_subset) +
     ) +
   facet_wrap(.~outcome_clean, nrow=1) +
   scale_x_continuous(breaks=postvaxcuts, limits=c(0, max(postvaxcuts)+period_length), expand = c(0, 0)) +
-  scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
+  scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#7570B3", "#B40F20")) +
   labs(
     y="Hazard ratio (95% CI)",
     x="Time since second dose (days)",
