@@ -175,7 +175,7 @@ table_1_wide %>%
 <br/><br/>
 
 #### Cumulative incidence plots and hazard ratios over time (figure)
-```{r, fig.width=21, fig.height=10}
+```{r, fig.width=21, fig.height=15}
 create_rounded_surv_table = function(outcome_number, input_data) {
   data_surv <-
     input_data %>%
@@ -230,6 +230,7 @@ create_rounded_surv_table = function(outcome_number, input_data) {
   data_surv_rounded
 }
 
+## Collate unmatched survival data
 surv_covid_postest = create_rounded_surv_table(1, data_tte_unmatched) %>% mutate(outcome_clean = clean_list[1])
 #surv_covid_emergency = create_rounded_surv_table(2) %>% mutate(outcome_clean = clean_list[2])
 surv_covid_hosp = create_rounded_surv_table(3, data_tte_unmatched) %>% mutate(outcome_clean = clean_list[3])
@@ -239,10 +240,21 @@ surv_noncovid_death = create_rounded_surv_table(5, data_tte_unmatched) %>% mutat
 ## Collate across outcomes
 surv_collated = rbind(surv_covid_postest, surv_covid_hosp, surv_covid_death, surv_noncovid_death)
 surv_collated$outcome_clean = factor(surv_collated$outcome_clean, levels = clean_list)
-#write.csv(subset(surv_collated, outcome_clean==clean_list[1]), "surv_collated.csv")
+
+## Collate matched survival data
+surv_covid_postest_matched = create_rounded_surv_table(1, data_tte_matched) %>% mutate(outcome_clean = clean_list[1])
+#surv_covid_emergency_matched = create_rounded_surv_table(2) %>% mutate(outcome_clean = clean_list[2])
+surv_covid_hosp_matched = create_rounded_surv_table(3, data_tte_matched) %>% mutate(outcome_clean = clean_list[3])
+surv_covid_death_matched = create_rounded_surv_table(4, data_tte_matched) %>% mutate(outcome_clean = clean_list[4])
+surv_noncovid_death_matched = create_rounded_surv_table(5, data_tte_matched) %>% mutate(outcome_clean = clean_list[5])
+
+## Collate across outcomes
+surv_collated_matched = rbind(surv_covid_postest_matched, surv_covid_hosp_matched, surv_covid_death_matched, surv_noncovid_death_matched)
+surv_collated_matched$outcome_clean = factor(surv_collated_matched$outcome_clean, levels = clean_list)
 
 ## Generate KM plot across 4 outcomes
-g1 = surv_collated %>%
+generate_km_plot = function(surv_data) {
+  surv_data %>%
   ggplot(aes(x = time, y = 1-surv.floor, colour = vax2_type_descr, fill = vax2_type_descr)) + geom_step(size = 0.8) +
   facet_wrap(.~outcome_clean, nrow=1) +
   geom_rect(aes(xmin=lagtime, xmax=time, ymin=1-surv.ll.floor, ymax=1-surv.ul.floor), alpha=0.1, colour="transparent") +
@@ -250,7 +262,7 @@ g1 = surv_collated %>%
   scale_y_continuous(expand = expansion(mult=c(0,0.01))) +
   labs(
     x = "",
-    y = "cumulative incidence",
+    y = "Cumulative incidence",
     colour = "",
     title = "") +
   theme_bw() +
@@ -276,6 +288,9 @@ g1 = surv_collated %>%
     plot.caption = element_text(hjust = 0, face= "italic"),
     legend.position = "right"  
     )
+}
+g1 = generate_km_plot(surv_collated) + ggtitle("Unmatched") + theme(title = element_text(size=20))
+g1_matched = generate_km_plot(surv_collated_matched) + ggtitle("Matched") + theme(title = element_text(size=20))
 
 ### Generate plot of hazard ratios over time
 
@@ -354,14 +369,14 @@ g2 = ggplot(data = model_subset) +
     scale_y_log10(
       limits = c(0.25,4),
       breaks=c(0.25, 0.5, 0.67, 1, 1.5, 2, 4),
-      sec.axis = dup_axis(name="<- favours BNT / favours AZ ->", breaks = NULL)
+      sec.axis = dup_axis(name="<- Favours BNT / Favours AZ ->", breaks = NULL)
     ) +
   facet_wrap(.~outcome_clean, nrow=1) +
   scale_x_continuous(breaks=postvaxcuts, limits=c(0, max(postvaxcuts)+period_length), expand = c(0, 0)) +
   scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#B40F20")) +
   labs(
-    y="hazard ratio (95% CI)",
-    x="time since second dose (days)",
+    y="Hazard ratio (95% CI)",
+    x="Time since second dose (days)",
     colour=NULL,
     title=NULL
   ) +
@@ -392,7 +407,7 @@ g2 = ggplot(data = model_subset) +
   )
 
 ## Generate aligned plot
-plot_grid(g1, g2, ncol=1,  align="v", axis = c("lr"))
+plot_grid(g1, g1_matched, g2, ncol=1,  align="v", axis = c("lr"))
 ```
 Cumulative incidence = 1 - Kaplan-Meier estimate for probability of survival in unadjusted models. Steps occur every 5 events for disclosure control.
 <br/><br/>
