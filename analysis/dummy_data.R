@@ -80,12 +80,16 @@ fifth_vax_type <- rcat(n=nsamples, c("pfizer","az","moderna",""), c(0.76*fifth_c
 data_processed$covid_vax_date_1 <- as_date(runif(nsamples, start_date, start_date+70)) 
 
 # Set distribution of dates for doses 2-5 of each vaccine - all administered 10-20 weeks after preceding dose for purposes of dummy data
-for (i in 1:nsamples) { 
-  data_processed$covid_vax_date_2[i] <- as_date(sample((data_processed$covid_vax_date_1[i]+70):(data_processed$covid_vax_date_1[i]+140),1))
-  data_processed$covid_vax_date_3[i] <- as_date(sample((data_processed$covid_vax_date_2[i]+70):(data_processed$covid_vax_date_2[i]+140),1))
-  data_processed$covid_vax_date_4[i] <- as_date(sample((data_processed$covid_vax_date_3[i]+70):(data_processed$covid_vax_date_3[i]+140),1))
-  data_processed$covid_vax_date_5[i] <- as_date(sample((data_processed$covid_vax_date_4[i]+70):(data_processed$covid_vax_date_4[i]+140),1))
-}
+data_processed$covid_vax_date_2 <- data_processed$covid_vax_date_1 + days(sample(70:140, size = nsamples, replace=TRUE))
+data_processed$covid_vax_date_3 <- data_processed$covid_vax_date_2 + days(sample(70:140, size = nsamples, replace=TRUE))
+data_processed$covid_vax_date_4 <- data_processed$covid_vax_date_3 + days(sample(70:140, size = nsamples, replace=TRUE))
+data_processed$covid_vax_date_5 <- data_processed$covid_vax_date_4 + days(sample(70:140, size = nsamples, replace=TRUE))
+# for (i in 1:nsamples) { 
+#   data_processed$covid_vax_date_2[i] <- as_date(sample((data_processed$covid_vax_date_1[i]+70):(data_processed$covid_vax_date_1[i]+140),1))
+#   data_processed$covid_vax_date_3[i] <- as_date(sample((data_processed$covid_vax_date_2[i]+70):(data_processed$covid_vax_date_2[i]+140),1))
+#   data_processed$covid_vax_date_4[i] <- as_date(sample((data_processed$covid_vax_date_3[i]+70):(data_processed$covid_vax_date_3[i]+140),1))
+#   data_processed$covid_vax_date_5[i] <- as_date(sample((data_processed$covid_vax_date_4[i]+70):(data_processed$covid_vax_date_4[i]+140),1))
+# }
 
 # Middle dose date of theoretical distribution:
 # Dose 1: 2021-01-12 #as_date("2020-12-08") + 35
