@@ -48,6 +48,7 @@ if (db == "unmatched") {
 }
 
 if (db == "matched" & timescale == "calendartime") stop ("Do not fit matched calendartime model.")
+if (subgroup != "all" & timescale == "calendartime") stop ("Do not fit calendartime model to subgroups.")
 
 ## Import data and process dates
 data_cohort <- read_rds(here::here("output", "data", input_name)) %>%
