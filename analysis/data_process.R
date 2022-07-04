@@ -352,15 +352,11 @@ data_processed <- data_extract %>%
       TRUE ~ NA_character_),
     
     # IMD
-    imd = na_if(imd, "0"),
-    imd = fct_case_when(
-      imd == 1 ~ "1 most deprived",
-      imd == 2 ~ "2",
-      imd == 3 ~ "3",
-      imd == 4 ~ "4",
-      imd == 5 ~ "5 least deprived",
-      TRUE ~ NA_character_
-    ),
+    imd = na_if(imd, "Unknown"),
+    imd = factor(
+      imd, 
+      levels = c("1 most deprived", "2", "3", "4", "5 least deprived")
+      ),
     
     # Region
     region = fct_collapse(

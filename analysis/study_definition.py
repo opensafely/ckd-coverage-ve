@@ -617,16 +617,16 @@ study = StudyDefinition(
   
   ## Index of multiple deprivation
   # https://docs.opensafely.org/study-def-tricks/#grouping-imd-by-quintile
-  imdQ5 = patients.categorised_as(
+  imd = patients.categorised_as(
     {
         "Unknown": "DEFAULT",
-        "1 (most deprived)": "imd >= 0 AND imd < 32800*1/5",
-        "2": "imd >= 32800*1/5 AND imd < 32800*2/5",
-        "3": "imd >= 32800*2/5 AND imd < 32800*3/5",
-        "4": "imd >= 32800*3/5 AND imd < 32800*4/5",
-        "5 (least deprived)": "imd >= 32800*4/5 AND imd <= 32800",
+        "1 most deprived": "imd_num >= 0 AND imd_num < 32800*1/5",
+        "2": "imd_num >= 32800*1/5 AND imd_num < 32800*2/5",
+        "3": "imd_num >= 32800*2/5 AND imd_num < 32800*3/5",
+        "4": "imd_num >= 32800*3/5 AND imd_num < 32800*4/5",
+        "5 least deprived": "imd_num >= 32800*4/5 AND imd_num <= 32800",
      },
-   imd = patients.address_as_of(
+   imd_num = patients.address_as_of(
             "index_date",
             returning="index_of_multiple_deprivation",
             round_to_nearest=100,
@@ -636,11 +636,11 @@ study = StudyDefinition(
       "category": {
         "ratios": {
           "Unknown": 0.01,
-          "1": 0.20,
+          "1 most deprived": 0.20,
           "2": 0.20,
           "3": 0.20,
           "4": 0.20,
-          "5": 0.19,
+          "5 least deprived": 0.19,
         }},
     },
   ),
