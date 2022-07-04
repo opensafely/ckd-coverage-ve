@@ -1,10 +1,10 @@
 ---
-title: "Comparative effectiveness of BNT162b2 vs ChAdOx1-S in CKD patients"
+title: "Comparative effectiveness of 2 x BNT162b2 vs 2 x ChAdOx1-S in people with kidney disease"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ## Import libraries
 library('here')
 library('tidyverse')
@@ -61,17 +61,15 @@ rounded_n_matched = plyr::round_any(nrow(data_tte_matched), 5)
 #### Background
 Kidney disease is a significant risk factor for COVID-19-related mortality. Although vaccination has the potential to mitigate this risk, chronic kidney disease (CKD) and kidney failure requiring renal replacement therapy (RRT) have been linked with impaired COVID-19 vaccine immunogenicity and high rates of breakthrough infection among individuals who have received a 2-dose primary vaccine series.
 
-Vaccine recommendations for people with kidney disease in the UK have evolved over time (see [protocol](https://docs.google.com/document/d/1w48W-bCMfn0RdkfxlU6fbRkPv3MnIYd3/edit#heading=h.1fob9te). Relative uptake of different vaccines in this population remains uncertain, as does the relative vaccine effectiveness (VE) of different regimens. This project seeks to address these key evidence gaps.
-<br/><br/>
+Vaccine recommendations for people with kidney disease in the UK have evolved over time (see [protocol](https://docs.google.com/document/d/1w48W-bCMfn0RdkfxlU6fbRkPv3MnIYd3/edit#heading=h.1fob9te). Relative uptake of different vaccines in this population has been described in our recent [preprint](https://www.medrxiv.org/content/10.1101/2022.06.14.22276391v1). However, the relative vaccine effectiveness (VE) of different regimens remains uncertain. This project seeks to address this key evidence gap.
 
-Most CKD patients received a 2-dose homologous primary series of either BNT162b2 or ChAdOx1-S between January and June 2021 (see outputs of vaccine coverage analyses).
+Most people with kidney disease received a 2-dose homologous primary series of either BNT162b2 or ChAdOx1-S between January and June 2021 (see Supplementary Table 1 of [coverage preprint](https://www.medrxiv.org/content/10.1101/2022.06.14.22276391v1)). Subsequently, individuals received a third primary or first booster dose of an RNA vaccine (either BNT162b2 or ChAdOx1-S). The primary comparison of interest in the present study was post-vaccination outcomes for BNT162b2 vs ChAdOx1-S. Outcomes after receipt of booster doses will be considered as a secondary analyses.
 <br/><br/>
 
 #### Inclusion criteria for primary cohort
 * Registered for at least 3m before index date (01-Dec-2020)    
-* Alive on index date    
 * Aged ≥16 on index date
-* eGFR<60 in 2 years before 01-Dec-2020 OR present in UK renal registry on 31-Dec-2020   
+* eGFR<60 in 2 years before index date OR present in UK Renal Registry (UKRR) on 31-Dec-2020 (the status update closest to the index date)  
 * No RRT mismatch (primary care dialysis/Tx code but absent from UKRR 2020 population)
 * No missing demographic data   
 * Received 2 x ChAdOx1-S or 2 x BNT162b2 as first two vaccine doses
@@ -83,9 +81,9 @@ Most CKD patients received a 2-dose homologous primary series of either BNT162b2
 
 ### Matching criteria for matched cohort
 * Region   
-* Age within 3 years    
-* Dose 2 date within 3 days    
-* Dose 1 date within 7 days    
+* Age (within 3y)      
+* Dose 2 date (within 3d)         
+* Dose 1 date (within 7d)         
 * JCVI group    
 * IMD    
 * Ethnicity    
@@ -93,10 +91,7 @@ Most CKD patients received a 2-dose homologous primary series of either BNT162b2
 * Clinically extremely vulnerable    
 * Prior SARS-CoV-2 at index date    
 
-A total of **`r prettyNum(rounded_n_unmatched)`** (rounded to the nearest 5) met the inclusion criteria (see *output/data/flowchart.csv* for additional details), of which **`r prettyNum(rounded_n_unmatched)`** were included in the matched subcohort.
-<br/><br/>
-
-#### Cohort selection
+#### Cohort selection - unmatched
 ```{r}
 flowchart <- read.csv(here::here("output", "tables", "flowchart_VE.csv"))
 names(flowchart)[1] = "Criteria"
@@ -113,14 +108,18 @@ flowchart %>%
 ```
 <br/><br/>
 
+#### Cohort selection - unmatched
+Of the **`r prettyNum(rounded_n_unmatched)`** individuals in the unmatched cohort (see above), **`r prettyNum(rounded_n_matched)`** were selected for the matched cohort (see matching criteria above).
+<br/><br/>
+
 #### Table 1: Summary of primary outcome population
 ```{r}
 table_1 <- rbind(
   read_rds(here::here("output", "tables", "table1_VE_redacted_unmatched_all.rds")) %>% mutate(subgroup = "All", subgroup_id = 1),
-  read_rds(here::here("output", "tables", "table1_VE_redacted_unmatched_CKD3.rds")) %>% mutate(subgroup = "CKD3", subgroup_id = 2),
-  read_rds(here::here("output", "tables", "table1_VE_redacted_unmatched_CKD4-5.rds")) %>% mutate(subgroup = "CKD4-5", subgroup_id = 3),
-  read_rds(here::here("output", "tables", "table1_VE_redacted_unmatched_RRT.rds")) %>% mutate(subgroup = "RRT", subgroup_id = 4),
-  read_rds(here::here("output", "tables", "table1_VE_redacted_matched_all.rds")) %>% mutate(subgroup = "Matched (all)", subgroup_id = 5)
+  read_rds(here::here("output", "tables", "table1_VE_redacted_matched_all.rds")) %>% mutate(subgroup = "Matched (all)", subgroup_id = 2),
+  read_rds(here::here("output", "tables", "table1_VE_redacted_unmatched_CKD3.rds")) %>% mutate(subgroup = "CKD3", subgroup_id = 3),
+  read_rds(here::here("output", "tables", "table1_VE_redacted_unmatched_CKD4-5.rds")) %>% mutate(subgroup = "CKD4-5", subgroup_id = 4),
+  read_rds(here::here("output", "tables", "table1_VE_redacted_unmatched_RRT.rds")) %>% mutate(subgroup = "RRT", subgroup_id = 5)
 )
 
 table_1_wide = table_1 %>% 
@@ -134,25 +133,26 @@ table_1_wide = table_1 %>%
 table_1_wide %>%
     gt(rowname_col = "Variable", groupname_col = "Group") %>%
     tab_spanner(
-      label = "All",
+      label = "Unmatched",
       columns = paste0(c("ChAdOx1-S", "BNT162b2")," [1]")
     ) %>%
-    tab_spanner(
-      label = "CKD3",
+     tab_spanner(
+      label = "Matched",
       columns = paste0(c("ChAdOx1-S", "BNT162b2")," [2]")
     ) %>%
     tab_spanner(
-      label = "CKD4-5",
+      label = "CKD3 subgroup (unmatched)",
       columns = paste0(c("ChAdOx1-S", "BNT162b2")," [3]")
     ) %>%
     tab_spanner(
-      label = "RRT",
+      label = "CKD4-5 subgroup (unmatched)",
       columns = paste0(c("ChAdOx1-S", "BNT162b2")," [4]")
     ) %>%
     tab_spanner(
-      label = "Matched",
+      label = "RRT subgroup (unmatched)",
       columns = paste0(c("ChAdOx1-S", "BNT162b2")," [5]")
     ) %>%
+
     tab_options(table.font.size = pct(70)) %>%
      tab_style(
         style = list(
@@ -172,9 +172,10 @@ table_1_wide %>%
        locations = cells_body(columns = "Variable")
      )
 ```
+Data are n (%) after rounding to the nearest 5. Any cells with rounded counts or non-counts (relative to the denominator) of >0 and <=10 are redacted. Primary care codes and risk groups are coded by separate binary variables; percentages in these subheadings therefore do not sum to 100. **Prior SARS-CoV-2** was determined based on evidence of a positive SARS-CoV-2 test, COVID-19-related primary care code, or COVID-19-related hospitalisation as of 1st December 2020. **Any immunosuppression** included a history of transplant, immunosuppression, haematologic cancer, or asplenia at baseline. JCVI group was inferred based on age and shielding code lists (to define **Clinically extremely vulnerable** individuals). **Comorbidity count** includes severe obesity, chronic heart disease, diabetes, chronic liver disease, any respiratory disease (including asthma), and chronic neurological disease. CKD, chronic kidney disease; CND, chronic neurological disease; RRT, renal replacement therapy. 
 <br/><br/>
 
-#### Cumulative incidence plots and hazard ratios over time (figure)
+#### Cumulative incidence plots and hazard ratios over time
 ```{r, fig.width=21, fig.height=15}
 create_rounded_surv_table = function(outcome_number, input_data) {
   data_surv <-
@@ -305,7 +306,7 @@ model_persontime = rbind(
   read_rds(here::here("output", "model", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[5],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[5])
   ) %>% 
-  mutate(model_group = ifelse(model_name=="unadjusted", "Person-time (unadjusted)", "Person-time (adjusted)"))
+  mutate(model_group = paste0("Person-time"," (",model_name,")"))
 
 ## Read in calendartime models
 model_calendartime = rbind(
@@ -318,7 +319,7 @@ model_calendartime = rbind(
   read_rds(here::here("output", "model", paste0("modelcox_tidy_reduced_unmatched_calendartime_",outcome_list[5],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[5])
   ) %>% 
-  mutate(model_group = "Calendar-time (adjusted)")
+  mutate(model_group = paste0("Calendar-time"," (",model_name,")"))
 
 ## Read in matched models
 model_matched = rbind(
@@ -358,8 +359,8 @@ model$redaction[model$n_event==0 & model$model==0] = "[N]"
 #write.csv(model, "model.csv")
 
 ## Selected fully adjusted models
-model_subset = subset(model, model_name=="fully adjusted" | model_group=="Matched" | model_group=="Person-time (unadjusted)")
-model_subset$model_group = factor(model_subset$model_group, levels = c("Person-time (unadjusted)", "Person-time (adjusted)", "Calendar-time (adjusted)", "Matched"))
+model_subset = subset(model, model_group %in% c("Person-time (unadjusted)", "Person-time (fully adjusted)", "Calendar-time (fully adjusted)", "Matched"))
+model_subset$model_group = factor(model_subset$model_group, levels = c("Person-time (unadjusted)","Person-time (fully adjusted)", "Calendar-time (fully adjusted)", "Matched"))
 
 ## Generate HR plot for 4 ouctomes
 g2 = ggplot(data = model_subset) +
@@ -409,7 +410,246 @@ g2 = ggplot(data = model_subset) +
 ## Generate aligned plot
 plot_grid(g1, g1_matched, g2, ncol=1,  align="v", axis = c("lr"))
 ```
-Cumulative incidence = 1 - Kaplan-Meier estimate for probability of survival in unadjusted models. Steps occur every 5 events for disclosure control.
+Cumulative incidence = 1 - Kaplan-Meier estimate for probability of survival in unadjusted models. Steps occur every 5 events.
 <br/><br/>
 
+#### Crude incidence rate ratios and hazard ratios over time (table)
+```{r}
+## Read in table of IRRs
+table_irr <- read_rds(here::here("output", "tables", "table_irr_redacted_unmatched_all.rds"))
+
+## Update column names
+table_irr <- table_irr %>%
+  filter(outcome_clean != "COVID-related A&E admission") %>%
+  select(c(period, BNT_n, BNT_events, BNT_personyears, BNT_rate, AZ_n, AZ_events, AZ_personyears, AZ_rate, rr, outcome_clean))
+names(table_irr) <- c("Period (days)", "n, BNT (total)", "n, BNT (events)", "person-years, BNT", "rate, BNT", 
+                      "n, AZ (total)", "n, AZ (events)", "person-years, AZ", "rate, AZ", 
+                      "IRR", "outcome_clean")
+
+## Generate table of HRs
+HR_summary <- model %>% select(model_group, term, estimate, conf.low, conf.high, outcome_clean) %>%
+  mutate(
+    `HR (95% CI)` = paste0(round(exp(estimate),2)," (",round(exp(conf.low),2),"-",round(exp(conf.high),2),")"),
+    `HR (95% CI)` = if_else(`HR (95% CI)`=="NA (NA-NA)", "--", `HR (95% CI)`),
+    ) %>%
+  select(-c(estimate, conf.low, conf.high)) %>%
+  pivot_wider(
+    names_from = model_group,
+    values_from = `HR (95% CI)` 
+    ) %>%
+  rename(`Period (days)` = term)
+
+## Merge tables
+left_join(table_irr, HR_summary, by = c("Period (days)", "outcome_clean")) %>%
+  gt(groupname_col = "outcome_clean") %>%
+  tab_spanner(
+    label = "BNT162b2",
+    columns = c("n, BNT (total)", "n, BNT (events)", "person-years, BNT", "rate, BNT")
+  ) %>%
+  tab_spanner(
+    label = "ChAdOx1-S",
+    columns = c("n, AZ (total)", "n, AZ (events)", "person-years, AZ", "rate, AZ")
+  ) %>%
+  tab_spanner(
+    label = "Hazard ratios",
+    columns = c("Person-time (unadjusted)", "Person-time (region/date adjusted)", "Person-time (fully adjusted)", "Calendar-time (unadjusted)", "Calendar-time (region/date adjusted)", "Calendar-time (fully adjusted)", "Matched")
+  ) %>%
+   tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
+   tab_options(table.font.size = pct(70)) %>% #table.width = pct(80) 
+   tab_footnote(
+     footnote = "IRR = incidence rate ratio.",
+     locations = cells_column_labels(columns = c("IRR"))
+   ) %>%
+   cols_width(
+     starts_with("Period") ~ px(100),
+     starts_with("IRR") ~ px(200),
+     ends_with("adjusted") ~ px(200)
+     )
+```
+<br/>Frequencies are rounded to the nearest 5. Data are redacted for any rows with rounded counts or non-counts (relative to the denominator) of >0 and <=10.
+<br/><br/>
+
+#### Subgroup analysis - CKD3
+```{r, fig.width=21, fig.height=15}
+## Function for KM plot in subgroup
+subset_km_plot = function(selected_subgroup = "CKD3") {
+  ## Collate unmatched survival data
+  surv_covid_postest = create_rounded_surv_table(1, subset(data_tte_unmatched, ckd_3cat==selected_subgroup)) %>% mutate(outcome_clean = clean_list[1])
+  #surv_covid_emergency = create_rounded_surv_table(2) %>% mutate(outcome_clean = clean_list[2])
+  surv_covid_hosp = create_rounded_surv_table(3, subset(data_tte_unmatched, ckd_3cat==selected_subgroup)) %>% mutate(outcome_clean = clean_list[3])
+  surv_covid_death = create_rounded_surv_table(4, subset(data_tte_unmatched, ckd_3cat==selected_subgroup)) %>% mutate(outcome_clean = clean_list[4])
+  surv_noncovid_death = create_rounded_surv_table(5, subset(data_tte_unmatched, ckd_3cat==selected_subgroup)) %>% mutate(outcome_clean = clean_list[5])
+  
+  ## Collate across outcomes
+  surv_collated = rbind(surv_covid_postest, surv_covid_hosp, surv_covid_death, surv_noncovid_death)
+  surv_collated$outcome_clean = factor(surv_collated$outcome_clean, levels = clean_list)
+  
+  ## Collate matched survival data
+  surv_covid_postest_matched = create_rounded_surv_table(1, subset(data_tte_matched, ckd_3cat==selected_subgroup)) %>% mutate(outcome_clean = clean_list[1])
+  #surv_covid_emergency_matched = create_rounded_surv_table(2) %>% mutate(outcome_clean = clean_list[2])
+  surv_covid_hosp_matched = create_rounded_surv_table(3, subset(data_tte_matched, ckd_3cat==selected_subgroup)) %>% mutate(outcome_clean = clean_list[3])
+  surv_covid_death_matched = create_rounded_surv_table(4, subset(data_tte_matched, ckd_3cat==selected_subgroup)) %>% mutate(outcome_clean = clean_list[4])
+  surv_noncovid_death_matched = create_rounded_surv_table(5, subset(data_tte_matched, ckd_3cat==selected_subgroup)) %>% mutate(outcome_clean = clean_list[5])
+  
+  ## Collate across outcomes
+  surv_collated_matched = rbind(surv_covid_postest_matched, surv_covid_hosp_matched, surv_covid_death_matched, surv_noncovid_death_matched)
+  surv_collated_matched$outcome_clean = factor(surv_collated_matched$outcome_clean, levels = clean_list)
+  
+  ## Generate KM plot across 4 outcomes
+  list(
+    g1 = generate_km_plot(surv_collated) + ggtitle("Unmatched") + theme(title = element_text(size=20)) + scale_x_continuous(breaks=postvaxcuts, limits=c(0, max(postvaxcuts)), expand = c(0,0)),
+    g1_matched = generate_km_plot(surv_collated_matched) + ggtitle("Matched") + theme(title = element_text(size=20)) + scale_x_continuous(breaks=postvaxcuts, limits=c(0, max(postvaxcuts)), expand = c(0,0))
+  )
+}
+
+## Function to read in subgroup model outputs
+read_in_subgroup_model = function(selected_subgroup="CKD3") {
+  model = rbind(
+    read_rds(here::here("output", "model", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[1],"_",selected_subgroup,".rds"))) %>%
+      mutate(outcome_clean = clean_list[1]),
+    read_rds(here::here("output", "model", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[3],"_",selected_subgroup,".rds"))) %>%
+      mutate(outcome_clean = clean_list[3]),
+    read_rds(here::here("output", "model", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[4],"_",selected_subgroup,".rds"))) %>%
+      mutate(outcome_clean = clean_list[4]),
+    read_rds(here::here("output", "model", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[5],"_",selected_subgroup,".rds"))) %>%
+      mutate(outcome_clean = clean_list[5])
+    ) %>% 
+    mutate(model_group = paste0("Person-time"," (",model_name,")"))
+  
+  ## Set factor levels
+  model$model_name = factor(model$model_name, levels = c("unadjusted", "region/date adjusted", "fully adjusted"))
+  model$outcome_clean = factor(model$outcome_clean, levels = clean_list)
+  
+  ## Remove redacted components from plot
+  model$estimate = as.numeric(model$estimate)
+  model$conf.low = as.numeric(model$conf.low)
+  model$conf.high = as.numeric(model$conf.high)
+  model
+}
+
+## Function to generate subgroup HR plot
+plot_subgroup_HRs = function(subgroup_model_data) {
+  ggplot(data = subgroup_model_data) +
+      geom_point(size = 2.5, aes(y=exp(estimate), x=model_name, colour=model_name)) +
+      geom_linerange(aes(ymin=exp(conf.low), ymax=exp(conf.high), x=model_name, colour=model_name)) +
+      geom_hline(aes(yintercept=1), colour='grey') +
+      scale_y_log10(
+        limits = c(0.25,4),
+        breaks=c(0.25, 0.5, 0.67, 1, 1.5, 2, 4),
+        sec.axis = dup_axis(name="<- Favours BNT / Favours AZ ->", breaks = NULL)
+      ) +
+    facet_wrap(.~outcome_clean, nrow=1) +
+    scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#7570B3", "#B40F20")) +
+    labs(
+      y="Hazard ratio (95% CI)",
+      x="Time since second dose (days)",
+      colour=NULL,
+      title=NULL
+    ) +
+    theme_bw() +
+    #geom_text(aes(x = term_midpoint, y = 1, label = redaction), size=6) +
+    theme(
+      strip.text = element_text(size=20, colour="white"), # set as white to avoid repeating text in aligned plot
+      axis.text.y = element_text(size=20),
+      axis.text.x = element_blank(),
+      axis.title.y.right = element_text(size=18),
+      axis.title = element_text(size=20),
+      legend.text = element_text(size=20),
+      panel.border = element_blank(),
+      axis.line.y = element_line(colour = "black"),
+      panel.grid.minor.x = element_blank(),
+      panel.grid.minor.y = element_blank(),
+      panel.grid.major.x = element_blank(),
+      strip.background = element_blank(),
+      strip.placement = "outside",
+      strip.text.y.left = element_text(angle = 0),
+      panel.spacing = unit(0.8, "lines"),
+      plot.title = element_text(hjust = 0),
+      plot.title.position = "plot",
+      plot.caption.position = "plot",
+      plot.caption = element_text(hjust = 0, face= "italic"),
+      legend.position = "right",
+      axis.line.y.right = element_line(size=0)
+    )
+}
+
+create_subgroup_table = function(selected_subgroup="CKD3", subgroup_model_data) {
+  ## Read in table of IRRs
+  table_irr <- read_rds(here::here("output", "tables", paste0("table_irr_redacted_unmatched_",selected_subgroup,".rds")))
+  
+  ## Update column names
+  table_irr <- table_irr %>%
+    filter(outcome_clean != "COVID-related A&E admission") %>%
+    select(c(period, BNT_n, BNT_events, BNT_personyears, BNT_rate, AZ_n, AZ_events, AZ_personyears, AZ_rate, rr, outcome_clean))
+  names(table_irr) <- c("Period (days)", "n, BNT (total)", "n, BNT (events)", "person-years, BNT", "rate, BNT", 
+                        "n, AZ (total)", "n, AZ (events)", "person-years, AZ", "rate, AZ", 
+                        "IRR", "outcome_clean")
+  
+  ## Generate table of HRs
+  HR_summary <- subgroup_model_data %>% select(model_group, term, estimate, conf.low, conf.high, outcome_clean) %>%
+    mutate(
+      `HR (95% CI)` = paste0(round(exp(estimate),2)," (",round(exp(conf.low),2),"-",round(exp(conf.high),2),")"),
+      `HR (95% CI)` = if_else(`HR (95% CI)`=="NA (NA-NA)", "--", `HR (95% CI)`),
+      ) %>%
+    select(-c(estimate, conf.low, conf.high)) %>%
+    pivot_wider(
+      names_from = model_group,
+      values_from = `HR (95% CI)` 
+      ) %>%
+    rename(`Period (days)` = term)
+  
+  ## Merge tables
+  left_join(table_irr, HR_summary, by = c("Period (days)", "outcome_clean")) %>%
+    gt(groupname_col = "outcome_clean") %>%
+    tab_spanner(
+      label = "BNT162b2",
+      columns = c("n, BNT (total)", "n, BNT (events)", "person-years, BNT", "rate, BNT")
+    ) %>%
+    tab_spanner(
+      label = "ChAdOx1-S",
+      columns = c("n, AZ (total)", "n, AZ (events)", "person-years, AZ", "rate, AZ")
+    ) %>%
+    tab_spanner(
+      label = "Hazard ratios",
+      columns = c("Person-time (unadjusted)", "Person-time (region/date adjusted)", "Person-time (fully adjusted)")
+    ) %>%
+     tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
+     tab_options(table.font.size = pct(70))
+}
+
+km_plots = subset_km_plot("CKD3")
+model = read_in_subgroup_model("CKD3")
+plot_grid(km_plots$g1, km_plots$g1_matched, plot_subgroup_HRs(model), ncol=1,  align="v", axis = c("lr"))
+```
+<br/><br/>
+
+```{r}
+create_subgroup_table("CKD3", model)
+```
+<br/><br/>
+
+#### Subgroup analysis - CKD4-5
+```{r, fig.width=21, fig.height=15}
+km_plots = subset_km_plot("CKD4-5")
+model = read_in_subgroup_model("CKD4-5")
+plot_grid(km_plots$g1, km_plots$g1_matched, plot_subgroup_HRs(model), ncol=1,  align="v", axis = c("lr"))
+```
+<br/><br/>
+
+```{r}
+create_subgroup_table("CKD4-5", model)
+```
+<br/><br/>
+
+#### Subgroup analysis - RRT
+```{r, fig.width=21, fig.height=15}
+km_plots = subset_km_plot("RRT (any)")
+model = read_in_subgroup_model("RRT")
+plot_grid(km_plots$g1, km_plots$g1_matched, plot_subgroup_HRs(model), ncol=1,  align="v", axis = c("lr"))
+```
+<br/><br/>
+
+```{r}
+create_subgroup_table("RRT", model)
+```
 .

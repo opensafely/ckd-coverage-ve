@@ -153,7 +153,7 @@ table1$Group[table1$Group=="ckd_5cat"] = "Kidney disease subgroup"
 table1$Group[table1$Group=="multimorb"] = "Comorbidity count"
 table1$Group[(table1$Variable %in% c("CKD3-5 code", "Dialysis code", "Kidney transplant code"))] = "Primary care coding of kidney disease"
 table1$Group[(table1$Variable %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care"))] = "Risk group (occupation/access)"
-table1$Group[table1$Variable %in% c("Prior SARS-CoV-2", "Immunosuppression", "Severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
+table1$Group[table1$Variable %in% c("Prior SARS-CoV-2", "Immunosuppression", "Any immunosuppression", "Severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
                                               "Chronic heart disease", "Chronic liver disease","Asplenia", "Haematologic cancer", "Obesity", 
                                               "Organ transplant (non-kidney)", "Chronic neurological disease", "Learning disability", "Severe mental illness", 
                                               "Clinically extremely vulnerable")] = "Risk group (clinical)"
