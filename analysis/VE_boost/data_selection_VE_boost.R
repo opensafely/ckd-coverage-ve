@@ -47,7 +47,7 @@ write_rds(
 )
 
 ## Set and store analysis intervals and last follow-up day
-period_length <- 84 # 1 12-week period for post-boost analysis, matching https://github.com/opensafely/comparative-booster/blob/main/lib/design/study-dates.json as of 04 July 2022
+period_length <- 84 # Single 12-week period for post-boost analysis, matching https://github.com/opensafely/comparative-booster/blob/main/lib/design/study-dates.json as of 04 July 2022
 n_periods <- 1
 postboostcuts <- period_length*0:1
 postboost_periods = paste0(postboostcuts[1:((length(postboostcuts)-1))]+1,"-",postboostcuts[2:length(postboostcuts)])
@@ -95,8 +95,8 @@ data_processed <- data_processed %>%
     tte_noncovid_death_or_censor = tte(vax3_date - 1, noncoviddeath_date, censor_date, na.censor=FALSE),
     ind_noncovid_death = dplyr::if_else((noncoviddeath_date>censor_date) | is.na(noncoviddeath_date), FALSE, TRUE),
 
-    # time dose 2 to cut-off
-    tte_dose2_to_cutoff = as.numeric(date(end_date)-date(vax3_date-1))
+    # time dose 3 to cut-off
+    tte_dose3_to_cutoff = as.numeric(date(end_date)-date(vax3_date-1))
     )
 
 ###################################
@@ -177,7 +177,7 @@ data_cohort <- data_criteria %>%
     vax2_week = as.integer(floor((vax2_date - first_az)/7)+1), # week 1 is days 1-7
     vax3_week = as.integer(floor((vax3_date - first_az)/7)+1), # week 1 is days 1-7
     week_region = paste0(vax3_week, "__", region),
-    vax2_az = (vax2_type=="az")*1
+    vax2_az = (vax2_type=="az")*1 # since comparison group is related to primary schedule (homologous vs heterologous), vax2_az can still be used
   )
 
 ## Save data
@@ -221,8 +221,8 @@ data_flowchart <- data_criteria %>%
       crit == "c3" ~ "  with no RRT mismatch (primary care dialysis/Tx code but absent from UKRR 2020 population)", 
       crit == "c4" ~ "  with no missing demographic information",
       crit == "c5" ~ "  received 2 x ChAdOx1-S or 2 x BNT162b2 followed by BNT162b2 boost",
-      crit == "c6" ~ "  received first dose after 04 January 2021",
-      crit == "c7" ~ "  dose interval of 8-14 weeks (doses 1-2) and >=12 weeks (doses 2-3)",
+      crit == "c6" ~ "  received first dose on or after 04 January 2021",
+      crit == "c7" ~ "  dose intervals of 8-14 weeks (for doses 1-2) and >=12 weeks (for doses 2-3)",
       crit == "c8" ~ "  post-vaccination outcomes recorded after third dose",
       crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, or housebound",
       crit == "c10" ~ "  not censored before third dose",
@@ -245,6 +245,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   ## Increase size of data cohort by 10-fold to assist with later model fitting
   data_cohort = rbind(data_cohort, data_cohort, data_cohort, data_cohort, data_cohort, data_cohort,
                        data_cohort, data_cohort, data_cohort, data_cohort, data_cohort, data_cohort)
+  
   ## Assign unique patient IDs to inflated cohort
   data_cohort$patient_id = sample.int(100000, nrow(data_cohort), replace = FALSE)
   

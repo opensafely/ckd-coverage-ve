@@ -440,7 +440,7 @@ data_processed <- data_extract %>%
     prevax_tests_conducted_any = ifelse(is.na(prevax_tests_conducted_any), 0, prevax_tests_conducted_any),
     prevax_tests_cat = cut(prevax_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
     
-    # Number of tests in pre-boost period
+    # Number of tests in pre-boost period (90 days preceding 01 Sep 2021)
     preboost_tests_conducted_any = ifelse(is.na(preboost_tests_conducted_any), 0, preboost_tests_conducted_any),
     preboost_tests_cat = cut(preboost_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
     

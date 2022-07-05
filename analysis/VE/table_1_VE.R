@@ -22,28 +22,40 @@ if(length(args)==0){
   # default (unmatched) file names
   matching_status = "unmatched"
   subgroup = "all"
+  vaccine = "primary"
 } else {
   matching_status = args[[1]] # can be unmatched or matched
   subgroup = args[[2]] # can be all, CKD, dialysis, or transplant
+  vaccine = args[[3]] # can be primary or boost
 }
 
 ## Import data
-if (matching_status=="unmatched") { 
+if (matching_status=="unmatched" & vaccine=="primary") { 
   data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE.rds"))
-  } else { 
+
+  } else if (matching_status=="matched" & vaccine=="primary") { 
   data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_matched.rds"))
-  }
+  
+  } else if (matching_status=="unmatched" & vaccine=="boost") { 
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds"))
 
-## Specify output path names
-output_html = paste0("table1_VE_redacted_",matching_status,"_",subgroup,".html")
-output_rds = paste0("table1_VE_redacted_",matching_status,"_",subgroup,".rds")
+  } else { 
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost_matched.rds"))
+}
 
+## Specify output path names and directory
+if (vaccine=="primary") {
+  output_html = paste0("table1_VE_redacted_",matching_status,"_",subgroup,".html")
+  output_rds = paste0("table1_VE_redacted_",matching_status,"_",subgroup,".rds")
+  fs::dir_create(here::here("output", "tables"))
+} else {
+  output_html = paste0("table1_VE_boost_redacted_",matching_status,"_",subgroup,".html")
+  output_rds = paste0("table1_VE_boost_redacted_",matching_status,"_",subgroup,".rds")
+  fs::dir_create(here::here("output", "tables", "VE_boost"))
+}
 ## Set rounding and redaction thresholds
 rounding_threshold = 5
 redaction_threshold = 10
-
-## Create output directory
-fs::dir_create(here::here("output", "tables"))
 
 ## Select subset
 if (subgroup=="all") {
@@ -196,5 +208,10 @@ table1_redacted <- table1_redacted %>% select(-Non_Count_az, -Count_az, -Percent
 names(table1_redacted)[3:4] <- c("ChAdOx1-S", "BNT162b2")
 
 ## Save as html/rds
-gt::gtsave(gt(table1_redacted), here::here("output","tables", output_html))
-write_rds(table1_redacted, here::here("output", "tables", output_rds), compress = "gz")
+if (vaccine=="primary") {
+  gt::gtsave(gt(table1_redacted), here::here("output","tables", output_html))
+  write_rds(table1_redacted, here::here("output", "tables", output_rds), compress = "gz")
+} else {
+  gt::gtsave(gt(table1_redacted), here::here("output","tables", "VE_boost", output_html))
+  write_rds(table1_redacted, here::here("output", "tables", "VE_boost", output_rds), compress = "gz")
+}

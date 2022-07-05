@@ -1226,7 +1226,7 @@ study = StudyDefinition(
   ),
   
   ################################################
-  ############ Pre-boost events ################
+  ############# Pre-boost events #################
   ################################################
   
   ## Covid-related positive test in pre-boost period
@@ -1354,7 +1354,7 @@ study = StudyDefinition(
     },
   ),
   
-  # Covid-related death after second dose
+  # Covid-related death after third dose
   postboost_covid_death_date = patients.with_these_codes_on_death_certificate(
     covid_icd10,
     returning = "date_of_death",
@@ -1367,7 +1367,7 @@ study = StudyDefinition(
     },
   ),
 
-  ## Any test after second dose
+  ## Any test after third dose
   postboost_any_test_date = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "any",
