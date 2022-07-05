@@ -67,26 +67,43 @@ data_extract <- read_csv(
     immunosuppression_medication_date = col_date(format="%Y-%m-%d"),
     
     # Dates for Covid-related variables
+    # Pre-index events
     prior_positive_test_date = col_date(format="%Y-%m-%d"),
     prior_primary_care_covid_case_date = col_date(format="%Y-%m-%d"),
     prior_covid_emergency_date = col_date(format="%Y-%m-%d"),
     prior_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
+    
+    # Pre-boost events
     prior_positive_test_date_boost = col_date(format="%Y-%m-%d"),
     prior_primary_care_covid_case_date_boost = col_date(format="%Y-%m-%d"),
     prior_covid_emergency_date_boost = col_date(format="%Y-%m-%d"),
     prior_covid_hospitalisation_date_boost = col_date(format="%Y-%m-%d"),
+    
+    # Pre-vax events (90 days pre dose 1)
     prevax_positive_test_date	= col_date(format="%Y-%m-%d"),
     prevax_primary_care_covid_case_date	= col_date(format="%Y-%m-%d"),
     prevax_covid_emergency_date	= col_date(format="%Y-%m-%d"),
     prevax_covid_hospitalisation_date	= col_date(format="%Y-%m-%d"),
+    
+    # Post-vax events (dose 2 onwards)
     postvax_positive_test_date = col_date(format="%Y-%m-%d"),
     postvax_covid_emergency_date = col_date(format="%Y-%m-%d"),
     postvax_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
     postvax_covid_death_date = col_date(format="%Y-%m-%d"),
     postvax_any_test_date	= col_date(format="%Y-%m-%d"),
-    postvax_any_emergency_date = col_date(format="%Y-%m-%d"),
-    postvax_any_hospitalisation_date = col_date(format="%Y-%m-%d"),
-    postvax_any_death_date = col_date(format="%Y-%m-%d"),
+    
+    # Pre-boost events (90 days pre dose 1 to day of boost)
+    preboost_positive_test_date = col_date(format="%Y-%m-%d"),
+    preboost_primary_care_covid_case_date	= col_date(format="%Y-%m-%d"),
+    preboost_covid_emergency_date	= col_date(format="%Y-%m-%d"),
+    preboost_covid_hospitalisation_date	= col_date(format="%Y-%m-%d"),
+    
+    # Post-vax events (dose 3 onwards)
+    postboost_positive_test_date = col_date(format="%Y-%m-%d"),
+    postboost_covid_emergency_date = col_date(format="%Y-%m-%d"),
+    postboost_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
+    postboost_covid_death_date = col_date(format="%Y-%m-%d"),
+    postboost_any_test_date	= col_date(format="%Y-%m-%d"),
     
     # CKD groups
     creatinine = col_double(), 
@@ -138,7 +155,8 @@ data_extract <- read_csv(
     non_kidney_transplant = col_logical(),
     
     # Other
-    prevax_tests_conducted_any = col_double()
+    prevax_tests_conducted_any = col_double(),
+    preboost_tests_conducted_any = col_double()
   ),
   na = character() # more stable to convert to missing later
 )
@@ -352,11 +370,7 @@ data_processed <- data_extract %>%
       TRUE ~ NA_character_),
     
     # IMD
-    imd = na_if(imd, "Unknown"),
-    imd = factor(
-      imd, 
-      levels = c("1 most deprived", "2", "3", "4", "5 least deprived")
-      ),
+    imd =  na_if(imd, "Unknown"),
     
     # Region
     region = fct_collapse(
@@ -419,9 +433,16 @@ data_processed <- data_extract %>%
     # COVID in window spanning 90 days pre dose 1
     prevax_covid_cat = as.numeric(!is.na(pmin(prevax_positive_test_date, prevax_primary_care_covid_case_date, prevax_covid_emergency_date, prevax_covid_hospitalisation_date, na.rm=TRUE))),
 
+    # COVID in window spanning 90 days pre dose 1 to day of dose 3
+    preboost_covid_cat = as.numeric(!is.na(pmin(preboost_positive_test_date, preboost_primary_care_covid_case_date, preboost_covid_emergency_date, preboost_covid_hospitalisation_date, na.rm=TRUE))),
+
     # Number of tests in pre-vaccination period
     prevax_tests_conducted_any = ifelse(is.na(prevax_tests_conducted_any), 0, prevax_tests_conducted_any),
     prevax_tests_cat = cut(prevax_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
+    
+    # Number of tests in pre-boost period (90 days preceding 01 Sep 2021)
+    preboost_tests_conducted_any = ifelse(is.na(preboost_tests_conducted_any), 0, preboost_tests_conducted_any),
+    preboost_tests_cat = cut(preboost_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
     
     # Non-COVID death date
     noncoviddeath_date = if_else(!is.na(death_date) & is.na(postvax_covid_death_date), death_date, as.Date(NA_character_)),
@@ -585,6 +606,7 @@ data_processed_updated <- data_processed %>%
 ## Set factor levels for derived variables
 data_processed_updated <- data_processed_updated %>%
   mutate(
+    imd = factor(imd, levels = c("1 (most deprived)", "2", "3", "4", "5 (least deprived)")),
     ukrr_2019_mod = factor(ukrr_2019_mod, levels = c("None", "HD", "ICHD", "HHD", "PD", "Tx")),
     ukrr_2020_mod = factor(ukrr_2020_mod, levels = c("None", "HD", "ICHD", "HHD", "PD", "Tx")),
     ukrr_index_mod = factor(ukrr_index_mod, levels = c("None", "HD", "ICHD", "HHD", "PD", "Tx")),

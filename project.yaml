@@ -5,7 +5,7 @@
 version: '3.0'
 
 expectations:
-  population_size: 500000
+  population_size: 250000
 
 actions:
 
@@ -238,7 +238,7 @@ actions:
 
   # Table 1 (all unmatched)
   table_1_VE_all_unmatched:
-    run: r:latest analysis/VE/table_1_VE.R unmatched all
+    run: r:latest analysis/VE/table_1_VE.R unmatched all primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -248,7 +248,7 @@ actions:
   
   # Table 1 (CKD3 unmatched)
   table_1_VE_CKD3_unmatched:
-    run: r:latest analysis/VE/table_1_VE.R unmatched CKD3
+    run: r:latest analysis/VE/table_1_VE.R unmatched CKD3 primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -258,7 +258,7 @@ actions:
  
    # Table 1 (CKD4-5 unmatched)
   table_1_VE_CKD4_5_unmatched:
-    run: r:latest analysis/VE/table_1_VE.R unmatched CKD4-5
+    run: r:latest analysis/VE/table_1_VE.R unmatched CKD4-5 primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -268,7 +268,7 @@ actions:
  
    # Table 1 (RRT unmatched)
   table_1_VE_RRT_unmatched:
-    run: r:latest analysis/VE/table_1_VE.R unmatched RRT
+    run: r:latest analysis/VE/table_1_VE.R unmatched RRT primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -278,7 +278,7 @@ actions:
         
   # Table 1 (all matched)
   table_1_VE_all_matched:
-    run: r:latest analysis/VE/table_1_VE.R matched all
+    run: r:latest analysis/VE/table_1_VE.R matched all primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -288,7 +288,7 @@ actions:
   
   # Table 1 (RRT matched)
   table_1_VE_RRT_matched:
-    run: r:latest analysis/VE/table_1_VE.R matched RRT
+    run: r:latest analysis/VE/table_1_VE.R matched RRT primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -302,7 +302,7 @@ actions:
    
   # Table IRR (all unmatched)
   table_irr_unmatched_all:
-    run: r:latest analysis/VE/table_irr.R unmatched all
+    run: r:latest analysis/VE/table_irr.R unmatched all primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -312,7 +312,7 @@ actions:
         
   # Table IRR (CKD3 unmatched)
   table_irr_unmatched_CKD3:
-    run: r:latest analysis/VE/table_irr.R unmatched CKD3
+    run: r:latest analysis/VE/table_irr.R unmatched CKD3 primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -322,7 +322,7 @@ actions:
  
   # Table IRR (CKD4-5 unmatched)
   table_irr_unmatched_CKD4_5:
-    run: r:latest analysis/VE/table_irr.R unmatched CKD4-5
+    run: r:latest analysis/VE/table_irr.R unmatched CKD4-5 primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -332,7 +332,7 @@ actions:
         
   # Table IRR (RRT unmatched)
   table_irr_unmatched_RRT:
-    run: r:latest analysis/VE/table_irr.R unmatched RRT
+    run: r:latest analysis/VE/table_irr.R unmatched RRT primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -342,7 +342,7 @@ actions:
 
   # Table IRR (all matched)
   table_irr_matched_all:
-    run: r:latest analysis/VE/table_irr.R matched all
+    run: r:latest analysis/VE/table_irr.R matched all primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -352,7 +352,7 @@ actions:
         
   # Table IRR (CKD3 matched)
   table_irr_matched_CKD3:
-    run: r:latest analysis/VE/table_irr.R matched CKD3
+    run: r:latest analysis/VE/table_irr.R matched CKD3 primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -362,7 +362,7 @@ actions:
  
   # Table IRR (CKD4-5 matched)
   table_irr_matched_CKD4_5:
-    run: r:latest analysis/VE/table_irr.R matched CKD4-5
+    run: r:latest analysis/VE/table_irr.R matched CKD4-5 primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -372,7 +372,7 @@ actions:
         
   # Table IRR (RRT matched)
   table_irr_matched_RRT:
-    run: r:latest analysis/VE/table_irr.R matched RRT
+    run: r:latest analysis/VE/table_irr.R matched RRT primary
     needs: [data_selection_VE]
     outputs:
       highly_sensitive:
@@ -1146,3 +1146,175 @@ actions:
     outputs:
       moderately_sensitive:
         html: output/markdown/cox_VE_summary.html
+
+
+
+
+
+#############################
+### VE boost cohort selection - matched/unmatched
+#############################
+
+# Select cohort (single script used for both matched and unmatched analyses)
+  data_selection_VE_boost:
+    run: r:latest analysis/VE_boost/data_selection_VE_boost.R
+    needs: [data_process]
+    outputs:
+      highly_sensitive:
+        data1: output/data/data_cohort_VE_boost.rds
+        data2: output/data/data_cohort_VE_boost_matched.rds
+        data3: output/lib/outcomes_boost.rds
+        data4: output/lib/postboost_list.rds
+        csv1: output/data/data_cohort_VE_boost.csv
+        csv2: output/data/data_cohort_VE_boost_matched.csv
+      moderately_sensitive:
+        csv1: output/tables/VE_boost/flowchart_VE_boost.csv
+        csv2: output/tables/VE_boost/flowchart_VE_boost_matched.csv
+
+#############################
+### VE table 1 - all, CKD3, CKD4-5, RRT - matched,unmatched
+#############################
+
+  # Table 1 (all unmatched)
+  table_1_VE_boost_all_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched all boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table1_VE_boost_redacted_unmatched_all.rds
+      moderately_sensitive:
+        table: output/tables/VE_boost/table1_VE_boost_redacted_unmatched_all.html
+  
+  # Table 1 (CKD3 unmatched)
+  table_1_VE_boost_CKD3_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched CKD3 boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table1_VE_boost_redacted_unmatched_CKD3.rds
+      moderately_sensitive:
+        table: output/tables/VE_boost/table1_VE_boost_redacted_unmatched_CKD3.html
+ 
+   # Table 1 (CKD4-5 unmatched)
+  table_1_VE_boost_CKD4_5_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched CKD4-5 boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table1_VE_boost_redacted_unmatched_CKD4-5.rds
+      moderately_sensitive:
+        table: output/tables/VE_boost/table1_VE_boost_redacted_unmatched_CKD4-5.html
+ 
+   # Table 1 (RRT unmatched)
+  table_1_VE_boost_RRT_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched RRT boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table1_VE_boost_redacted_unmatched_RRT.rds
+      moderately_sensitive:
+        table: output/tables/VE_boost/table1_VE_boost_redacted_unmatched_RRT.html
+        
+  # Table 1 (all matched)
+  table_1_VE_boost_all_matched:
+    run: r:latest analysis/VE/table_1_VE.R matched all boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table1_VE_boost_redacted_matched_all.rds
+      moderately_sensitive:
+        table: output/tables/VE_boost/table1_VE_boost_redacted_matched_all.html
+  
+  # Table 1 (RRT matched)
+  table_1_VE_boost_RRT_matched:
+    run: r:latest analysis/VE/table_1_VE.R matched RRT boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table1_VE_boost_redacted_matched_RRT.rds
+      moderately_sensitive:
+        table: output/tables/VE_boost/table1_VE_boost_redacted_matched_RRT.html
+   
+#############################
+### IRR - all, CKD3, CKD4-5, RRT - matched,unmatched
+#############################
+   
+  # Table IRR (all unmatched)
+  table_irr_boost_unmatched_all:
+    run: r:latest analysis/VE/table_irr.R unmatched all boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table_irr_boost_redacted_unmatched_all.rds
+      moderately_sensitive:
+        csv: output/tables/VE_boost/table_irr_boost_redacted_unmatched_all.csv
+        
+  # Table IRR (CKD3 unmatched)
+  table_irr_boost_unmatched_CKD3:
+    run: r:latest analysis/VE/table_irr.R unmatched CKD3 boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table_irr_boost_redacted_unmatched_CKD3.rds
+      moderately_sensitive:
+        csv: output/tables/VE_boost/table_irr_boost_redacted_unmatched_CKD3.csv
+ 
+  # Table IRR (CKD4-5 unmatched)
+  table_irr_boost_unmatched_CKD4_5:
+    run: r:latest analysis/VE/table_irr.R unmatched CKD4-5 boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table_irr_boost_redacted_unmatched_CKD4-5.rds
+      moderately_sensitive:
+        csv: output/tables/VE_boost/table_irr_boost_redacted_unmatched_CKD4-5.csv
+        
+  # Table IRR (RRT unmatched)
+  table_irr_boost_unmatched_RRT:
+    run: r:latest analysis/VE/table_irr.R unmatched RRT boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table_irr_boost_redacted_unmatched_RRT.rds
+      moderately_sensitive:
+        csv: output/tables/VE_boost/table_irr_boost_redacted_unmatched_RRT.csv
+
+  # Table IRR (all matched)
+  table_irr_boost_matched_all:
+    run: r:latest analysis/VE/table_irr.R matched all boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table_irr_boost_redacted_matched_all.rds
+      moderately_sensitive:
+        csv: output/tables/VE_boost/table_irr_boost_redacted_matched_all.csv
+        
+  # Table IRR (CKD3 matched)
+  table_irr_boost_matched_CKD3:
+    run: r:latest analysis/VE/table_irr.R matched CKD3 boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table_irr_boost_redacted_matched_CKD3.rds
+      moderately_sensitive:
+        csv: output/tables/VE_boost/table_irr_boost_redacted_matched_CKD3.csv
+ 
+  # Table IRR (CKD4-5 matched)
+  table_irr_boost_matched_CKD4_5:
+    run: r:latest analysis/VE/table_irr.R matched CKD4-5 boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table_irr_boost_redacted_matched_CKD4-5.rds
+      moderately_sensitive:
+        csv: output/tables/VE_boost/table_irr_boost_redacted_matched_CKD4-5.csv
+        
+  # Table IRR (RRT matched)
+  table_irr_boost_matched_RRT:
+    run: r:latest analysis/VE/table_irr.R matched RRT boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/tables/VE_boost/table_irr_boost_redacted_matched_RRT.rds
+      moderately_sensitive:
+        csv: output/tables/VE_boost/table_irr_boost_redacted_matched_RRT.csv

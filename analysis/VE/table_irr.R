@@ -24,16 +24,25 @@ if(length(args)==0){
   # default (unmatched) file names
   matching_status = "unmatched"
   subgroup = "all"
+  vaccine = "primary"
 } else {
   matching_status = args[[1]] # can be unmatched or matched
   subgroup = args[[2]] # can be all, CKD, dialysis, or transplant
+  vaccine = args[[3]] # can be primary or boost
 }
 
 ## Import data
-if (matching_status=="unmatched") { 
+if (matching_status=="unmatched" & vaccine=="primary") { 
   data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE.rds"))
-} else { 
+  
+} else if (matching_status=="matched" & vaccine=="primary") { 
   data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_matched.rds"))
+  
+} else if (matching_status=="unmatched" & vaccine=="boost") { 
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds"))
+  
+} else { 
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost_matched.rds"))
 }
 
 # Modify dates to avoid timestamps causing inequalities for dates on the same day
@@ -44,8 +53,15 @@ data_cohort <- data_cohort %>%
                 unit = "days")))
 
 ## Specify output path names
-output_csv = paste0("table_irr_redacted_",matching_status,"_",subgroup,".csv")
-output_rds = paste0("table_irr_redacted_",matching_status,"_",subgroup,".rds")
+if (vaccine=="primary") {
+  output_csv = paste0("table_irr_redacted_",matching_status,"_",subgroup,".csv")
+  output_rds = paste0("table_irr_redacted_",matching_status,"_",subgroup,".rds")
+  fs::dir_create(here::here("output", "tables"))
+} else {
+  output_csv = paste0("table_irr_boost_redacted_",matching_status,"_",subgroup,".csv")
+  output_rds = paste0("table_irr_boost_redacted_",matching_status,"_",subgroup,".rds")
+  fs::dir_create(here::here("output", "tables", "VE_boost"))
+}
 
 ## Select subset
 if (subgroup=="all") {
@@ -62,20 +78,31 @@ if (subgroup=="all") {
 source(here::here("analysis", "functions.R"))
 
 ## Import outcome time periods
-postvax_list <- read_rds(
-  here::here("output", "lib", "postvax_list.rds")
-)
-postvaxcuts = postvax_list$postvaxcuts
-postvax_periods = postvax_list$postvax_periods
-period_length = postvaxcuts[2]-postvaxcuts[1]
-lastfupday = max(postvaxcuts)
-
+if (vaccine=="primary") {
+  postvax_list <- read_rds(
+    here::here("output", "lib", "postvax_list.rds")
+  )
+  postvaxcuts = postvax_list$postvaxcuts
+  postvax_periods = postvax_list$postvax_periods
+  period_length = postvaxcuts[2]-postvaxcuts[1]
+  lastfupday = max(postvaxcuts)
+} else {
+  postboost_list <- read_rds(
+    here::here("output", "lib", "postboost_list.rds")
+  )
+  postvaxcuts = postboost_list$postboostcuts
+  postvax_periods = postboost_list$postboost_periods
+  period_length = postvaxcuts[2]-postvaxcuts[1]
+  lastfupday = max(postvaxcuts)
+}
+  
 ## Split into vaccine-specific data frames
 data_cohort_AZ <- subset(data_cohort, vax2_type=="az")
 data_cohort_BNT <- subset(data_cohort, vax2_type=="pfizer")
 
 ## Function to calculate IRRs and return redacted table
 redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
+  
   ## Add outcome date
   data_cohort_irr = data_cohort %>%
     mutate(
@@ -86,8 +113,12 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
       exclusion_date = pmin(censor_date, outcome_date, na.rm=TRUE),
       
       ## Time to censorship or outcome
-      tte_exclusion = tte(vax2_date - 1, exclusion_date, exclusion_date),
-      
+      tte_exclusion = tte(vax2_date - 1, exclusion_date, exclusion_date)
+    )
+   
+  if (vaccine=="primary") {
+    data_cohort_irr = data_cohort_irr %>%
+      mutate(
       ## Person-days contributed to window 1
       persondays_window1 = ifelse(tte_exclusion>postvaxcuts[1] & tte_exclusion<=postvaxcuts[2], tte_exclusion, period_length),
       
@@ -102,17 +133,31 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
       ## Person-days contributed to window 4 (all follow-up)
       persondays_window4 = tte_exclusion
     )
+  } else {
+    data_cohort_irr = data_cohort_irr %>%
+      mutate(
+        persondays_window1 = tte_exclusion
+      )
+  }
   
   ## Split into vaccine-specific data frames
   data_cohort_AZ <- subset(data_cohort_irr, vax2_type=="az")
   data_cohort_BNT <- subset(data_cohort_irr, vax2_type=="pfizer")
   
   ## Create IRR dataframe to fill in
-  postvax_irr <- data.frame(
-    period = c(postvax_periods, paste0(postvaxcuts[1]+1,"-",lastfupday)),
-    period_start = c(postvaxcuts[1:3]+1,postvaxcuts[1]+1),
-    period_end = c(postvaxcuts[2:4], lastfupday)
-  )
+  if (vaccine=="primary") {
+    postvax_irr <- data.frame(
+      period = c(postvax_periods, paste0(postvaxcuts[1]+1,"-",lastfupday)),
+      period_start = c(postvaxcuts[1:3]+1,postvaxcuts[1]+1),
+      period_end = c(postvaxcuts[2:4], lastfupday)
+    )
+  } else {
+    postvax_irr <- data.frame(
+      period = postvax_periods,
+      period_start = postvaxcuts[1]+1,
+      period_end = postvaxcuts[2]
+    )
+  }
   
 ## Calculate vaccine-specific N, event rates, person-time, and rates
   for (i in 1:nrow(postvax_irr)) {
@@ -165,13 +210,23 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
 }
 
 ## Collate IRR table based on function above
-irr_collated = rbind(
-  redacted_irr_table(ind_endpoint = "ind_covid_postest", endpoint_date = "postvax_positive_test_date", tte_endpoint = "tte_covid_postest"),
-  redacted_irr_table(ind_endpoint = "ind_covid_emergency", endpoint_date = "postvax_covid_emergency_date", tte_endpoint = "tte_covid_emergency"),
-  redacted_irr_table(ind_endpoint = "ind_covid_hosp", endpoint_date = "postvax_covid_hospitalisation_date", tte_endpoint = "tte_covid_hosp"),
-  redacted_irr_table(ind_endpoint = "ind_covid_death", endpoint_date = "postvax_covid_death_date", tte_endpoint = "tte_covid_death"),
-  redacted_irr_table(ind_endpoint = "ind_noncovid_death", endpoint_date = "noncoviddeath_date", tte_endpoint = "tte_noncovid_death")
-)
+if (vaccine=="primary") {
+  irr_collated = rbind(
+    redacted_irr_table(ind_endpoint = "ind_covid_postest", endpoint_date = "postvax_positive_test_date", tte_endpoint = "tte_covid_postest"),
+    redacted_irr_table(ind_endpoint = "ind_covid_emergency", endpoint_date = "postvax_covid_emergency_date", tte_endpoint = "tte_covid_emergency"),
+    redacted_irr_table(ind_endpoint = "ind_covid_hosp", endpoint_date = "postvax_covid_hospitalisation_date", tte_endpoint = "tte_covid_hosp"),
+    redacted_irr_table(ind_endpoint = "ind_covid_death", endpoint_date = "postvax_covid_death_date", tte_endpoint = "tte_covid_death"),
+    redacted_irr_table(ind_endpoint = "ind_noncovid_death", endpoint_date = "noncoviddeath_date", tte_endpoint = "tte_noncovid_death")
+  )
+} else {
+  irr_collated = rbind(
+    redacted_irr_table(ind_endpoint = "ind_covid_postest", endpoint_date = "postboost_positive_test_date", tte_endpoint = "tte_covid_postest"),
+    redacted_irr_table(ind_endpoint = "ind_covid_emergency", endpoint_date = "postboost_covid_emergency_date", tte_endpoint = "tte_covid_emergency"),
+    redacted_irr_table(ind_endpoint = "ind_covid_hosp", endpoint_date = "postboost_covid_hospitalisation_date", tte_endpoint = "tte_covid_hosp"),
+    redacted_irr_table(ind_endpoint = "ind_covid_death", endpoint_date = "postboost_covid_death_date", tte_endpoint = "tte_covid_death"),
+    redacted_irr_table(ind_endpoint = "ind_noncovid_death", endpoint_date = "noncoviddeath_date", tte_endpoint = "tte_noncovid_death")
+  )
+}
 
 ## Add clean names
 irr_collated$outcome_clean = "Positive SARS-CoV-2 test"
@@ -187,10 +242,15 @@ irr_collated$outcome_clean[irr_collated$outcome=="tte_noncovid_death"] = "Non-CO
 # irr_collated$AZ_personyears[irr_collated$period=="15-182"] = "--"
 
 ## Simplify output to report on whole study period in subgroup analyses
-if (subgroup!="all") {
+if (vaccine=="primary" & subgroup!="all") {
   irr_collated = subset(irr_collated, period=="15-182")
 }
 
 ## Save output
-write_csv(irr_collated, here::here("output", "tables", output_csv))
-write_rds(irr_collated, here::here("output", "tables", output_rds), compress="gz")
+if (vaccine=="primary") {
+  write_csv(irr_collated, here::here("output", "tables", output_csv))
+  write_rds(irr_collated, here::here("output", "tables", output_rds), compress="gz")
+} else {
+  write_csv(irr_collated, here::here("output", "tables", "VE_boost", output_csv))
+  write_rds(irr_collated, here::here("output", "tables", "VE_boost", output_rds), compress="gz")
+}

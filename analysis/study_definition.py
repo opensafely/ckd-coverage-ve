@@ -620,12 +620,12 @@ study = StudyDefinition(
   imd = patients.categorised_as(
     {
         "Unknown": "DEFAULT",
-        "1 most deprived": "imd_num >= 0 AND imd_num < 32800*1/5",
-        "2": "imd_num >= 32800*1/5 AND imd_num < 32800*2/5",
-        "3": "imd_num >= 32800*2/5 AND imd_num < 32800*3/5",
-        "4": "imd_num >= 32800*3/5 AND imd_num < 32800*4/5",
-        "5 least deprived": "imd_num >= 32800*4/5 AND imd_num <= 32800",
-     },
+        "1 (most deprived)": "imd_num >= 0 AND imd_num < 32800*1/5",
+         "2": "imd_num >= 32800*1/5 AND imd_num < 32800*2/5",
+         "3": "imd_num >= 32800*2/5 AND imd_num < 32800*3/5",
+         "4": "imd_num >= 32800*3/5 AND imd_num < 32800*4/5",
+         "5 (least deprived)": "imd_num >= 32800*4/5 AND imd_num <= 32800",
+      },
    imd_num = patients.address_as_of(
             "index_date",
             returning="index_of_multiple_deprivation",
@@ -636,11 +636,11 @@ study = StudyDefinition(
       "category": {
         "ratios": {
           "Unknown": 0.01,
-          "1 most deprived": 0.20,
+          "1 (most deprived)": 0.20,
           "2": 0.20,
           "3": 0.20,
           "4": 0.20,
-          "5 least deprived": 0.19,
+          "5 (least deprived)": 0.19,
         }},
     },
   ),
@@ -1068,7 +1068,7 @@ study = StudyDefinition(
 ###############################################################################
 
   ################################################
-  ############ pre-vaccine events ################
+  ############ Pre-vaccine events ################
   ################################################
   
   ## Covid-related positive test in pre-vaccination period
@@ -1148,7 +1148,7 @@ study = StudyDefinition(
   ),
 
   ################################################
-  ############ events during study period ########
+  ############ Events during study period ########
   ################################################
   
   ## Covid-related positive test after second dose
@@ -1209,10 +1209,6 @@ study = StudyDefinition(
     },
   ),
   
-  ################################################
-  ############ Alternative endpoints #############
-  ################################################
-
   ## Any test after second dose
   postvax_any_test_date = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
@@ -1229,44 +1225,163 @@ study = StudyDefinition(
     },
   ),
   
-  ## Any emergency admission after second dose
-  postvax_any_emergency_date = patients.attended_emergency_care(
-    returning = "date_arrived",
-    between=["covid_vax_date_2",end_date],
+  ################################################
+  ############# Pre-boost events #################
+  ################################################
+  
+  ## Covid-related positive test in pre-boost period
+  preboost_positive_test_date = patients.with_test_result_in_sgss(
+    pathogen = "SARS-CoV-2",
+    test_result = "positive",
+    returning = "date",
     date_format = "YYYY-MM-DD",
+    between=["covid_vax_date_1 - 90 days","covid_vax_date_3 - 1 day"], # exclude influence of infections between primary course and booster dose
     find_first_match_in_period = True,
+    restrict_to_earliest_specimen_date = False,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
+      "date": {"earliest": "2020-09-02", "latest": "2021-09-30"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
-      "incidence": 0.2,
+      "incidence": 0.02,
     },
   ),
   
-  ## Any unplanned admission after second dose
-  postvax_any_hospitalisation_date = patients.admitted_to_hospital(
+  ## Covid-related case identification in pre-boost period
+  preboost_primary_care_covid_case_date = patients.with_these_clinical_events(
+    combine_codelists(
+      covid_primary_care_code,
+      covid_primary_care_positive_test,
+      covid_primary_care_sequalae,
+    ),
+    returning = "date",
+    date_format = "YYYY-MM-DD",
+    between=["covid_vax_date_1 - 90 days","covid_vax_date_3 - 1 day"], # exclude influence of infections between primary course and booster dose
+    find_first_match_in_period=True,
+    return_expectations = {
+      "date": {"earliest": "2020-09-02", "latest": "2021-09-30"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
+      "incidence": 0.02,
+    },
+  ),
+  
+  ## Covid-related A&E in pre-boost period
+  preboost_covid_emergency_date = patients.attended_emergency_care(
+    returning="date_arrived",
+    with_these_diagnoses = covid_emergency,
+    between=["covid_vax_date_1 - 90 days","covid_vax_date_3 - 1 day"], # exclude influence of infections between primary course and booster dose
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2020-09-02", "latest": "2021-09-30"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
+      "incidence": 0.005,
+    },
+  ),
+  
+  ## Covid-related admission in pre-boost period
+  preboost_covid_hospitalisation_date = patients.admitted_to_hospital(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
     with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
-    between=["covid_vax_date_2",end_date],
+    between=["covid_vax_date_1 - 90 days","covid_vax_date_3 - 1 day"], # exclude influence of infections between primary course and booster dose
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
+      "date": {"earliest": "2020-09-02", "latest": "2021-09-30"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
+      "incidence": 0.005,
+    },
+  ),
+  
+  ## Count of tests (any) in pre-boost period (fixed time window to avoid influence of changing incidence over time)
+  preboost_tests_conducted_any = patients.with_test_result_in_sgss(
+    pathogen = "SARS-CoV-2",
+    test_result = "any",
+    returning = "number_of_matches_in_period",
+    between=["2021-06-03","2021-09-01"], # 90 days preceding 1st September 2021 (date of extended primary series announcement)
+    restrict_to_earliest_specimen_date = False,
+    return_expectations={
+      "int": {"distribution": "normal", "mean": 4, "stddev": 1},
+      "incidence": 0.05,
+    },
+  ),
+  
+  ###########################################################
+  ############ Events during post-boost study period ########
+  ###########################################################
+  
+  ## Covid-related positive test after third dose
+  postboost_positive_test_date = patients.with_test_result_in_sgss(
+    pathogen = "SARS-CoV-2",
+    test_result = "positive",
+    between=["covid_vax_date_3",end_date],
+    find_first_match_in_period = True,
+    restrict_to_earliest_specimen_date = False,
+    returning = "date",
+    date_format = "YYYY-MM-DD",
+    return_expectations = {
+      "date": {"earliest": "2021-09-01", "latest" : "2022-05-11"},
+      "rate": "uniform",
+      "incidence": 0.4,
+    },
+  ),
+  
+  ## Covid-related A&E after third dose
+  postboost_covid_emergency_date = patients.attended_emergency_care(
+    returning = "date_arrived",
+    with_these_diagnoses = covid_emergency,
+    between=["covid_vax_date_3",end_date],
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2021-09-01", "latest" : "2022-05-11"},
+      "rate": "uniform",
+      "incidence": 0.2,
+    },
+  ),
+    
+  ## Covid-related admission after third dose
+  postboost_covid_hospitalisation_date = patients.admitted_to_hospital(
+    returning = "date_admitted",
+    with_these_diagnoses = covid_icd10,
+    with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
+    between=["covid_vax_date_3",end_date],
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2021-09-01", "latest" : "2022-05-11"},
       "rate": "uniform",
       "incidence": 0.2,
     },
   ),
   
-  # Any death after second dose
-  postvax_any_death_date = patients.died_from_any_cause(
-    returning="date_of_death",
-    between=["covid_vax_date_2",end_date],
-    date_format="YYYY-MM-DD",
+  # Covid-related death after third dose
+  postboost_covid_death_date = patients.with_these_codes_on_death_certificate(
+    covid_icd10,
+    returning = "date_of_death",
+    between=["covid_vax_date_3",end_date],
+    date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-02-01", "latest" : "2022-05-11"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-05-11"},
       "rate": "uniform",
       "incidence": 0.1
     },
   ),
+
+  ## Any test after third dose
+  postboost_any_test_date = patients.with_test_result_in_sgss(
+    pathogen = "SARS-CoV-2",
+    test_result = "any",
+    between=["covid_vax_date_3",end_date],
+    find_first_match_in_period = True,
+    restrict_to_earliest_specimen_date = False,
+    returning = "date",
+    date_format = "YYYY-MM-DD",
+    return_expectations = {
+      "date": {"earliest": "2021-09-01", "latest" : "2022-05-11"},
+      "rate": "uniform",
+      "incidence": 0.5,
+    },
+  ),
+  
   
 )
