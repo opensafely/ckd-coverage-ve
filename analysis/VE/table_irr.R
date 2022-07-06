@@ -53,15 +53,9 @@ data_cohort <- data_cohort %>%
                 unit = "days")))
 
 ## Specify output path names
-if (vaccine=="primary") {
-  output_csv = paste0("table_irr_redacted_",matching_status,"_",subgroup,".csv")
-  output_rds = paste0("table_irr_redacted_",matching_status,"_",subgroup,".rds")
-  fs::dir_create(here::here("output", "tables"))
-} else {
-  output_csv = paste0("table_irr_boost_redacted_",matching_status,"_",subgroup,".csv")
-  output_rds = paste0("table_irr_boost_redacted_",matching_status,"_",subgroup,".rds")
-  fs::dir_create(here::here("output", "tables", "VE_boost"))
-}
+output_csv = paste0("table_irr_",vaccine,"_redacted_",matching_status,"_",subgroup,".csv")
+output_rds = paste0("table_irr_",vaccine,"_redacted_",matching_status,"_",subgroup,".rds")
+fs::dir_create(here::here("output", "tables"))
 
 ## Select subset
 if (subgroup=="all") {
@@ -82,20 +76,16 @@ if (vaccine=="primary") {
   postvax_list <- read_rds(
     here::here("output", "lib", "postvax_list.rds")
   )
-  postvaxcuts = postvax_list$postvaxcuts
-  postvax_periods = postvax_list$postvax_periods
-  period_length = postvaxcuts[2]-postvaxcuts[1]
-  lastfupday = max(postvaxcuts)
 } else {
-  postboost_list <- read_rds(
+  postvax_list <- read_rds(
     here::here("output", "lib", "postboost_list.rds")
   )
-  postvaxcuts = postboost_list$postboostcuts
-  postvax_periods = postboost_list$postboost_periods
-  period_length = postvaxcuts[2]-postvaxcuts[1]
-  lastfupday = max(postvaxcuts)
 }
-  
+postvaxcuts = postvax_list$postvaxcuts
+postvax_periods = postvax_list$postvax_periods
+period_length = postvaxcuts[2]-postvaxcuts[1]
+lastfupday = max(postvaxcuts)
+
 ## Split into vaccine-specific data frames
 data_cohort_AZ <- subset(data_cohort, vax2_type=="az")
 data_cohort_BNT <- subset(data_cohort, vax2_type=="pfizer")
@@ -247,10 +237,5 @@ if (vaccine=="primary" & subgroup!="all") {
 }
 
 ## Save output
-if (vaccine=="primary") {
-  write_csv(irr_collated, here::here("output", "tables", output_csv))
-  write_rds(irr_collated, here::here("output", "tables", output_rds), compress="gz")
-} else {
-  write_csv(irr_collated, here::here("output", "tables", "VE_boost", output_csv))
-  write_rds(irr_collated, here::here("output", "tables", "VE_boost", output_rds), compress="gz")
-}
+write_csv(irr_collated, here::here("output", "tables", output_csv))
+write_rds(irr_collated, here::here("output", "tables", output_rds), compress="gz")

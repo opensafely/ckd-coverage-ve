@@ -18,7 +18,7 @@ library('MatchIt')
 source(here::here("analysis", "functions.R"))
 
 ## Create output directory
-fs::dir_create(here::here("output", "tables", "VE_boost"))
+fs::dir_create(here::here("output", "tables"))
 
 ## Import processed data
 data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))  %>%
@@ -49,15 +49,15 @@ write_rds(
 ## Set and store analysis intervals and last follow-up day
 period_length <- 84 # Single 12-week period for post-boost analysis, matching https://github.com/opensafely/comparative-booster/blob/main/lib/design/study-dates.json as of 04 July 2022
 n_periods <- 1
-postboostcuts <- period_length*0:1
-postboost_periods = paste0(postboostcuts[1:((length(postboostcuts)-1))]+1,"-",postboostcuts[2:length(postboostcuts)])
-postboost_periods_weeks = paste0((postboostcuts/7)[1:((length(postboostcuts)-1))]+1,"-",(postboostcuts/7)[2:length(postboostcuts)])
-lastfupday <- max(postboostcuts)
+postvaxcuts <- period_length*0:1
+postvax_periods = paste0(postvaxcuts[1:((length(postvaxcuts)-1))]+1,"-",postvaxcuts[2:length(postvaxcuts)])
+postvax_periods_weeks = paste0((postvaxcuts/7)[1:((length(postvaxcuts)-1))]+1,"-",(postvaxcuts/7)[2:length(postvaxcuts)])
+lastfupday <- max(postvaxcuts)
 write_rds(
   list(
-    postboostcuts = postboostcuts,
-    postboost_periods = postboost_periods,
-    postboost_periods_weeks = postboost_periods_weeks
+    postvaxcuts = postvaxcuts,
+    postvax_periods = postvax_periods,
+    postvax_periods_weeks = postvax_periods_weeks
   ),
   here::here("output", "lib", "postboost_list.rds")
 )
@@ -230,7 +230,7 @@ data_flowchart <- data_criteria %>%
       TRUE ~ NA_character_
     )
   )
-write_csv(data_flowchart, here::here("output", "tables", "VE_boost", "flowchart_VE_boost.csv"))
+write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE_boost.csv"))
 
 
 
@@ -242,6 +242,9 @@ write_csv(data_flowchart, here::here("output", "tables", "VE_boost", "flowchart_
 
 ## If running locally, inflate unmatched cohort and use inflated data for both matched/unmatched analyses
 if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
+  ## Remove 'No CKD' cat, which may be retained in dummy data but would be excluded if run on server
+  data_cohort = subset(data_cohort, ckd_6cat!="No CKD") %>% droplevels()
+  
   ## Increase size of data cohort by 10-fold to assist with later model fitting
   data_cohort = rbind(data_cohort, data_cohort, data_cohort, data_cohort, data_cohort, data_cohort,
                        data_cohort, data_cohort, data_cohort, data_cohort, data_cohort, data_cohort)
@@ -261,7 +264,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   data_flowchart = data_flowchart[1:2,]
   data_flowchart$criteria = c("Unmatched VE cohort", "Matched VE cohort")
   data_flowchart$n = max(data_flowchart$n)
-  write_csv(data_flowchart, here::here("output", "tables", "VE_boost", "flowchart_VE_boost_matched.csv"))
+  write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE_boost_matched.csv"))
   
 } else {
   

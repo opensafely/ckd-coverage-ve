@@ -239,6 +239,9 @@ write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE.csv"))
 
 ## If running locally, inflate unmatched cohort and use inflated data for both matched/unmatched analyses
 if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
+  ## Remove 'No CKD' cat, which may be retained in dummy data but would be excluded if run on server
+  data_cohort = subset(data_cohort, ckd_6cat!="No CKD") %>% droplevels()
+  
   ## Increase size of data cohort by 10-fold to assist with later model fitting
   data_cohort = rbind(data_cohort, data_cohort, data_cohort, data_cohort, data_cohort, data_cohort,
                        data_cohort, data_cohort, data_cohort, data_cohort, data_cohort, data_cohort)
@@ -258,6 +261,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   data_flowchart$criteria = c("Unmatched VE cohort", "Matched VE cohort")
   data_flowchart$n = max(data_flowchart$n)
   write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE_matched.csv"))
+  
 } else {
   
   ## Specify exact matching variables

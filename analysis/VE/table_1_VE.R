@@ -44,15 +44,10 @@ if (matching_status=="unmatched" & vaccine=="primary") {
 }
 
 ## Specify output path names and directory
-if (vaccine=="primary") {
-  output_html = paste0("table1_VE_redacted_",matching_status,"_",subgroup,".html")
-  output_rds = paste0("table1_VE_redacted_",matching_status,"_",subgroup,".rds")
-  fs::dir_create(here::here("output", "tables"))
-} else {
-  output_html = paste0("table1_VE_boost_redacted_",matching_status,"_",subgroup,".html")
-  output_rds = paste0("table1_VE_boost_redacted_",matching_status,"_",subgroup,".rds")
-  fs::dir_create(here::here("output", "tables", "VE_boost"))
-}
+output_html = paste0("table1_VE_",vaccine,"_redacted_",matching_status,"_",subgroup,".html")
+output_rds = paste0("table1_VE_",vaccine,"_redacted_",matching_status,"_",subgroup,".rds")
+fs::dir_create(here::here("output", "tables"))
+
 ## Set rounding and redaction thresholds
 rounding_threshold = 5
 redaction_threshold = 10
@@ -208,10 +203,5 @@ table1_redacted <- table1_redacted %>% select(-Non_Count_az, -Count_az, -Percent
 names(table1_redacted)[3:4] <- c("ChAdOx1-S", "BNT162b2")
 
 ## Save as html/rds
-if (vaccine=="primary") {
-  gt::gtsave(gt(table1_redacted), here::here("output","tables", output_html))
-  write_rds(table1_redacted, here::here("output", "tables", output_rds), compress = "gz")
-} else {
-  gt::gtsave(gt(table1_redacted), here::here("output","tables", "VE_boost", output_html))
-  write_rds(table1_redacted, here::here("output", "tables", "VE_boost", output_rds), compress = "gz")
-}
+gt::gtsave(gt(table1_redacted), here::here("output","tables", output_html))
+write_rds(table1_redacted, here::here("output", "tables", output_rds), compress = "gz")
