@@ -23,25 +23,28 @@ args <- commandArgs(trailingOnly=TRUE)
 # arg2: timescale = persontime / calendartime
 # arg3: outcome = covid_postest / covid_emergency / covid_hosp / covid_death / noncovid_death
 # arg4: subset = all / CKD3 / CKD4-5 / RRT
+# arg5: vaccine = primary / boost
 
 if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
-  timescale = "persontime"
+  timescale = "calendartimefull"
   selected_outcome = "covid_postest"
   subgroup = "all"
+  vaccine = "boost"
 } else {
   db = args[[1]]
   timescale = args[[2]]
   selected_outcome = args[[3]]
   subgroup = args[[4]]
+  vaccine = args[[5]]
 }
 
 ## Import data
-full = timescale != "calendartime"
+full = timescale == "persontime"
 if (full) {
   ## Get data for full model
-  data_cox_full <- read_rds(here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
+  data_cox_full <- read_rds(here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
   ## Check dataset not empty
   if (nrow(data_cox_full) == 0) {
     # log
@@ -50,7 +53,7 @@ if (full) {
 }
 
 ## Read data for stratified model
-data_cox_strata <- read_rds(here::here("output", "model", glue("data_cox_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
+data_cox_strata <- read_rds(here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
 strata = nrow(data_cox_strata) > 0
 ## Check dataset not empty
 if (!strata & timescale == "calendartime") {
@@ -61,51 +64,83 @@ if (!strata & timescale == "calendartime") {
 ## Import formulas 
 if (full) {
   formulas_full <- read_rds(
-    here::here("output", "model", glue("formulas_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
+    here::here("output", "model", paste0("VE_",vaccine), glue("formulas_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
 }
 if (strata) {
   formulas_strata <- read_rds(
-    here::here("output", "model", glue("formulas_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
+    here::here("output", "model", paste0("VE_",vaccine), glue("formulas_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
 }
 
 ## Import outcomes
-outcomes_list <- read_rds(
-  here::here("output", "lib", "outcomes.rds")
-)
+if (vaccine=="primary") {
+  outcomes_list <- read_rds(
+    here::here("output", "lib", "outcomes.rds")
+  )
+} else if (vaccine=="boost") {
+  outcomes_list <- read_rds(
+    here::here("output", "lib", "outcomes_boost.rds")
+  )
+} else {
+  stop ("Arguments not specified correctly.")
+}
 outcome_index = which(outcomes_list$short_name == selected_outcome)
 selected_outcome_clean = outcomes_list$clean_name[outcome_index]
 
-## Import postvax_list
-postvax_list <- read_rds(
-  here::here("output", "lib", "postvax_list.rds")
-)
-lastfupday = max(postvax_list$postvaxcuts)
+if (vaccine=="primary") {
+  ## Import postvax_list
+  postvax_list <- read_rds(
+    here::here("output", "lib", "postvax_list.rds")
+  )
+  lastfupday = max(postvax_list$postvaxcuts)
+
+} else if (vaccine=="boost") {
+  ## Import postboost_list
+  postvax_list <- read_rds(
+    here::here("output", "lib", "postboost_list.rds")
+  )
+  lastfupday = max(postvax_list$postvaxcuts)
+} else {
+  stop ("Arguments not specified correctly.")
+}
 
 ## Read in incidence rate ratio table
-irr_table = read_rds(here::here("output", "tables", glue("table_irr_redacted_{db}_{subgroup}.rds"))) %>%
+irr_table = read_rds(here::here("output", "tables", glue("table_irr_{vaccine}_redacted_{db}_{subgroup}.rds"))) %>%
   mutate_all(as.character)
 
+## Specify irr strata and full levels
 irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
-irr_sub_strata <- irr_sub %>%
-  filter(period %in% postvax_list$postvax_periods)
-irr_sub_full <- irr_sub %>%
-  filter(!(period %in% postvax_list$postvax_periods))
+
+if (vaccine=="primary") {
+  irr_sub_strata <- irr_sub %>% filter(period %in% postvax_list$postvax_periods)
+  irr_sub_full <- irr_sub %>% filter(!(period %in% postvax_list$postvax_periods))
+  
+  ## Override strata with full time period for 'calendertimefull' implementation
+  if (timescale=="calendartimefull") {
+    irr_sub_strata = irr_sub_full
+  }
+  
+} else if (vaccine=="boost") {
+  irr_sub_strata <- irr_sub %>% filter(period %in% postvax_list$postvax_periods)
+  irr_sub_full <- irr_sub_strata
+} else {
+  stop ("Arguments not specified correctly.")
+}
 
 ## Create directory for full model outputs
-dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
+dir.create(here::here("output", "model", paste0("VE_",vaccine)), showWarnings = FALSE, recursive=TRUE)
 
 ## Create log file
 cat(
   glue("## Script info for cox models ##"), 
   "  \n", 
-  file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), 
+  file = here::here("output", "model", paste0("VE_",vaccine), glue("log_cox_model_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), 
   append = FALSE
   )
 
 ## Function to pass additional log text
 logoutput <- function(...){
-  cat(..., file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), sep = "\n  ", append = TRUE)
-  cat("\n", file = here::here("output", "model", glue("log_cox_model_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), sep = "\n  ", append = TRUE)
+  cat(..., file = here::here("output", "model", paste0("VE_",vaccine), glue("log_cox_model_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), sep = "\n  ", append = TRUE)
+  cat("\n", file = here::here("output", "model", paste0("VE_",vaccine), glue("log_cox_model_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), sep = "\n  ", append = TRUE)
 }
 
 logoutput(
@@ -113,7 +148,8 @@ logoutput(
   glue("db = {db}"),
   glue("timescale = {timescale}"),
   glue("outcome = {selected_outcome_clean}"),
-  glue("subset = {subgroup}")
+  glue("subset = {subgroup}"),
+  glue("vaccine = {vaccine}")
 )
 
 ####################################################### 
@@ -265,11 +301,11 @@ if (full) {
 ## Save model summary
 write_csv(
   model_glance_full,
-  here::here("output", "model", glue("modelcox_glance_full_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
+  here::here("output", "model", paste0("VE_",vaccine), glue("modelcox_glance_full_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
 )
 write_csv(
   model_tidy_full, 
-  here::here("output", "model", glue("modelcox_tidy_full_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
+  here::here("output", "model", paste0("VE_",vaccine), glue("modelcox_tidy_full_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
 )
 
 
@@ -330,11 +366,11 @@ if (strata) {
 ## Save model summary
 write_csv(
   model_glance_strata,
-  here::here("output", "model", glue("modelcox_glance_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
+  here::here("output", "model", paste0("VE_",vaccine), glue("modelcox_glance_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
 )
 write_csv(
   model_tidy_strata, 
-  here::here("output", "model", glue("modelcox_tidy_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
+  here::here("output", "model", paste0("VE_",vaccine), glue("modelcox_tidy_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
 )
 
 reduce_tidy <- function(stratified=FALSE) {
@@ -422,10 +458,10 @@ model_tidy_final <- model_tidy_final %>%
 ## Save outputs
 write_csv(
   model_tidy_final, 
-  here::here("output", "model", glue("modelcox_tidy_reduced_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
+  here::here("output", "model", paste0("VE_",vaccine), glue("modelcox_tidy_reduced_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
   )
 write_rds(
   model_tidy_final,
-  here::here("output", "model", glue("modelcox_tidy_reduced_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")), 
+  here::here("output", "model", paste0("VE_",vaccine), glue("modelcox_tidy_reduced_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")), 
   compress="gz"
   )
