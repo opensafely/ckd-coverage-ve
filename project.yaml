@@ -1631,29 +1631,6 @@ actions:
       moderately_sensitive:
         csv: output/model/VE_boost/modelcox*matched_persontime_covid_emergency_all.csv
         logs: output/model/VE_boost/log_cox_model_matched_persontime_covid_emergency_all.txt
-        
-  ### unmatched calendartime all
-  # preflight
-  cox_boost_preflight_unmatched_calendartime_covid_emergency_VE_all:
-    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_emergency all boost
-    needs: [data_selection_VE_boost]
-    outputs:
-      highly_sensitive:
-        data: output/model/VE_boost/data*unmatched_calendartime_covid_emergency_all.rds
-        formulas: output/model/VE_boost/formulas*unmatched_calendartime_covid_emergency_all.rds
-      moderately_sensitive:
-        logs: output/model/VE_boost/log_cox_preflight_unmatched_calendartime_covid_emergency_all.txt
-  
-  # model
-  cox_boost_model_unmatched_calendartime_covid_emergency_VE_all:
-    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_emergency all boost
-    needs: [data_selection_VE_boost, table_irr_boost_unmatched_all, cox_boost_preflight_unmatched_calendartime_covid_emergency_VE_all]
-    outputs:
-      highly_sensitive:
-        data: output/model/VE_boost/modelcox*unmatched_calendartime_covid_emergency_all.rds
-      moderately_sensitive:
-        csv: output/model/VE_boost/modelcox*unmatched_calendartime_covid_emergency_all.csv
-        logs: output/model/VE_boost/log_cox_model_unmatched_calendartime_covid_emergency_all.txt
   
   ### unmatched calendartimefull all
   # preflight
@@ -1796,29 +1773,6 @@ actions:
       moderately_sensitive:
         csv: output/model/VE_boost/modelcox*matched_persontime_covid_hosp_all.csv
         logs: output/model/VE_boost/log_cox_model_matched_persontime_covid_hosp_all.txt
-        
-  ### unmatched calendartime all
-  # preflight
-  cox_boost_preflight_unmatched_calendartime_covid_hosp_VE_all:
-    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_hosp all boost
-    needs: [data_selection_VE_boost]
-    outputs:
-      highly_sensitive:
-        data: output/model/VE_boost/data*unmatched_calendartime_covid_hosp_all.rds
-        formulas: output/model/VE_boost/formulas*unmatched_calendartime_covid_hosp_all.rds
-      moderately_sensitive:
-        logs: output/model/VE_boost/log_cox_preflight_unmatched_calendartime_covid_hosp_all.txt
-  
-  # model
-  cox_boost_model_unmatched_calendartime_covid_hosp_VE_all:
-    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_hosp all boost
-    needs: [data_selection_VE_boost, table_irr_boost_unmatched_all, cox_boost_preflight_unmatched_calendartime_covid_hosp_VE_all]
-    outputs:
-      highly_sensitive:
-        data: output/model/VE_boost/modelcox*unmatched_calendartime_covid_hosp_all.rds
-      moderately_sensitive:
-        csv: output/model/VE_boost/modelcox*unmatched_calendartime_covid_hosp_all.csv
-        logs: output/model/VE_boost/log_cox_model_unmatched_calendartime_covid_hosp_all.txt
 
   ### unmatched calendartimefull all
   # preflight
@@ -1962,29 +1916,6 @@ actions:
         csv: output/model/VE_boost/modelcox*matched_persontime_covid_death_all.csv
         logs: output/model/VE_boost/log_cox_model_matched_persontime_covid_death_all.txt
         
-  ### unmatched calendartime all
-  # preflight
-  cox_boost_preflight_unmatched_calendartime_covid_death_VE_all:
-    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_death all boost
-    needs: [data_selection_VE_boost]
-    outputs:
-      highly_sensitive:
-        data: output/model/VE_boost/data*unmatched_calendartime_covid_death_all.rds
-        formulas: output/model/VE_boost/formulas*unmatched_calendartime_covid_death_all.rds
-      moderately_sensitive:
-        logs: output/model/VE_boost/log_cox_preflight_unmatched_calendartime_covid_death_all.txt
-  
-  # model
-  cox_boost_model_unmatched_calendartime_covid_death_VE_all:
-    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_death all boost
-    needs: [data_selection_VE_boost, table_irr_boost_unmatched_all, cox_boost_preflight_unmatched_calendartime_covid_death_VE_all]
-    outputs:
-      highly_sensitive:
-        data: output/model/VE_boost/modelcox*unmatched_calendartime_covid_death_all.rds
-      moderately_sensitive:
-        csv: output/model/VE_boost/modelcox*unmatched_calendartime_covid_death_all.csv
-        logs: output/model/VE_boost/log_cox_model_unmatched_calendartime_covid_death_all.txt
-        
   ### unmatched calendartimefull all
   # preflight
   cox_boost_preflight_unmatched_calendartimefull_covid_death_VE_all:
@@ -2126,29 +2057,6 @@ actions:
       moderately_sensitive:
         csv: output/model/VE_boost/modelcox*matched_persontime_noncovid_death_all.csv
         logs: output/model/VE_boost/log_cox_model_matched_persontime_noncovid_death_all.txt
-        
-  ### unmatched calendartime all
-  # preflight
-  cox_boost_preflight_unmatched_calendartime_noncovid_death_VE_all:
-    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime noncovid_death all boost
-    needs: [data_selection_VE_boost]
-    outputs:
-      highly_sensitive:
-        data: output/model/VE_boost/data*unmatched_calendartime_noncovid_death_all.rds
-        formulas: output/model/VE_boost/formulas*unmatched_calendartime_noncovid_death_all.rds
-      moderately_sensitive:
-        logs: output/model/VE_boost/log_cox_preflight_unmatched_calendartime_noncovid_death_all.txt
-  
-  # model
-  cox_boost_model_unmatched_calendartime_noncovid_death_VE_all:
-    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime noncovid_death all boost
-    needs: [data_selection_VE_boost, table_irr_boost_unmatched_all, cox_boost_preflight_unmatched_calendartime_noncovid_death_VE_all]
-    outputs:
-      highly_sensitive:
-        data: output/model/VE_boost/modelcox*unmatched_calendartime_noncovid_death_all.rds
-      moderately_sensitive:
-        csv: output/model/VE_boost/modelcox*unmatched_calendartime_noncovid_death_all.csv
-        logs: output/model/VE_boost/log_cox_model_unmatched_calendartime_noncovid_death_all.txt
         
   ### unmatched calendartimefull all
   # preflight
