@@ -27,7 +27,7 @@ if(length(args)==0){
   vaccine = "primary"
 } else {
   matching_status = args[[1]] # can be unmatched or matched
-  subgroup = args[[2]] # can be all, CKD, dialysis, or transplant
+  subgroup = args[[2]] # can be all / CKD3 / CKD4-5 / RRT
   vaccine = args[[3]] # can be primary or boost
 }
 
@@ -100,33 +100,33 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
       valid_outcome = get(ind_endpoint),
   
       ## Select minimum date of censorship or outcome - used to exclude from analysis
-      exclusion_date = pmin(censor_date, outcome_date, na.rm=TRUE),
+      stop_date = pmin(censor_date, outcome_date, na.rm=TRUE),
       
       ## Time to censorship or outcome
-      tte_exclusion = tte(vax2_date - 1, exclusion_date, exclusion_date)
+      tte_stop = tte(vax2_date - 1, stop_date, na.censor=TRUE)
     )
    
   if (vaccine=="primary") {
     data_cohort_irr = data_cohort_irr %>%
       mutate(
       ## Person-days contributed to window 1
-      persondays_window1 = ifelse(tte_exclusion>postvaxcuts[1] & tte_exclusion<=postvaxcuts[2], tte_exclusion, period_length),
+      persondays_window1 = ifelse(tte_stop>postvaxcuts[1] & tte_stop<=postvaxcuts[2], tte_stop, period_length),
       
       ## Person-days contributed to window 2
-      persondays_window2 = ifelse(tte_exclusion>postvaxcuts[2] & tte_exclusion<=postvaxcuts[3], tte_exclusion-postvaxcuts[2], period_length),
-      persondays_window2 = ifelse(tte_exclusion<=postvaxcuts[2], 0, persondays_window2),
+      persondays_window2 = ifelse(tte_stop>postvaxcuts[2] & tte_stop<=postvaxcuts[3], tte_stop-postvaxcuts[2], period_length),
+      persondays_window2 = ifelse(tte_stop<=postvaxcuts[2], 0, persondays_window2),
       
       ## Person-days contributed to window 3
-      persondays_window3 = ifelse(tte_exclusion>postvaxcuts[3] & tte_exclusion<=postvaxcuts[4], tte_exclusion-postvaxcuts[3], period_length),
-      persondays_window3 = ifelse(tte_exclusion<=postvaxcuts[3], 0, persondays_window3),
+      persondays_window3 = ifelse(tte_stop>postvaxcuts[3] & tte_stop<=postvaxcuts[4], tte_stop-postvaxcuts[3], period_length),
+      persondays_window3 = ifelse(tte_stop<=postvaxcuts[3], 0, persondays_window3),
       
       ## Person-days contributed to window 4 (all follow-up)
-      persondays_window4 = tte_exclusion
+      persondays_window4 = tte_stop
     )
   } else {
     data_cohort_irr = data_cohort_irr %>%
       mutate(
-        persondays_window1 = tte_exclusion
+        persondays_window1 = tte_stop
       )
   }
   
@@ -151,12 +151,12 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
   
 ## Calculate vaccine-specific N, event rates, person-time, and rates
   for (i in 1:nrow(postvax_irr)) {
-    postvax_irr$BNT_n[i] = sum(data_cohort_BNT$tte_exclusion>=postvax_irr$period_start[i])
+    postvax_irr$BNT_n[i] = sum(data_cohort_BNT$tte_stop>=postvax_irr$period_start[i])
     postvax_irr$BNT_events[i] = sum(data_cohort_BNT$valid_outcome==TRUE & data_cohort_BNT[,tte_endpoint]>=postvax_irr$period_start[i] & data_cohort_BNT[,tte_endpoint]<=postvax_irr$period_end[i], na.rm = T)
     postvax_irr$BNT_personyears[i] = round(sum(data_cohort_BNT[,paste0("persondays_window",i)])/365.25,2)
     postvax_irr$BNT_rate[i] = round(postvax_irr$BNT_events[i]/postvax_irr$BNT_personyears[i]*1000,2)
 
-    postvax_irr$AZ_n[i] = sum(data_cohort_AZ$tte_exclusion>=postvax_irr$period_start[i])
+    postvax_irr$AZ_n[i] = sum(data_cohort_AZ$tte_stop>=postvax_irr$period_start[i])
     postvax_irr$AZ_events[i] = sum(data_cohort_AZ$valid_outcome==TRUE & data_cohort_AZ[,tte_endpoint]>=postvax_irr$period_start[i] & data_cohort_AZ[,tte_endpoint]<=postvax_irr$period_end[i], na.rm = T)
     postvax_irr$AZ_personyears[i] = round(sum(data_cohort_AZ[,paste0("persondays_window",i)])/365.25,2)
     postvax_irr$AZ_rate[i] = round(postvax_irr$AZ_events[i]/postvax_irr$AZ_personyears[i]*1000,2)

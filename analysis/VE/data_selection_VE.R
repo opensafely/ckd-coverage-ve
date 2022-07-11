@@ -173,7 +173,7 @@ data_cohort <- data_criteria %>%
     vax2_day = as.integer(floor((vax2_date - first_az))+1), # day 1 is the day first dose 1 given
     vax1_week = as.integer(floor((vax1_date - first_az)/7)+1), # week 1 is days 1-7
     vax2_week = as.integer(floor((vax2_date - first_az)/7)+1), # week 1 is days 1-7
-    week_region = paste0(vax2_week, "__", region),
+    week_region = paste0(vax2_week, "_", region),
     vax2_az = (vax2_type=="az")*1
   )
 
@@ -223,7 +223,7 @@ data_flowchart <- data_criteria %>%
       crit == "c8" ~ "  post-vaccination outcomes recorded after second dose",
       crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, or housebound",
       crit == "c10" ~ "  not censored before second dose",
-      crit == "c11" ~ "  no COVID in 90 days before dose 1",
+      crit == "c11" ~ "  no SARS-CoV-2 in window spanning 90 days before dose 1",
       TRUE ~ NA_character_
     )
   )
@@ -325,7 +325,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   write_rds(data_matched, here::here("output", "data", "data_cohort_VE_matched.rds"), compress="gz")
   write_csv(data_matched, here::here("output", "data", "data_cohort_VE_matched.csv"))
   
-  # Define selection criteria ----
+  ## Define selection criteria
   data_criteria <- data_cohort %>%
     transmute(
       patient_id,

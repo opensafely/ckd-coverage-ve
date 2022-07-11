@@ -28,9 +28,9 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
-  timescale = "calendartimefull"
-  selected_outcome = "covid_postest"
-  subgroup = "all"
+  timescale = "persontime"
+  selected_outcome = "covid_death"
+  subgroup = "RRT"
   vaccine = "boost"
 } else {
   db = args[[1]]
@@ -40,25 +40,22 @@ if(length(args)==0){
   vaccine = args[[5]]
 }
 
-## Import data
-full = timescale == "persontime"
-if (full) {
-  ## Get data for full model
-  data_cox_full <- read_rds(here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
-  ## Check dataset not empty
-  if (nrow(data_cox_full) == 0) {
-    # log
-    try(stop("Not enough events to fit model."))
-  }
+## Import data for full model
+data_cox_full <- read_rds(here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
+full = nrow(data_cox_full) > 0
+
+## Check dataset not empty
+if (!full) {
+  try(stop("Not enough events to fit model."))
 }
 
 ## Read data for stratified model
 data_cox_strata <- read_rds(here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
 strata = nrow(data_cox_strata) > 0
+
 ## Check dataset not empty
-if (!strata & timescale == "calendartime") {
-  # log
-  try(stop("Not enough events to fit model with calendar timescale."))
+if (!strata & vaccine == "primary" & subgroup=="all") {
+  try(stop("Not enough events to fit stratified model."))
 }
 
 ## Import formulas 
@@ -66,6 +63,7 @@ if (full) {
   formulas_full <- read_rds(
     here::here("output", "model", paste0("VE_",vaccine), glue("formulas_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
 }
+
 if (strata) {
   formulas_strata <- read_rds(
     here::here("output", "model", paste0("VE_",vaccine), glue("formulas_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")))
@@ -86,22 +84,19 @@ if (vaccine=="primary") {
 outcome_index = which(outcomes_list$short_name == selected_outcome)
 selected_outcome_clean = outcomes_list$clean_name[outcome_index]
 
+## Import postvax timepoints
 if (vaccine=="primary") {
-  ## Import postvax_list
   postvax_list <- read_rds(
     here::here("output", "lib", "postvax_list.rds")
   )
-  lastfupday = max(postvax_list$postvaxcuts)
-
 } else if (vaccine=="boost") {
-  ## Import postboost_list
   postvax_list <- read_rds(
     here::here("output", "lib", "postboost_list.rds")
   )
-  lastfupday = max(postvax_list$postvaxcuts)
 } else {
   stop ("Arguments not specified correctly.")
 }
+lastfupday = max(postvax_list$postvaxcuts)
 
 ## Read in incidence rate ratio table
 irr_table = read_rds(here::here("output", "tables", glue("table_irr_{vaccine}_redacted_{db}_{subgroup}.rds"))) %>%
@@ -113,12 +108,6 @@ irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", 
 if (vaccine=="primary") {
   irr_sub_strata <- irr_sub %>% filter(period %in% postvax_list$postvax_periods)
   irr_sub_full <- irr_sub %>% filter(!(period %in% postvax_list$postvax_periods))
-  
-  ## Override strata with full time period for 'calendertimefull' implementation
-  if (timescale=="calendartimefull") {
-    irr_sub_strata = irr_sub_full
-  }
-  
 } else if (vaccine=="boost") {
   irr_sub_strata <- irr_sub %>% filter(period %in% postvax_list$postvax_periods)
   irr_sub_full <- irr_sub_strata
@@ -158,6 +147,7 @@ logoutput(
 # number = 0; stratified = TRUE
 
 cox_model_VE <- function(number, stratified=TRUE) {
+  assign("last.warning", NULL, envir = baseenv())
   if (number==0) model_type = "unadjusted"
   if (number==1) model_type = "region/date adjusted"
   if (number==2) model_type = "fully adjusted"
@@ -167,8 +157,6 @@ cox_model_VE <- function(number, stratified=TRUE) {
   } else {
     formula_cox <- formulas_full[[formula_index]]
   }
-  
-  if (timescale == "calendartime" & !stratified) stop("Must set stratified=TRUE if using calendar timescale")
   
   if (stratified) {
     ## If stratified = TRUE, fit cox model stratified by follow-up window
@@ -246,6 +234,7 @@ redact_glance <- function(.data) {
   return(.data)
 }
 
+## Run full models
 if (full) {
   if (db == "matched") {
     summary0_full <- cox_model_VE(0, stratified=FALSE)
@@ -308,7 +297,7 @@ write_csv(
   here::here("output", "model", paste0("VE_",vaccine), glue("modelcox_tidy_full_{db}_{timescale}_{selected_outcome}_{subgroup}.csv"))
 )
 
-
+## Run sratified models
 if (strata) {
   if (db == "matched") {
     summary0_strata <- cox_model_VE(0, stratified=TRUE)

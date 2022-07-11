@@ -64,17 +64,12 @@ if (db == "unmatched" & vaccine == "primary") {
   stop ("Arguments not specified correctly.")
 }
 
+## Stop if argument combination does not match analysis plan
 if (db == "matched" & timescale == "calendartime") stop ("Do not fit matched calendar time model.")
 if (subgroup != "all" & timescale == "calendartime") stop ("Do not fit calendar time model to subgroups.")
 
 ## Import data and process dates
 data_cohort <- read_rds(here::here("output", "data", input_name)) %>%
-  # to avoid timestamps causing inequalities for dates on the same day
-  mutate(across(where(is.Date), 
-                ~ floor_date(
-                  as.Date(.x, format="%Y-%m-%d"),
-                  unit = "days"))
-  ) %>%
   ## Define vaccination date for start of follow-up
   mutate(vax_date = get(selected_vax_date), 
          vax_day = get(selected_vax_day)
@@ -152,7 +147,7 @@ logoutput(
   glue("vaccine = {vaccine}")
 )
 
-### Print dataset size
+## Print dataset size
 logoutput(
   "data_cohort:",
   glue("data size = ", nrow(data_cohort)),
@@ -224,7 +219,8 @@ data_tte <- data_cohort %>%
     tte_outcome = tte(
       origin_date = vax_date-1, 
       event_date = outcome_date, 
-      censor_date = censor_date
+      censor_date = censor_date,
+      na.censor = TRUE
     )
   )
 
@@ -242,8 +238,8 @@ if (timescale == "calendartime") {
     .data %>%
       # time since the earliest vax_date in the dataset
       mutate(rescale = as.integer(vax_date - min(vax_date)),
-             unscaled_tte_outcome = tte_outcome,
-             unscaled_tte_censor = tte_censor) %>%
+             unscaled_tte_censor = tte_censor,
+             unscaled_tte_outcome = tte_outcome) %>%
       mutate(across(starts_with(c("tte", "tstart", "tstop")),
                     ~ .x + rescale)) %>%
       select(-rescale)
@@ -278,7 +274,7 @@ if (strata) {
     id = patient_id,
     tstart = 0L,
     tstop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-    ind_outcome = event(tte_outcome, ind_outcome)
+    ind_outcome = event(tte_outcome)
   ) %>%
     tmerge( # create treatment timescale variables
       data1 = .,
@@ -299,7 +295,7 @@ if (strata) {
   data_cox_strata <- data_cox_strata %>% add_covars()
 }
 
-## Cleanup
+## Clean-up
 rm(data_tte, data_cohort)
 
 ################################################################################
@@ -448,8 +444,6 @@ merge_levels <- function(.data, var, strata=FALSE) {
                           as.integer(.x)),
                         levels = 1:(i-1),
                         labels = var_levs)))
-      
-      
     } 
   }
   if (!is.null(data)) data <- data %>% select(all_of(var))
@@ -544,6 +538,7 @@ if (strata) {
       compress = "gz"
     )
     
+  ## Specify stratified unmatched models
   } else if (db == "unmatched") {
     
     ## Categorical vars for formula2
@@ -573,7 +568,6 @@ if (strata) {
       here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")),
       compress = "gz"
     )
-    
   }
 }
 

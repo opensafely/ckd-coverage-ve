@@ -142,7 +142,7 @@ data_criteria <- data_processed %>%
     isnot_endoflife = !endoflife,
     isnot_housebound = !housebound,
     
-    # Not censored pre dose 2
+    # Not censored pre dose dose 3
     isnot_censored_early = tte_censor>0 | is.na(tte_censor),
     
     # No COVID in window spanning 90 days pre dose 1 to day of dose 3
@@ -176,7 +176,7 @@ data_cohort <- data_criteria %>%
     vax1_week = as.integer(floor((vax1_date - first_az)/7)+1), # week 1 is days 1-7
     vax2_week = as.integer(floor((vax2_date - first_az)/7)+1), # week 1 is days 1-7
     vax3_week = as.integer(floor((vax3_date - first_az)/7)+1), # week 1 is days 1-7
-    week_region = paste0(vax3_week, "__", region),
+    week_region = paste0(vax3_week, "_", region),
     vax2_az = (vax2_type=="az")*1 # since comparison group is related to primary schedule (homologous vs heterologous), vax2_az can still be used
   )
 
@@ -329,7 +329,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   write_rds(data_matched, here::here("output", "data", "data_cohort_VE_boost_matched.rds"), compress="gz")
   write_csv(data_matched, here::here("output", "data", "data_cohort_VE_boost_matched.csv"))
   
-  # Define selection criteria ----
+  ## Define selection criteria
   data_criteria <- data_cohort %>%
     transmute(
       patient_id,

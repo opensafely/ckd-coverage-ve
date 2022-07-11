@@ -25,7 +25,7 @@ if(length(args)==0){
   vaccine = "primary"
 } else {
   matching_status = args[[1]] # can be unmatched or matched
-  subgroup = args[[2]] # can be all, CKD, dialysis, or transplant
+  subgroup = args[[2]] # can be all / CKD3 / CKD4-5 / RRT
   vaccine = args[[3]] # can be primary or boost
 }
 
