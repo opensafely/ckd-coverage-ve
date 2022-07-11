@@ -188,7 +188,7 @@ postvax_time <- data_cohort %>%
 surv = c("tstart", "tstop", "ind_outcome") 
 expo = "vax2_az"
 vars0 = "timesincevax_pw"
-vars1 = c("region", "vax_day", "strata_var")
+vars1 = c("vax_day", "jcvi_region")
 vars2_cont = "age"
 vars2_cat = c("sex", "imd", "ethnicity", "rural_urban_group", "ckd_3cat", "multimorb",
               "learning_disability", "sev_mental_ill", "any_immunosuppression", "prior_covid_cat", "prevax_tests_cat")
@@ -270,7 +270,7 @@ add_covars <- function(.data) {
   .data %>%
     left_join(
       data_cohort %>%
-        mutate(strata_var = as.character(glue("{jcvi_group}_{region}"))) %>%
+        mutate(jcvi_region = as.character(glue("{jcvi_group}_{region}"))) %>%
         select(patient_id, all_of(c(expo, vars1, vars2_cont, vars2_cat))),
       by = "patient_id"
     ) %>%
@@ -527,10 +527,10 @@ if (db == "unmatched") {
   
   ## Set formula updates for calendar time vs person time models
   if (timescale == "persontime") {
-    formula1_update <- as.formula(". ~ . + strata(region)*ns(vax_day, 3)")
+    formula1_update <- as.formula(". ~ . + strata(jcvi_region)*ns(vax_day, 3)")
   } 
   if (timescale == "calendartime") {
-    formula1_update <- as.formula(". ~ . + strata(strata_var)")
+    formula1_update <- as.formula(". ~ . + strata(jcvi_region)")
   }
 }
 
