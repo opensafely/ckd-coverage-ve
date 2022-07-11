@@ -31,7 +31,7 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
-  timescale = "persontime"
+  timescale = "calendartime"
   selected_outcome = "covid_postest"
   subgroup = "all"
   vaccine = "primary"
@@ -105,7 +105,6 @@ if (vaccine=="primary") {
     here::here("output", "lib", "postvax_list.rds")
   )
 } else if (vaccine=="boost") {
-  # TODO
   postvax_list <- read_rds(
     here::here("output", "lib", "postboost_list.rds")
   )
@@ -204,10 +203,7 @@ if (subgroup!="all") {
 ### Prepare time to event data for the given outcome
 ####################################################### 
 
-# TODO
-# ensure 85+ cut from boost model
-
-# derive time to event data
+## Derive time to event data
 data_tte <- data_cohort %>%
   transmute(
     
@@ -217,7 +213,7 @@ data_tte <- data_cohort %>%
     outcome_date = get(outcomes_list$date_name[outcome_index]),
     ind_outcome = get(paste0("ind_",selected_outcome)),
     
-    # select vax date
+    ## Select vax date
     vax_date,
     
     ## Censor date already defined in data_selection_VE.R script
@@ -229,10 +225,10 @@ data_tte <- data_cohort %>%
       origin_date = vax_date-1, 
       event_date = outcome_date, 
       censor_date = censor_date
-    ),
+    )
   )
 
-# define full data
+## Define full data
 data_cox_full <- data_tte %>%
   mutate(
     tstart = 0,
@@ -241,22 +237,24 @@ data_cox_full <- data_tte %>%
 
 if (timescale == "calendartime") {
   
-  # function for rescaling variables to calendar timescale
+  ## Function for rescaling variables to calendar timescale
   rescale_calendartime <- function(.data) {
     .data %>%
       # time since the earliest vax_date in the dataset
-      mutate(rescale = as.integer(vax_date - min(vax_date))) %>%
+      mutate(rescale = as.integer(vax_date - min(vax_date)),
+             unscaled_tte_outcome = tte_outcome,
+             unscaled_tte_censor = tte_censor) %>%
       mutate(across(starts_with(c("tte", "tstart", "tstop")),
                     ~ .x + rescale)) %>%
       select(-rescale)
   }
   
-  # apply rescale_calendartime function
+  ## Apply rescale_calendartime function
   data_cox_full <- data_cox_full %>% rescale_calendartime()
   
 }
 
-# function for adding the relevant covariates to the tte data
+## Function for adding the relevant covariates to the tte data
 add_covars <- function(.data) {
   .data %>%
     left_join(
@@ -280,7 +278,7 @@ if (strata) {
     id = patient_id,
     tstart = 0L,
     tstop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-    ind_outcome = event(tte_outcome)
+    ind_outcome = event(tte_outcome, ind_outcome)
   ) %>%
     tmerge( # create treatment timescale variables
       data1 = .,
@@ -288,9 +286,9 @@ if (strata) {
       id = patient_id,
       timesincevax_pw = tdc(fup_day, timesincevax_pw)
     ) %>%
-    # set factor levels for postvaccination periods
+    ## Set factor levels for postvaccination periods
     mutate(across(timesincevax_pw, factor, levels = postvax_periods)) %>%
-    # ind_outcome as logical to match data_tte
+    ## ind_outcome as logical to match data_tte
     mutate(across(ind_outcome, as.logical)) %>%
     as_tibble()
   
@@ -301,7 +299,7 @@ if (strata) {
   data_cox_strata <- data_cox_strata %>% add_covars()
 }
 
-# cleanup
+## Cleanup
 rm(data_tte, data_cohort)
 
 ################################################################################
