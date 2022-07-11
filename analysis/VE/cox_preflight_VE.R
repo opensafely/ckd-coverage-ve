@@ -23,9 +23,10 @@ args <- commandArgs(trailingOnly=TRUE)
 
 ## Set input and output pathways for matched/unmatched data - default is unmatched
 # arg1: db = matched / unmatched
-# arg2: timescale = persontime / calendartime
+# arg2: timescale = persontime / calendartime 
 # arg3: outcome = covid_postest / covid_emergency / covid_hosp / covid_death / noncovid_death
 # arg4: subset = all / CKD3 / CKD4-5 / RRT
+# arg5: vaccine = primary / boost
 
 if(length(args)==0){
   # default (unmatched) file names
@@ -33,22 +34,38 @@ if(length(args)==0){
   timescale = "persontime"
   selected_outcome = "covid_postest"
   subgroup = "all"
+  vaccine = "primary"
 } else {
   db = args[[1]]
   timescale = args[[2]]
   selected_outcome = args[[3]]
   subgroup = args[[4]]
+  vaccine = args[[5]]
 }
 
 ## Specify input data
-if (db == "unmatched") {
+if (db == "unmatched" & vaccine == "primary") { 
   input_name = "data_cohort_VE.rds"
+  selected_vax_date = "vax2_date"
+  selected_vax_day = "vax2_day"
+} else if (db == "matched" & vaccine == "primary") { 
+  input_name = "data_cohort_VE_matched.rds"
+  selected_vax_date = "vax2_date"
+  selected_vax_day = "vax2_day"
+} else if (db == "unmatched" & vaccine == "boost") { 
+  input_name = "data_cohort_VE_boost.rds"
+  selected_vax_date = "vax3_date"
+  selected_vax_day = "vax3_day"
+} else if (db == "matched" & vaccine == "boost") { 
+  input_name = "data_cohort_VE_boost_matched.rds"
+  selected_vax_date = "vax3_date"
+  selected_vax_day = "vax3_day"
 } else {
-  input_name = glue("data_cohort_VE_{db}.rds")
+  stop ("Arguments not specified correctly.")
 }
 
-if (db == "matched" & timescale == "calendartime") stop ("Do not fit matched calendartime model.")
-if (subgroup != "all" & timescale == "calendartime") stop ("Do not fit calendartime model to subgroups.")
+if (db == "matched" & timescale == "calendartime") stop ("Do not fit matched calendar time model.")
+if (subgroup != "all" & timescale == "calendartime") stop ("Do not fit calendar time model to subgroups.")
 
 ## Import data and process dates
 data_cohort <- read_rds(here::here("output", "data", input_name)) %>%
@@ -56,7 +73,12 @@ data_cohort <- read_rds(here::here("output", "data", input_name)) %>%
   mutate(across(where(is.Date), 
                 ~ floor_date(
                   as.Date(.x, format="%Y-%m-%d"),
-                  unit = "days")))
+                  unit = "days"))
+  ) %>%
+  ## Define vaccination date for start of follow-up
+  mutate(vax_date = get(selected_vax_date), 
+         vax_day = get(selected_vax_day)
+  )
 
 ## Select subset
 if (subgroup=="all") {
@@ -67,43 +89,58 @@ if (subgroup=="all") {
   data_cohort = subset(data_cohort, ckd_3cat == "CKD4-5")
 } else if (subgroup=="RRT") {
   data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
+} else {
+  stop ("Arguments not specified correctly.")
 }
 
 ## Import custom user functions and packages
 source(here::here("analysis", "functions.R"))
 
 ## Create directory for full model outputs
-dir.create(here::here("output", "model"), showWarnings = FALSE, recursive=TRUE)
+dir.create(here::here("output", "model", paste0("VE_",vaccine)), showWarnings = FALSE, recursive=TRUE)
+
+## Import outcome time periods
+if (vaccine=="primary") {
+  postvax_list <- read_rds(
+    here::here("output", "lib", "postvax_list.rds")
+  )
+} else if (vaccine=="boost") {
+  # TODO
+  postvax_list <- read_rds(
+    here::here("output", "lib", "postboost_list.rds")
+  )
+} else {
+  stop ("Arguments not specified correctly.")
+}
 
 ## Import outcomes
-outcomes_list <- read_rds(
-  here::here("output", "lib", "outcomes.rds")
-)
+if (vaccine=="primary") {
+  outcomes_list <- read_rds(
+    here::here("output", "lib", "outcomes.rds")
+  )
+} else if (vaccine=="boost") {
+  outcomes_list <- read_rds(
+    here::here("output", "lib", "outcomes_boost.rds")
+  )
+} else {
+  stop ("Arguments not specified correctly.")
+}
 outcome_index = which(outcomes_list$short_name == selected_outcome)
 selected_outcome_clean = outcomes_list$clean_name[outcome_index]
 selected_outcome_date_name = outcomes_list$date_name[outcome_index]
-
-## Import outcome time periods
-postvax_list <- read_rds(
-  here::here("output", "lib", "postvax_list.rds")
-)
-postvaxcuts = postvax_list$postvaxcuts
-postvax_periods = postvax_list$postvax_periods
-period_length = postvaxcuts[2]-postvaxcuts[1]
-lastfupday = max(postvaxcuts)
 
 ## Create log file
 cat(
   glue("## Script info for cox preflight ##"), 
   "  \n", 
-  file = here::here("output", "model", glue("log_cox_preflight_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), 
+  file = here::here("output", "model", paste0("VE_",vaccine), glue("log_cox_preflight_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), 
   append = FALSE
-  )
+)
 
 ## Function to pass additional log text
 logoutput <- function(...){
-  cat(..., file = here::here("output", "model", glue("log_cox_preflight_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), sep = "\n  ", append = TRUE)
-  cat("\n", file = here::here("output", "model", glue("log_cox_preflight_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), sep = "\n  ", append = TRUE)
+  cat(..., file = here::here("output", "model", paste0("VE_",vaccine), glue("log_cox_preflight_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), sep = "\n  ", append = TRUE)
+  cat("\n", file = here::here("output", "model", paste0("VE_",vaccine), glue("log_cox_preflight_{db}_{timescale}_{selected_outcome}_{subgroup}.txt")), sep = "\n  ", append = TRUE)
 }
 
 ## Pass parameters to log file
@@ -112,7 +149,8 @@ logoutput(
   glue("db = {db}"),
   glue("timescale = {timescale}"),
   glue("outcome = {selected_outcome_clean}"),
-  glue("subset = {subgroup}")
+  glue("subset = {subgroup}"),
+  glue("vaccine = {vaccine}")
 )
 
 ### Print dataset size
@@ -123,6 +161,11 @@ logoutput(
 )
 
 ## Create dataset containing one row per patient per post-vaccination period
+postvaxcuts = postvax_list$postvaxcuts
+postvax_periods = postvax_list$postvax_periods
+period_length = postvaxcuts[2]-postvaxcuts[1]
+lastfupday = max(postvaxcuts)
+
 postvax_time <- data_cohort %>%
   select(patient_id) %>%
   uncount(weights = length(postvaxcuts), .id="id_postvax") %>%
@@ -142,128 +185,126 @@ postvax_time <- data_cohort %>%
 ####################################################### 
 ### Specify variables for models
 #######################################################
-surv_strata = c("tstart", "tstop", "ind_outcome") 
-surv_full = c("follow_up_time", "ind_outcome")
+surv = c("tstart", "tstop", "ind_outcome") 
 expo = "vax2_az"
 vars0 = "timesincevax_pw"
-vars1 = c("region", "vax2_day", "strata_var")
+vars1 = c("vax_day", "jcvi_region")
 vars2_cont = "age"
 vars2_cat = c("sex", "imd", "ethnicity", "rural_urban_group", "ckd_3cat", "multimorb",
               "learning_disability", "sev_mental_ill", "any_immunosuppression", "prior_covid_cat", "prevax_tests_cat")
 
 ## Drop ckd_3cat category from subgroup analyses
 if (subgroup!="all") {
-   vars2_cat <- vars2_cat[!(vars2_cat %in% c("ckd_3cat"))]
+  vars2_cat <- vars2_cat[!(vars2_cat %in% c("ckd_3cat"))]
 }
 
 ## Matched models to be run without additional confounder adjustment
 
-
-
 ####################################################### 
 ### Prepare time to event data for the given outcome
 ####################################################### 
-if (timescale == "persontime") {
-  
-  data_tte <- data_cohort %>% 
-    mutate(
-      ## Select dates for outcome in question
-      outcome_date = get(outcomes_list$date_name[outcome_index]),
-      
-      ## Censor date already defined in data_selection_VE.R script 
-      
-      ## Calculate tte and ind for outcome in question
-      tte_outcome = tte(vax2_date-1, outcome_date, censor_date, na.censor=TRUE),
-      ind_outcome = get(paste0("ind_",selected_outcome)),
-      tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-      
-      ## Calculate follow-up time (censor/event)
-      follow_up_time = tte(vax2_date-1, get(outcomes_list$date_name[outcome_index]), censor_date) 
-    ) %>%
-    mutate(across(all_of(vars2_cat), as.factor))
-  
-  data_cox_full <- data_tte %>%
-    select(
-      patient_id,
-      any_of(c(surv_full, expo, vars1, vars2_cont, vars2_cat))
-    ) 
-  
-  ## Create stratified dataset if running for whole population
-  if (subgroup=="all") {
+
+# TODO
+# ensure 85+ cut from boost model
+
+# derive time to event data
+data_tte <- data_cohort %>%
+  transmute(
     
-    data_cox_strata <- tmerge(
-      data1 = data_tte %>% select(-starts_with("ind_"), -ends_with("_date")),
-      data2 = data_tte,
-      id = patient_id,
-      tstart = 0L,
-      tstop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-      ind_outcome = event(tte_outcome)
-    ) %>%
-      tmerge( # create treatment timescale variables
-        data1 = .,
-        data2 = postvax_time,
-        id = patient_id,
-        timesincevax_pw = tdc(fup_day, timesincevax_pw)
-      ) %>%
-      # set factor levels for postvaccination periods
-      mutate(across(timesincevax_pw, factor, levels = postvax_periods)) %>%
-      # ind_outcome as logical to match data_tte
-      mutate(across(ind_outcome, as.logical)) %>%
-      select(
-        patient_id,
-        any_of(c(surv_strata, expo, vars0, vars1, vars2_cont, vars2_cat))
-      ) %>%
-      as_tibble()
+    patient_id,
+    
+    ## Select dates for outcome in question
+    outcome_date = get(outcomes_list$date_name[outcome_index]),
+    ind_outcome = get(paste0("ind_",selected_outcome)),
+    
+    # select vax date
+    vax_date,
+    
+    ## Censor date already defined in data_selection_VE.R script
+    censor_date,
+    tte_censor, 
+    
+    ## Calculate tte and ind for outcome in question
+    tte_outcome = tte(
+      origin_date = vax_date-1, 
+      event_date = outcome_date, 
+      censor_date = censor_date
+    ),
+  )
+
+# define full data
+data_cox_full <- data_tte %>%
+  mutate(
+    tstart = 0,
+    tstop = tte_outcome
+  )
+
+if (timescale == "calendartime") {
+  
+  # function for rescaling variables to calendar timescale
+  rescale_calendartime <- function(.data) {
+    .data %>%
+      # time since the earliest vax_date in the dataset
+      mutate(rescale = as.integer(vax_date - min(vax_date))) %>%
+      mutate(across(starts_with(c("tte", "tstart", "tstop")),
+                    ~ .x + rescale)) %>%
+      select(-rescale)
   }
   
-} else {
-  
-  data_cox_strata <- postvax_time %>%
-    left_join(
-      data_cohort %>%
-        rename(
-          outcome_date = outcomes_list$date_name[outcome_index]
-        ) %>%
-        select(patient_id, censor_date, vax2_date, outcome_date),
-      by = "patient_id"
-    ) %>%
-    mutate(
-      ## Origin date is the day before the earliest vax2 date in dataset
-      min_vax_2_date = min(vax2_date) - days(1),
-      ## Individual start date for a given period is the day before the vax2 date
-      start_date = vax2_date + (id_postvax - 1)*period_length - days(1),
-      ## End date of a period is min of:
-      end_date = pmin(start_date + period_length, censor_date, outcome_date, na.rm=TRUE)
-    ) %>%
-    ## Remove samples for which end_date<=start_date:
-    filter(start_date < end_date) %>%
-    ## Outcome indicator
-    mutate(ind_outcome = !is.na(outcome_date) & outcome_date == end_date) %>%
-    ## Replace outcome_date and censor_date with missing if they don't occur between start_date and end_date
-    mutate(across(c(outcome_date, censor_date),
-                  ~if_else(
-                    !is.na(.x) & start_date < .x & .x <= end_date,
-                    .x,
-                    as.Date(NA_character_)
-                  ))) %>%
-    ## Calendar time-scale: time since min_vax_2_date
-    mutate(across(c(start_date, end_date),
-                  ~ as.integer(.x - min_vax_2_date))) %>%
-    select(patient_id, id_postvax, timesincevax_pw, ind_outcome,
-           tstart = start_date, tstop = end_date) %>%
-    left_join(
-      data_cohort %>%
-        mutate(strata_var = as.character(glue("{jcvi_group}_{region}"))) %>%
-        select(patient_id, all_of(c(expo, vars1, vars2_cont, vars2_cat))),
-      by = "patient_id"
-    )
-  
-  data_cox_full <- data_cox_strata
+  # apply rescale_calendartime function
+  data_cox_full <- data_cox_full %>% rescale_calendartime()
   
 }
 
+# function for adding the relevant covariates to the tte data
+add_covars <- function(.data) {
+  .data %>%
+    left_join(
+      data_cohort %>%
+        mutate(jcvi_region = as.character(glue("{jcvi_group}_{region}"))) %>%
+        select(patient_id, all_of(c(expo, vars1, vars2_cont, vars2_cat))),
+      by = "patient_id"
+    ) %>%
+    mutate(across(all_of(vars2_cat), as.factor))
+}
+
+data_cox_full <- data_cox_full %>% add_covars()
+
+## Create stratified dataset if running model for primary schedule in whole population
+if (subgroup=="all" & vaccine=="primary") strata <- TRUE else strata <- FALSE
+
+if (strata) {
+  data_cox_strata <- tmerge(
+    data1 = data_tte %>% select(-ind_outcome, -censor_date, -outcome_date),
+    data2 = data_tte,
+    id = patient_id,
+    tstart = 0L,
+    tstop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
+    ind_outcome = event(tte_outcome)
+  ) %>%
+    tmerge( # create treatment timescale variables
+      data1 = .,
+      data2 = postvax_time,
+      id = patient_id,
+      timesincevax_pw = tdc(fup_day, timesincevax_pw)
+    ) %>%
+    # set factor levels for postvaccination periods
+    mutate(across(timesincevax_pw, factor, levels = postvax_periods)) %>%
+    # ind_outcome as logical to match data_tte
+    mutate(across(ind_outcome, as.logical)) %>%
+    as_tibble()
+  
+  if (timescale == "calendartime") {
+    data_cox_strata <- data_cox_strata %>% rescale_calendartime()
+  }
+  
+  data_cox_strata <- data_cox_strata %>% add_covars()
+}
+
+# cleanup
 rm(data_tte, data_cohort)
 
+################################################################################
 ## Check if >2 events for each level of expo in full data
 check_events_full <- data_cox_full %>%
   group_by(across(all_of(expo))) %>%
@@ -271,30 +312,28 @@ check_events_full <- data_cox_full %>%
   ungroup() 
 full = all(check_events_full$total_events > events_threshold) 
 
-if (!full | timescale == "calendartime") {
-  ## Save empty outputs if not enough events to model or if calendar timescale
+if (!full) {
+  ## Save empty outputs if not enough events to model
   write_rds(
     tibble(),
-    here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
+    here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
   )
   write_rds(
     list(),
-    here::here("output", "model", glue("formulas_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
+    here::here("output", "model", paste0("VE_",vaccine), glue("formulas_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
   )
-}
-if (!full) {
   ## Stop the script if too few events to model
   error_message = "Too few outcome events to model."
   logoutput(error_message)
   ## Wrap in try() to avoid the job from exiting with error code 1
   try(stop(error_message))
-} 
+}
 
-## If not a subgroup analysis, specify stratified dataset 
-if (subgroup=="all") {
+## Specify stratified dataset
+if (strata) {
   ## Only keep postvaxcuts during which there are >2 events for each level of expo
   data_cox_strata_keep <- data_cox_strata %>%
-    filter(!is.na(timesincevax_pw) & timesincevax_pw!="183+") %>% ## Added to cut periods of 1-14d and 183d+
+    filter(!is.na(timesincevax_pw) & timesincevax_pw!="183+") %>% ## Added to cut periods of 1-14d and 183d+ (primary)
     group_by(across(all_of(c(vars0, expo)))) %>%
     mutate(check_events_strata = sum(ind_outcome)) %>%
     ungroup() %>%
@@ -307,33 +346,26 @@ if (subgroup=="all") {
   
   ## Strata controls whether to process data for stratified models
   strata = nrow(data_cox_strata_keep) > 0
-} else {
-  ## Set strata to FALSE for subgroup models to avoid downstream logic errors
-  strata=FALSE
-}
+} 
 
 if (!strata) {
-  error_message = "Not enough events for stratified model."
+  if (vaccine=="primary" & subgroup=="all") {
+    error_message = "Not enough events for stratified model."
+  } else {
+    error_message = "Stratified model excluded."
+  }
   logoutput(error_message)
   ## Save empty outputs
   write_rds(
     tibble(),
-    here::here("output", "model", glue("data_cox_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")),
+    here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")),
     compress = "gz"
   )
   write_rds(
     tibble(),
-    here::here("output", "model", glue("formulas_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
+    here::here("output", "model", paste0("VE_",vaccine), glue("formulas_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
   )
 }
-
-if (timescale == "calendartime" & !strata) {
-  error_message = "Cannot fit calendar time model."
-  logoutput(error_message)
-  try(stop(error_message))
-}
-
-
 
 ####################################################### 
 ### Pre-flight functions
@@ -349,7 +381,7 @@ merge_levels <- function(.data, var, strata=FALSE) {
   old_levs <- levels(.data[[var]])
   ## Which variables do we want to reorder by frequency of events?
   if (var %in% c("ethnicity", "rural_urban_group")) {
-  ## if (length(old_levs) > 2) {
+    ## if (length(old_levs) > 2) {
     new_levs <- .data %>%
       filter(ind_outcome) %>%
       group_by(across(all_of(var))) %>%
@@ -445,7 +477,7 @@ merge_summary <- function(data_in) {
   out <- str_c(
     c(glue("Merge summary for \"{name_data}\" ----"), " ", out_drop, " ", out_keep), 
     collapse = "\n"
-    )
+  )
   return(out)
 }
 
@@ -454,12 +486,13 @@ merge_summary <- function(data_in) {
 ### Run pre-flight functions
 ####################################################### 
 
-### Full models: run for unmatched person-time models (all and subgroup)
-if (db == "unmatched" & timescale == "persontime") {
-  ## Merge levels in full dataset
+## Run pre-flight merging for unmatched data
+if (db == "unmatched") {
+  ### Full unmatched person-time models (all and subgroup)
+  # Merge levels in full dataset
   data_cox_full_merged <- data_cox_full %>%
     select(-all_of(vars2_cat)) %>%
-    ## Join merged variables
+    # Join merged variables
     bind_cols(
       lapply(
         vars2_cat, 
@@ -467,101 +500,108 @@ if (db == "unmatched" & timescale == "persontime") {
       )
     )
   logoutput(merge_summary(data_cox_full_merged))
-}
-
-## Stratified models: run for unmatched, excluding subgroup analyses (where strata = FALSE)
-if (db == "unmatched" & strata) {
-  ## Merge levels in stratified dataset
-  data_cox_strata_merged <- data_cox_strata_keep %>%
-    select(-all_of(vars2_cat)) %>%
-    ## Join merged variables
-    bind_cols(
-      lapply(
-        vars2_cat, 
-        function(x) data_cox_strata_keep %>% merge_levels(var = x, strata = TRUE)
+  
+  ## Stratified unmatched models, excluding subgroup analyses or booster analyses (where strata = FALSE)
+  if (strata) {
+    ## Merge levels in stratified dataset
+    data_cox_strata_merged <- data_cox_strata_keep %>%
+      select(-all_of(vars2_cat)) %>%
+      ## Join merged variables
+      bind_cols(
+        lapply(
+          vars2_cat, 
+          function(x) data_cox_strata_keep %>% merge_levels(var = x, strata = TRUE)
+        )
       )
-    )
-  logoutput(merge_summary(data_cox_strata_merged))
-}
-
-## Set formula updates for calendartime vs persontime models
-if (db == "unmatched" & timescale == "persontime") {
-  formula1_update <- as.formula(". ~ . + strata(region)*ns(vax2_day, 3)")
-} 
-if (db == "unmatched" & timescale == "calendartime") {
-  formula1_update <- as.formula(". ~ . + strata(strata_var)")
+    logoutput(merge_summary(data_cox_strata_merged))
+  }
+  
+  ## Set formula updates for calendar time vs person time models
+  if (timescale == "persontime") {
+    formula1_update <- as.formula(". ~ . + strata(jcvi_region)*ns(vax_day, 3)")
+  } 
+  if (timescale == "calendartime") {
+    formula1_update <- as.formula(". ~ . + strata(jcvi_region)")
+  }
 }
 
 ## Specify stratified matched models
-if (db == "matched" & strata) {
-  formula0_strata <- as.formula(glue("Surv(tstart, tstop, ind_outcome) ~ {expo}:strata({vars0})"))
-  formulas_strata <- list(formula0_strata)
+if (strata) {
   
-  ## Save formulas
-  write_rds(
-    formulas_strata,
-    here::here("output", "model", glue("formulas_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
-  )
-  ## Save data
-  write_rds(
-    data_cox_strata_keep, # Full stratified dataset rather than merged dataset
-    here::here("output", "model", glue("data_cox_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")),
-    compress = "gz"
-  )
-}
-
-## Specify stratified unmatched models
-if (db == "unmatched" & strata) {
-  ## Categorical vars for formula2
-  vars2_formula_strata <- str_c(
-    vars2_cat[vars2_cat %in% names(data_cox_strata_merged)], 
-    collapse = " + "
-  )
-  if (vars2_formula_strata == "") {
-    formula2_update_strata <- as.formula(glue(". ~ . + poly(age, degree = 2, raw = TRUE)"))
-  } else {
-    formula2_update_strata <- as.formula(glue(". ~ . + poly(age, degree = 2, raw = TRUE) + {vars2_formula_strata}"))
+  formula0_strata <- as.formula(glue("Surv(tstart, tstop, ind_outcome) ~ {expo}:strata({vars0})"))
+  
+  if (db == "matched") {
+    
+    formulas_strata <- list(formula0_strata)
+    
+    ## Save formulas
+    write_rds(
+      formulas_strata,
+      here::here("output", "model", paste0("VE_",vaccine), glue("formulas_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
+    )
+    ## Save data
+    write_rds(
+      data_cox_strata_keep, # Full stratified dataset rather than merged dataset
+      here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")),
+      compress = "gz"
+    )
+    
+  } else if (db == "unmatched") {
+    
+    ## Categorical vars for formula2
+    vars2_formula_strata <- str_c(
+      vars2_cat[vars2_cat %in% names(data_cox_strata_merged)], 
+      collapse = " + "
+    )
+    if (vars2_formula_strata == "") {
+      formula2_update_strata <- as.formula(glue(". ~ . + poly(age, degree = 2, raw = TRUE)"))
+    } else {
+      formula2_update_strata <- as.formula(glue(". ~ . + poly(age, degree = 2, raw = TRUE) + {vars2_formula_strata}"))
+    }
+    
+    ## Final formulas
+    formula1_strata <- formula0_strata %>% update(formula1_update)
+    formula2_strata <- formula1_strata %>% update(formula2_update_strata)
+    formulas_strata <- list(formula0_strata, formula1_strata, formula2_strata)
+    
+    ## Save formulas
+    write_rds(
+      formulas_strata,
+      here::here("output", "model", paste0("VE_",vaccine), glue("formulas_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
+    )
+    ## Save data
+    write_rds(
+      data_cox_strata_merged,
+      here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")),
+      compress = "gz"
+    )
+    
   }
-  
-  ## Final formulas
-  formula0_strata <- as.formula(glue("Surv(tstart, tstop, ind_outcome) ~ {expo}:strata({vars0})"))
-  formula1_strata <- formula0_strata %>% update(formula1_update)
-  formula2_strata <- formula1_strata %>% update(formula2_update_strata)
-  formulas_strata <- list(formula0_strata, formula1_strata, formula2_strata)
-  
-  ## Save formulas
-  write_rds(
-    formulas_strata,
-    here::here("output", "model", glue("formulas_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
-  )
-  ## Save data
-  write_rds(
-    data_cox_strata_merged,
-    here::here("output", "model", glue("data_cox_strata_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")),
-    compress = "gz"
-  )
 }
 
 ## Specify full matched model
-if (db == "matched" & timescale == "persontime") {
-    formula0_full <- as.formula(glue("Surv(follow_up_time, ind_outcome) ~ {expo}"))
-    formulas_full <- list(formula0_full)
+formula0_full <- as.formula(glue("Surv(tstart, tstop, ind_outcome) ~ {expo}"))
+
+if (db == "matched") {
+  
+  formulas_full <- list(formula0_full)
   
   ## Save formulas
   write_rds(
     formulas_full,
-    here::here("output", "model", glue("formulas_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
+    here::here("output", "model", paste0("VE_",vaccine), glue("formulas_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
   )
   ## Save data
   write_rds(
     data_cox_full, # Full dataset rather than merged dataset
-    here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")),
+    here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")),
     compress = "gz"
   )
+  
 }
 
 ## Specify full unmatched model
-if (db == "unmatched" & timescale == "persontime") {
+if (db == "unmatched") {
   
   ## Categorical vars for formula2
   vars2_formula_full <- str_c(
@@ -576,7 +616,6 @@ if (db == "unmatched" & timescale == "persontime") {
   }
   
   ## Final formulas
-  formula0_full <- as.formula(glue("Surv(follow_up_time, ind_outcome) ~ {expo}"))
   formula1_full <- formula0_full %>% update(formula1_update)
   formula2_full <- formula1_full %>% update(formula2_update_full)
   formulas_full <- list(formula0_full, formula1_full, formula2_full)
@@ -584,12 +623,12 @@ if (db == "unmatched" & timescale == "persontime") {
   ## Save formulas
   write_rds(
     formulas_full,
-    here::here("output", "model", glue("formulas_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
+    here::here("output", "model", paste0("VE_",vaccine), glue("formulas_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds"))
   )
   ## Save data
   write_rds(
     data_cox_full_merged,
-    here::here("output", "model", glue("data_cox_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")),
+    here::here("output", "model", paste0("VE_",vaccine), glue("data_cox_full_{db}_{timescale}_{selected_outcome}_{subgroup}.rds")),
     compress = "gz"
   )
 }
@@ -601,12 +640,13 @@ print.f <- function(f) {
 
 ## Print formulas to log file
 logoutput("Formulas for the full model:")
-if (db == "matched" & timescale == "persontime") {
+
+if (db == "matched") {
   logoutput(
     "\nformula0----\n",
     print.f(formulas_full[[1]])
   )
-} else if (db == "unmatched" & timescale == "persontime") {
+} else if (db == "unmatched") {
   logoutput(
     "\nformula0----\n",
     print.f(formulas_full[[1]]),
@@ -616,37 +656,32 @@ if (db == "matched" & timescale == "persontime") {
     print.f(formulas_full[[3]]),
     "\n------\n"
   )
-} else {
-  logoutput(
-    "No full model when using calendar timescale."
-  )
 }
 
-logoutput("Formulas for the stratified model:")
-if (subgroup!="all") {
-  logoutput(
-    "Stratified model not specified for subgroup analysis."
-  )
-} else if (db == "matched" & strata) {
-  logoutput(
-    "\nformula0----\n",
-    print.f(formulas_strata[[1]]),
-    "\n------\n"
-  )
-} else if (db == "unmatched" & strata) {
-  logoutput(
-    "\nformula0----\n",
-    print.f(formulas_strata[[1]]),
-    "\nformula1----\n",
-    print.f(formulas_strata[[2]]),
-    "\nformula2----\n",
-    print.f(formulas_strata[[3]]),
-    "\n------\n"
-  )
-} else {
-  logoutput(
-    "Not enough events for the stratified model."
-  )
+if (strata) {
+  
+  logoutput("Formulas for the stratified model:")
+  
+  if (db == "matched") {
+    logoutput(
+      "\nformula0----\n",
+      print.f(formulas_strata[[1]]),
+      "\n------\n"
+    )
+  }
+  
+  if (db == "unmatched") {
+    logoutput(
+      "\nformula0----\n",
+      print.f(formulas_strata[[1]]),
+      "\nformula1----\n",
+      print.f(formulas_strata[[2]]),
+      "\nformula2----\n",
+      print.f(formulas_strata[[3]]),
+      "\n------\n"
+    )
+    
+  }
 }
 
 ## Print dataset size and save outputs
@@ -678,4 +713,3 @@ if (db == "matched" & strata) {
     glue("memory usage = ", format(object.size(data_cox_strata_keep), units="GB", standard="SI", digits=3L))
   )
 }
-
