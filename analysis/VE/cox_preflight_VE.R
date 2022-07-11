@@ -228,17 +228,8 @@ data_tte <- data_cohort %>%
     tte_outcome = tte(
       origin_date = vax_date-1, 
       event_date = outcome_date, 
-      censor_date = censor_date#, 
-      # na.censor=TRUE
+      censor_date = censor_date
     ),
-    
-    # tte_stop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-    # ## Calculate follow-up time (censor/event)
-    # follow_up = tte(
-    #   origin_date = vax_date-1, 
-    #   event_date = outcome_date, 
-    #   censor_date = censor_date
-    # )
   )
 
 # define full data
@@ -255,7 +246,7 @@ if (timescale == "calendartime") {
     .data %>%
       # time since the earliest vax_date in the dataset
       mutate(rescale = as.integer(vax_date - min(vax_date))) %>%
-      mutate(across(starts_with(c("tte", "follow_up", "tstart", "tstop")),
+      mutate(across(starts_with(c("tte", "tstart", "tstop")),
                     ~ .x + rescale)) %>%
       select(-rescale)
   }
