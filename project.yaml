@@ -2076,4 +2076,4 @@ actions:
     - cox_boost_model_unmatched_persontime_noncovid_death_VE_RRT
     outputs:
       moderately_sensitive:
-        html: output/markdown/cox_VE_summary.html
+        html: output/markdown/cox_VE_boost_summary.html
