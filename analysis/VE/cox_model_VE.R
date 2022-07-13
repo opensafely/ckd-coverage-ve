@@ -29,9 +29,9 @@ if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
   timescale = "persontime"
-  selected_outcome = "covid_death"
-  subgroup = "RRT"
-  vaccine = "boost"
+  selected_outcome = "covid_postest"
+  subgroup = "all"
+  vaccine = "primary"
 } else {
   db = args[[1]]
   timescale = args[[2]]
@@ -147,7 +147,6 @@ logoutput(
 # number = 0; stratified = TRUE
 
 cox_model_VE <- function(number, stratified=TRUE) {
-  assign("last.warning", NULL, envir = baseenv())
   if (number==0) model_type = "unadjusted"
   if (number==1) model_type = "region/date adjusted"
   if (number==2) model_type = "fully adjusted"

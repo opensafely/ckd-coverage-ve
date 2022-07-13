@@ -31,7 +31,7 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0){
   # default (unmatched) file names
   db = "unmatched"
-  timescale = "calendartime"
+  timescale = "persontime"
   selected_outcome = "covid_postest"
   subgroup = "all"
   vaccine = "primary"
@@ -219,8 +219,8 @@ data_tte <- data_cohort %>%
     tte_outcome = tte(
       origin_date = vax_date-1, 
       event_date = outcome_date, 
-      censor_date = censor_date,
-      na.censor = TRUE
+      censor_date = censor_date#,
+      #na.censor = TRUE
     )
   )
 
@@ -274,7 +274,7 @@ if (strata) {
     id = patient_id,
     tstart = 0L,
     tstop = pmin(tte_censor, tte_outcome, na.rm=TRUE),
-    ind_outcome = event(tte_outcome)
+    ind_outcome = event(tte_outcome, ind_outcome)
   ) %>%
     tmerge( # create treatment timescale variables
       data1 = .,
@@ -705,3 +705,4 @@ if (db == "matched" & strata) {
     glue("memory usage = ", format(object.size(data_cox_strata_keep), units="GB", standard="SI", digits=3L))
   )
 }
+
