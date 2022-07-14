@@ -255,6 +255,7 @@ generate_km_plot = function(surv_data) {
   surv_data %>%
   ggplot(aes(x = time, y = 1-surv.floor, colour = vax2_type_descr, fill = vax2_type_descr)) + geom_step(size = 0.8) +
   facet_wrap(.~outcome_clean, nrow=1) +
+  geom_rect(aes(xmin=lagtime, xmax=time, ymin=1-surv.ll.floor, ymax=1-surv.ul.floor), alpha=0.1, colour="transparent") +
   scale_x_continuous(breaks=postvaxcuts, limits=c(0, max(postvaxcuts)), expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(mult=c(0,0.01))) +
   labs(
