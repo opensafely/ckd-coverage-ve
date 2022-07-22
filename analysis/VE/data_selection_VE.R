@@ -266,14 +266,13 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   
   ## Specify exact matching variables
   exact_variables <- c(
-    #"region",
-    "stp",
+    "region",
     "jcvi_group",
     "imd",
     "sex",
     #"ethnicity",
     "ckd_3cat",
-    "cev",
+    #"cev",
     #"prior_covid_cat",
     NULL
   )
@@ -281,8 +280,8 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   ## Specify caliper variables
   caliper_variables <- c(
     age = 3,
-    vax2_day = 1,
-    vax1_day = 3,
+    #vax2_day = 3,
+    #vax1_day = 3,
     NULL
   )
   

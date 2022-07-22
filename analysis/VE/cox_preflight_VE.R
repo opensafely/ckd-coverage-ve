@@ -185,7 +185,8 @@ vars0 = "timesincevax_pw"
 vars1 = c("vax_day", "jcvi_region")
 vars2_cont = "age"
 vars2_cat = c("sex", "imd", "ethnicity", "rural_urban_group", "ckd_3cat", "multimorb",
-              "learning_disability", "sev_mental_ill", "any_immunosuppression", "prior_covid_cat", "prevax_tests_cat")
+              "learning_disability", "sev_mental_ill", "any_immunosuppression")
+# "prior_covid_cat", "prevax_tests_cat"
 
 ## Drop ckd_3cat category from subgroup analyses
 if (subgroup!="all") {
