@@ -232,6 +232,14 @@ actions:
         csv1: output/tables/flowchart_VE.csv
         csv2: output/tables/flowchart_VE_matched.csv
 
+# Descriptive plots of vaccination profile
+  vax_dates_VE:
+    run: r:latest -e 'rmarkdown::render("analysis/VE/vax_dates_VE.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
+    needs: [data_selection_VE]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/vax_dates_VE.html
+        
 #############################
 ### VE table 1 - all, CKD3, CKD4-5, RRT - matched,unmatched
 #############################

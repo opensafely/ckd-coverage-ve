@@ -1,0 +1,73 @@
+---
+title: "Descriptive plots for BNT162b2 vs ChAdOx1-S vaccination in people with kidney disease"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+## Import libraries
+library('here')
+library('tidyverse')
+library('readr')
+library('tidyr')
+library('lubridate')
+library('glue')
+library('gt')
+library('gtsummary')
+library('reshape2')
+library('kableExtra')
+library('cowplot')
+library('fs')
+library('survival')
+library('survminer')
+library('scales')
+
+## Import custom user functions
+source(here::here("analysis", "functions.R"))
+
+## Read in data for cumulative incidence curves
+data_tte_unmatched <- read_rds(here::here("output", "data", "data_cohort_VE.rds")) %>%
+  mutate(#vax2_type_descr = recode(vax2_type_descr, "BNT162b2" = "BNT", "ChAdOx1" = "AZ"),
+         jcvi_simple = recode(jcvi_group, 
+                              "2 (80+ or health/social care worker)" = "JCVI 2", 
+                              "3 (75+)" = "JCVI 3",
+                              "4 (70+ or clinically extremely vulnerable)" = "JCVI 4", 
+                              "5 (65+)" = "JCVI 5",
+                              "6 (16-65 and clinically vulnerable)" = "JCVI 6"))
+
+# data_tte_matched <- read_rds(here::here("output", "data", "data_cohort_VE_matched.rds")) %>%
+#   mutate(vax2_type_descr = recode(vax2_type_descr, "BNT162b2" = "BNT", "ChAdOx1" = "AZ"))
+```
+<br/><br/>  
+
+#### Dose 2 dates by region and JCVI group
+```{r, fig.width=14, fig.height=10}
+ggplot(data_tte_unmatched, aes(x=vax2_date, group=vax2_type_descr, fill=vax2_type_descr)) + 
+     geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=1) +
+     scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2021-01-01"), as.Date("2021-12-31")), 
+               breaks = c(as.Date("2021-01-01"),as.Date("2021-04-01"),as.Date("2021-07-01"),as.Date("2021-10-01"))) +
+     theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
+     scale_fill_brewer(palette="Dark2", name = "Product") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free") + 
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), ymin = 0, ymax = 10, alpha = 1, colour="grey")
+```
+<br><br>
+
+#### Dose 1-2 interval by region and JCVI group
+```{r, fig.width=14, fig.height=10}
+ggplot(data_tte_unmatched, aes(x=tbv1_2, group=vax2_type_descr, fill=vax2_type_descr)) + 
+     geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=1) +
+     theme_bw() + xlab("dose 1-2 interval (days)") + #ylab("density (smoothed)") + 
+     scale_fill_brewer(palette="Dark2", name = "Product") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free") + 
+ annotate("rect", xmin = 7*7, xmax = 15*7, ymin = 0, ymax = 10, alpha = 1, colour="grey")
+```
+<br> Grey lines are used to redact values of <10 in each plot.
+.
