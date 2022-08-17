@@ -275,6 +275,56 @@ actions:
         data: output/tables/table1_VE_primary_redacted_unmatched_RRT.rds
       moderately_sensitive:
         table: output/tables/table1_VE_primary_redacted_unmatched_RRT.html
+ 
+  # Table 1 (JCVI2 unmatched)
+  table_1_VE_JCVI2_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched JCVI2 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table1_VE_primary_redacted_unmatched_JCVI2.rds
+      moderately_sensitive:
+        table: output/tables/table1_VE_primary_redacted_unmatched_JCVI2.html
+
+  # Table 1 (JCVI3 unmatched)
+  table_1_VE_JCVI3_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched JCVI3 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table1_VE_primary_redacted_unmatched_JCVI3.rds
+      moderately_sensitive:
+        table: output/tables/table1_VE_primary_redacted_unmatched_JCVI3.html
+        
+  # Table 1 (JCVI4 unmatched)
+  table_1_VE_JCVI4_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched JCVI4 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table1_VE_primary_redacted_unmatched_JCVI4.rds
+      moderately_sensitive:
+        table: output/tables/table1_VE_primary_redacted_unmatched_JCVI4.html
+ 
+  # Table 1 (JCVI5 unmatched)
+  table_1_VE_JCVI5_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched JCVI5 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table1_VE_primary_redacted_unmatched_JCVI5.rds
+      moderately_sensitive:
+        table: output/tables/table1_VE_primary_redacted_unmatched_JCVI5.html
+  
+  # Table 1 (JCVI6 unmatched)
+  table_1_VE_JCVI6_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched JCVI6 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table1_VE_primary_redacted_unmatched_JCVI6.rds
+      moderately_sensitive:
+        table: output/tables/table1_VE_primary_redacted_unmatched_JCVI6.html
         
   # Table 1 (all matched)
   table_1_VE_all_matched:
@@ -339,7 +389,57 @@ actions:
         data: output/tables/table_irr_primary_redacted_unmatched_RRT.rds
       moderately_sensitive:
         csv: output/tables/table_irr_primary_redacted_unmatched_RRT.csv
+        
+  # Table IRR (JCVI2 unmatched)
+  table_irr_unmatched_JCVI2:
+    run: r:latest analysis/VE/table_irr.R unmatched JCVI2 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_primary_redacted_unmatched_JCVI2.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_primary_redacted_unmatched_JCVI2.csv
 
+  # Table IRR (JCVI3 unmatched)
+  table_irr_unmatched_JCVI3:
+    run: r:latest analysis/VE/table_irr.R unmatched JCVI3 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_primary_redacted_unmatched_JCVI3.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_primary_redacted_unmatched_JCVI3.csv
+        
+  # Table IRR (JCVI4 unmatched)
+  table_irr_unmatched_JCVI4:
+    run: r:latest analysis/VE/table_irr.R unmatched JCVI4 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_primary_redacted_unmatched_JCVI4.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_primary_redacted_unmatched_JCVI4.csv
+        
+  # Table IRR (JCVI5 unmatched)
+  table_irr_unmatched_JCVI5:
+    run: r:latest analysis/VE/table_irr.R unmatched JCVI5 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_primary_redacted_unmatched_JCVI5.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_primary_redacted_unmatched_JCVI5.csv
+        
+  # Table IRR (JCVI6 unmatched)
+  table_irr_unmatched_JCVI6:
+    run: r:latest analysis/VE/table_irr.R unmatched JCVI6 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_primary_redacted_unmatched_JCVI6.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_primary_redacted_unmatched_JCVI6.csv
+        
   # Table IRR (all matched)
   table_irr_matched_all:
     run: r:latest analysis/VE/table_irr.R matched all primary
@@ -535,9 +635,239 @@ actions:
       moderately_sensitive:
         csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_RRT.csv
         logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_postest_RRT.txt
+        
+  ### unmatched persontime JCVI2
+  # preflight
+  cox_preflight_unmatched_persontime_covid_postest_VE_JCVI2:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_postest JCVI2 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_covid_postest_JCVI2.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_covid_postest_JCVI2.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_covid_postest_JCVI2.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_postest_VE_JCVI2:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_postest JCVI2 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI2, cox_preflight_unmatched_persontime_covid_postest_VE_JCVI2]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_JCVI2.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_JCVI2.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_postest_JCVI2.txt
 
+  ### unmatched persontime JCVI3
+  # preflight
+  cox_preflight_unmatched_persontime_covid_postest_VE_JCVI3:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_postest JCVI3 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_covid_postest_JCVI3.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_covid_postest_JCVI3.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_covid_postest_JCVI3.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_postest_VE_JCVI3:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_postest JCVI3 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI3, cox_preflight_unmatched_persontime_covid_postest_VE_JCVI3]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_JCVI3.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_JCVI3.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_postest_JCVI3.txt
 
+  ### unmatched persontime JCVI4
+  # preflight
+  cox_preflight_unmatched_persontime_covid_postest_VE_JCVI4:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_postest JCVI4 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_covid_postest_JCVI4.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_covid_postest_JCVI4.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_covid_postest_JCVI4.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_postest_VE_JCVI4:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_postest JCVI4 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI4, cox_preflight_unmatched_persontime_covid_postest_VE_JCVI4]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_JCVI4.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_JCVI4.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_postest_JCVI4.txt
+        
+  ### unmatched persontime JCVI5
+  # preflight
+  cox_preflight_unmatched_persontime_covid_postest_VE_JCVI5:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_postest JCVI5 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_covid_postest_JCVI5.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_covid_postest_JCVI5.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_covid_postest_JCVI5.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_postest_VE_JCVI5:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_postest JCVI5 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI5, cox_preflight_unmatched_persontime_covid_postest_VE_JCVI5]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_JCVI5.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_JCVI5.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_postest_JCVI5.txt
+        
+  ### unmatched persontime JCVI6
+  # preflight
+  cox_preflight_unmatched_persontime_covid_postest_VE_JCVI6:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_postest JCVI6 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_covid_postest_JCVI6.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_covid_postest_JCVI6.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_covid_postest_JCVI6.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_postest_VE_JCVI6:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_postest JCVI6 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI6, cox_preflight_unmatched_persontime_covid_postest_VE_JCVI6]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_JCVI6.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_JCVI6.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_postest_JCVI6.txt
 
+  ### unmatched calendartime JCVI2
+  # preflight
+  cox_preflight_unmatched_calendartime_covid_postest_VE_JCVI2:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_postest JCVI2 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_calendartime_covid_postest_JCVI2.rds
+        formulas: output/model/VE_primary/formulas*unmatched_calendartime_covid_postest_JCVI2.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_calendartime_covid_postest_JCVI2.txt
+  
+  # model
+  cox_model_unmatched_calendartime_covid_postest_VE_JCVI2:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_postest JCVI2 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI2, cox_preflight_unmatched_calendartime_covid_postest_VE_JCVI2]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_calendartime_covid_postest_JCVI2.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_calendartime_covid_postest_JCVI2.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_calendartime_covid_postest_JCVI2.txt
+
+  ### unmatched calendartime JCVI3
+  # preflight
+  cox_preflight_unmatched_calendartime_covid_postest_VE_JCVI3:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_postest JCVI3 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_calendartime_covid_postest_JCVI3.rds
+        formulas: output/model/VE_primary/formulas*unmatched_calendartime_covid_postest_JCVI3.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_calendartime_covid_postest_JCVI3.txt
+  
+  # model
+  cox_model_unmatched_calendartime_covid_postest_VE_JCVI3:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_postest JCVI3 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI3, cox_preflight_unmatched_calendartime_covid_postest_VE_JCVI3]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_calendartime_covid_postest_JCVI3.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_calendartime_covid_postest_JCVI3.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_calendartime_covid_postest_JCVI3.txt
+
+  ### unmatched calendartime JCVI4
+  # preflight
+  cox_preflight_unmatched_calendartime_covid_postest_VE_JCVI4:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_postest JCVI4 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_calendartime_covid_postest_JCVI4.rds
+        formulas: output/model/VE_primary/formulas*unmatched_calendartime_covid_postest_JCVI4.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_calendartime_covid_postest_JCVI4.txt
+  
+  # model
+  cox_model_unmatched_calendartime_covid_postest_VE_JCVI4:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_postest JCVI4 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI4, cox_preflight_unmatched_calendartime_covid_postest_VE_JCVI4]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_calendartime_covid_postest_JCVI4.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_calendartime_covid_postest_JCVI4.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_calendartime_covid_postest_JCVI4.txt
+        
+  ### unmatched calendartime JCVI5
+  # preflight
+  cox_preflight_unmatched_calendartime_covid_postest_VE_JCVI5:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_postest JCVI5 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_calendartime_covid_postest_JCVI5.rds
+        formulas: output/model/VE_primary/formulas*unmatched_calendartime_covid_postest_JCVI5.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_calendartime_covid_postest_JCVI5.txt
+  
+  # model
+  cox_model_unmatched_calendartime_covid_postest_VE_JCVI5:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_postest JCVI5 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI5, cox_preflight_unmatched_calendartime_covid_postest_VE_JCVI5]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_calendartime_covid_postest_JCVI5.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_calendartime_covid_postest_JCVI5.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_calendartime_covid_postest_JCVI5.txt
+        
+  ### unmatched calendartime JCVI6
+  # preflight
+  cox_preflight_unmatched_calendartime_covid_postest_VE_JCVI6:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime covid_postest JCVI6 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_calendartime_covid_postest_JCVI6.rds
+        formulas: output/model/VE_primary/formulas*unmatched_calendartime_covid_postest_JCVI6.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_calendartime_covid_postest_JCVI6.txt
+  
+  # model
+  cox_model_unmatched_calendartime_covid_postest_VE_JCVI6:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime covid_postest JCVI6 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI6, cox_preflight_unmatched_calendartime_covid_postest_VE_JCVI6]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_calendartime_covid_postest_JCVI6.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_calendartime_covid_postest_JCVI6.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_calendartime_covid_postest_JCVI6.txt
+        
+        
+        
 ### OUTCOME #2: covid_emergency test
 
   ### unmatched persontime all
@@ -1104,6 +1434,238 @@ actions:
         csv: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_RRT.csv
         logs: output/model/VE_primary/log_cox_model_unmatched_persontime_noncovid_death_RRT.txt
 
+  ### unmatched persontime JCVI2
+  # preflight
+  cox_preflight_unmatched_persontime_noncovid_death_VE_JCVI2:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime noncovid_death JCVI2 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_noncovid_death_JCVI2.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_noncovid_death_JCVI2.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_noncovid_death_JCVI2.txt
+  
+  # model
+  cox_model_unmatched_persontime_noncovid_death_VE_JCVI2:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime noncovid_death JCVI2 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI2, cox_preflight_unmatched_persontime_noncovid_death_VE_JCVI2]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_JCVI2.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_JCVI2.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_noncovid_death_JCVI2.txt
+ 
+  ### unmatched persontime JCVI3
+  # preflight
+  cox_preflight_unmatched_persontime_noncovid_death_VE_JCVI3:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime noncovid_death JCVI3 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_noncovid_death_JCVI3.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_noncovid_death_JCVI3.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_noncovid_death_JCVI3.txt
+  
+  # model
+  cox_model_unmatched_persontime_noncovid_death_VE_JCVI3:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime noncovid_death JCVI3 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI3, cox_preflight_unmatched_persontime_noncovid_death_VE_JCVI3]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_JCVI3.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_JCVI3.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_noncovid_death_JCVI3.txt
+        
+  ### unmatched persontime JCVI4
+  # preflight
+  cox_preflight_unmatched_persontime_noncovid_death_VE_JCVI4:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime noncovid_death JCVI4 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_noncovid_death_JCVI4.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_noncovid_death_JCVI4.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_noncovid_death_JCVI4.txt
+  
+  # model
+  cox_model_unmatched_persontime_noncovid_death_VE_JCVI4:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime noncovid_death JCVI4 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI4, cox_preflight_unmatched_persontime_noncovid_death_VE_JCVI4]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_JCVI4.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_JCVI4.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_noncovid_death_JCVI4.txt
+  
+  ### unmatched persontime JCVI5
+  # preflight
+  cox_preflight_unmatched_persontime_noncovid_death_VE_JCVI5:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime noncovid_death JCVI5 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_noncovid_death_JCVI5.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_noncovid_death_JCVI5.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_noncovid_death_JCVI5.txt
+  
+  # model
+  cox_model_unmatched_persontime_noncovid_death_VE_JCVI5:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime noncovid_death JCVI5 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI5, cox_preflight_unmatched_persontime_noncovid_death_VE_JCVI5]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_JCVI5.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_JCVI5.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_noncovid_death_JCVI5.txt
+        
+  ### unmatched persontime JCVI6
+  # preflight
+  cox_preflight_unmatched_persontime_noncovid_death_VE_JCVI6:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime noncovid_death JCVI6 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_noncovid_death_JCVI6.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_noncovid_death_JCVI6.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_noncovid_death_JCVI6.txt
+  
+  # model
+  cox_model_unmatched_persontime_noncovid_death_VE_JCVI6:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime noncovid_death JCVI6 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI6, cox_preflight_unmatched_persontime_noncovid_death_VE_JCVI6]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_JCVI6.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_JCVI6.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_noncovid_death_JCVI6.txt
+        
+  ### unmatched calendartime JCVI2
+  # preflight
+  cox_preflight_unmatched_calendartime_noncovid_death_VE_JCVI2:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime noncovid_death JCVI2 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_calendartime_noncovid_death_JCVI2.rds
+        formulas: output/model/VE_primary/formulas*unmatched_calendartime_noncovid_death_JCVI2.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_calendartime_noncovid_death_JCVI2.txt
+  
+  # model
+  cox_model_unmatched_calendartime_noncovid_death_VE_JCVI2:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime noncovid_death JCVI2 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI2, cox_preflight_unmatched_calendartime_noncovid_death_VE_JCVI2]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_calendartime_noncovid_death_JCVI2.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_calendartime_noncovid_death_JCVI2.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_calendartime_noncovid_death_JCVI2.txt
+ 
+  ### unmatched calendartime JCVI3
+  # preflight
+  cox_preflight_unmatched_calendartime_noncovid_death_VE_JCVI3:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime noncovid_death JCVI3 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_calendartime_noncovid_death_JCVI3.rds
+        formulas: output/model/VE_primary/formulas*unmatched_calendartime_noncovid_death_JCVI3.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_calendartime_noncovid_death_JCVI3.txt
+  
+  # model
+  cox_model_unmatched_calendartime_noncovid_death_VE_JCVI3:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime noncovid_death JCVI3 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI3, cox_preflight_unmatched_calendartime_noncovid_death_VE_JCVI3]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_calendartime_noncovid_death_JCVI3.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_calendartime_noncovid_death_JCVI3.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_calendartime_noncovid_death_JCVI3.txt
+        
+  ### unmatched calendartime JCVI4
+  # preflight
+  cox_preflight_unmatched_calendartime_noncovid_death_VE_JCVI4:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime noncovid_death JCVI4 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_calendartime_noncovid_death_JCVI4.rds
+        formulas: output/model/VE_primary/formulas*unmatched_calendartime_noncovid_death_JCVI4.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_calendartime_noncovid_death_JCVI4.txt
+  
+  # model
+  cox_model_unmatched_calendartime_noncovid_death_VE_JCVI4:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime noncovid_death JCVI4 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI4, cox_preflight_unmatched_calendartime_noncovid_death_VE_JCVI4]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_calendartime_noncovid_death_JCVI4.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_calendartime_noncovid_death_JCVI4.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_calendartime_noncovid_death_JCVI4.txt
+  
+  ### unmatched calendartime JCVI5
+  # preflight
+  cox_preflight_unmatched_calendartime_noncovid_death_VE_JCVI5:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime noncovid_death JCVI5 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_calendartime_noncovid_death_JCVI5.rds
+        formulas: output/model/VE_primary/formulas*unmatched_calendartime_noncovid_death_JCVI5.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_calendartime_noncovid_death_JCVI5.txt
+  
+  # model
+  cox_model_unmatched_calendartime_noncovid_death_VE_JCVI5:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime noncovid_death JCVI5 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI5, cox_preflight_unmatched_calendartime_noncovid_death_VE_JCVI5]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_calendartime_noncovid_death_JCVI5.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_calendartime_noncovid_death_JCVI5.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_calendartime_noncovid_death_JCVI5.txt
+        
+  ### unmatched calendartime JCVI6
+  # preflight
+  cox_preflight_unmatched_calendartime_noncovid_death_VE_JCVI6:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched calendartime noncovid_death JCVI6 primary
+    needs: [data_selection_VE]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_calendartime_noncovid_death_JCVI6.rds
+        formulas: output/model/VE_primary/formulas*unmatched_calendartime_noncovid_death_JCVI6.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_calendartime_noncovid_death_JCVI6.txt
+  
+  # model
+  cox_model_unmatched_calendartime_noncovid_death_VE_JCVI6:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched calendartime noncovid_death JCVI6 primary
+    needs: [data_selection_VE, table_irr_unmatched_JCVI6, cox_preflight_unmatched_calendartime_noncovid_death_VE_JCVI6]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_calendartime_noncovid_death_JCVI6.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_calendartime_noncovid_death_JCVI6.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_calendartime_noncovid_death_JCVI6.txt
+        
+        
+        
   # summary
   cox_VE_summary:
     run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'

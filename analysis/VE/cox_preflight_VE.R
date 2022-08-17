@@ -25,7 +25,7 @@ args <- commandArgs(trailingOnly=TRUE)
 # arg1: db = matched / unmatched
 # arg2: timescale = persontime / calendartime 
 # arg3: outcome = covid_postest / covid_emergency / covid_hosp / covid_death / noncovid_death
-# arg4: subset = all / CKD3 / CKD4-5 / RRT
+# arg4: subset = all / CKD3 / CKD4-5 / RRT / JCVI2 / JCVI3 / JCVI4 / JCVI5 / JCVI6
 # arg5: vaccine = primary / boost
 
 if(length(args)==0){
@@ -33,7 +33,7 @@ if(length(args)==0){
   db = "unmatched"
   timescale = "persontime"
   selected_outcome = "covid_postest"
-  subgroup = "all"
+  subgroup = "JCVI_2"
   vaccine = "primary"
 } else {
   db = args[[1]]
@@ -66,7 +66,6 @@ if (db == "unmatched" & vaccine == "primary") {
 
 ## Stop if argument combination does not match analysis plan
 if (db == "matched" & timescale == "calendartime") stop ("Do not fit matched calendar time model.")
-if (subgroup != "all" & timescale == "calendartime") stop ("Do not fit calendar time model to subgroups.")
 
 ## Import data and process dates
 data_cohort <- read_rds(here::here("output", "data", input_name)) %>%
@@ -78,15 +77,30 @@ data_cohort <- read_rds(here::here("output", "data", input_name)) %>%
 ## Select subset
 if (subgroup=="all") {
   data_cohort = data_cohort
+  ## Kidney disease subgroups
 } else if (subgroup=="CKD3") {
   data_cohort = subset(data_cohort, ckd_3cat == "CKD3")
 } else if (subgroup=="CKD4-5") {
   data_cohort = subset(data_cohort, ckd_3cat == "CKD4-5")
 } else if (subgroup=="RRT") {
   data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
+  ## JCVI subgroups
+} else if (subgroup=="JCVI2") {
+  data_cohort = subset(data_cohort, jcvi_group == "2 (80+ or health/social care worker)")
+} else if (subgroup=="JCVI3") {
+  data_cohort = subset(data_cohort, jcvi_group == "3 (75+)")
+} else if (subgroup=="JCVI4") {
+  data_cohort = subset(data_cohort, jcvi_group == "4 (70+ or clinically extremely vulnerable)")
+} else if (subgroup=="JCVI5") {
+  data_cohort = subset(data_cohort, jcvi_group == "5 (65+)")
+} else if (subgroup=="JCVI6") {
+  data_cohort = subset(data_cohort, jcvi_group == "6 (16-65 and clinically vulnerable)")
 } else {
   stop ("Arguments not specified correctly.")
 }
+
+## Drop unused levels
+data_cohort = data_cohort %>% droplevels()
 
 ## Import custom user functions and packages
 source(here::here("analysis", "functions.R"))
@@ -182,14 +196,15 @@ postvax_time <- data_cohort %>%
 surv = c("tstart", "tstop", "ind_outcome") 
 expo = "vax2_az"
 vars0 = "timesincevax_pw"
-vars1 = c("vax_day", "jcvi_region")
+vars1 = c("vax_day", "region")
 vars2_cont = "age"
-vars2_cat = c("sex", "imd", "ethnicity", "rural_urban_group", "ckd_3cat", "multimorb",
-              "learning_disability", "sev_mental_ill", "any_immunosuppression")
-# "prior_covid_cat", "prevax_tests_cat"
+vars2_cat = c("sex", "imd", "ethnicity", "rural_urban_group", "ckd_3cat",
+              "sev_obesity", "chd", "diabetes", "cld", "any_resp_dis", "chronic_neuro_dis_inc_sig_learn_dis", # previously multimorb
+              "other_transplant", "immunosuppression", "haem_cancer", "asplenia", # previously any_immunosuppression 
+              "learning_disability", "sev_mental_ill", "prior_covid_cat", "prevax_tests_cat")
 
 ## Drop ckd_3cat category from subgroup analyses
-if (subgroup!="all") {
+if (subgroup %in% c("CKD3", "CKD4-5", "RRT")) {
   vars2_cat <- vars2_cat[!(vars2_cat %in% c("ckd_3cat"))]
 }
 
@@ -256,7 +271,7 @@ add_covars <- function(.data) {
   .data %>%
     left_join(
       data_cohort %>%
-        mutate(jcvi_region = as.character(glue("{jcvi_group}_{region}"))) %>%
+        #mutate(jcvi_region = as.character(glue("{jcvi_group}_{region}"))) %>%
         select(patient_id, all_of(c(expo, vars1, vars2_cont, vars2_cat))),
       by = "patient_id"
     ) %>%
@@ -511,10 +526,10 @@ if (db == "unmatched") {
   
   ## Set formula updates for calendar time vs person time models
   if (timescale == "persontime") {
-    formula1_update <- as.formula(". ~ . + strata(jcvi_region)*ns(vax_day, 3)")
+    formula1_update <- as.formula(". ~ . + strata(region)*ns(vax_day, 3)")
   } 
   if (timescale == "calendartime") {
-    formula1_update <- as.formula(". ~ . + strata(jcvi_region)")
+    formula1_update <- as.formula(". ~ . + strata(region)")
   }
 }
 

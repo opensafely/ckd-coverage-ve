@@ -58,7 +58,6 @@ data_processed <- data_processed %>%
     stp = sample(factor(c("1", "2")), size=n(), replace=TRUE),
     region = sample(factor(c("Midlands", "London")), size=n(), replace=TRUE),
     imd = sample(factor(c("1 (most deprived)", "2")), size=n(), replace=TRUE),
-    jcvi_group = sample(factor(c("1 (65+ care home resident)", "2 (80+ or health/social care worker)")), size=n(), replace=TRUE),
     cev = as.numeric(rcat(n=nsamples, c("0", "1"), c(0.4,0.6))),
     any_immunosuppression = as.numeric(rcat(n=nsamples, c("0", "1"), c(0.4,0.6))),
     prior_covid_cat = as.numeric(rcat(n=nsamples, c("0", "1"), c(0.4,0.6)))

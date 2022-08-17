@@ -27,7 +27,7 @@ if(length(args)==0){
   vaccine = "primary"
 } else {
   matching_status = args[[1]] # can be unmatched or matched
-  subgroup = args[[2]] # can be all / CKD3 / CKD4-5 / RRT
+  subgroup = args[[2]] # can be all / CKD3 / CKD4-5 / RRT / JCVI2 / JCVI3 / JCVI4 / JCVI5 / JCVI6 
   vaccine = args[[3]] # can be primary or boost
 }
 
@@ -60,12 +60,26 @@ fs::dir_create(here::here("output", "tables"))
 ## Select subset
 if (subgroup=="all") {
   data_cohort = data_cohort
+  ## Kidney disease subgroups
 } else if (subgroup=="CKD3") {
   data_cohort = subset(data_cohort, ckd_3cat == "CKD3")
 } else if (subgroup=="CKD4-5") {
   data_cohort = subset(data_cohort, ckd_3cat == "CKD4-5")
 } else if (subgroup=="RRT") {
   data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
+  ## JCVI subgroups
+} else if (subgroup=="JCVI2") {
+  data_cohort = subset(data_cohort, jcvi_group == "2 (80+ or health/social care worker)")
+} else if (subgroup=="JCVI3") {
+  data_cohort = subset(data_cohort, jcvi_group == "3 (75+)")
+} else if (subgroup=="JCVI4") {
+  data_cohort = subset(data_cohort, jcvi_group == "4 (70+ or clinically extremely vulnerable)")
+} else if (subgroup=="JCVI5") {
+  data_cohort = subset(data_cohort, jcvi_group == "5 (65+)")
+} else if (subgroup=="JCVI6") {
+  data_cohort = subset(data_cohort, jcvi_group == "6 (16-65 and clinically vulnerable)")
+} else {
+  stop ("Arguments not specified correctly.")
 }
 
 ## Import custom user functions
