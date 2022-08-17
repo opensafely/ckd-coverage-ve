@@ -123,7 +123,7 @@ ggplot(data_tte_unmatched, aes(x=tbv1_2, group=vax2_type_descr, fill=vax2_type_d
 #### Age by region and JCVI group
 ```{r, fig.width=14, fig.height=10}
 ggplot(data_tte_unmatched, aes(x=age, group=vax2_type_descr, fill=vax2_type_descr)) + 
-     geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=3) +
+     geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=1) +
      theme_bw() + xlab("age") + #ylab("density (smoothed)") + 
      scale_fill_brewer(palette="Dark2", name = "Product") +
      theme(strip.background = element_blank(), strip.text = element_text(size=12),
