@@ -118,5 +118,32 @@ ggplot(data_tte_unmatched, aes(x=tbv1_2, group=vax2_type_descr, fill=vax2_type_d
   facet_grid(region~jcvi_simple, scales="free") + 
  annotate("rect", xmin = 7*7, xmax = 15*7, ymin = 0, ymax = 10, alpha = 1, colour="grey")
 ```
-<br> Grey lines are used to redact values of <10 in each plot.
+<br><br>
+
+#### Age by region and JCVI group
+```{r, fig.width=14, fig.height=10}
+ggplot(data_tte_unmatched, aes(x=age, group=vax2_type_descr, fill=vax2_type_descr)) + 
+     geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=3) +
+     theme_bw() + xlab("age") + #ylab("density (smoothed)") + 
+     scale_fill_brewer(palette="Dark2", name = "Product") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free") + 
+  annotate("rect", xmin = 18, xmax = 100, ymin = 0, ymax = 10, alpha = 1, colour="grey")
+```
+<br><br>
+
+#### Age by region and JCVI group - density
+```{r, fig.width=14, fig.height=10}
+ggplot(data_tte_unmatched, aes(x=age, colour=vax2_type_descr)) + 
+     geom_density(alpha=0.5) +
+     theme_bw() + xlab("age") + #ylab("density (smoothed)") + 
+     scale_colour_brewer(palette="Dark2", name = "Product") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free")
+```
+<br>Grey lines are used to redact values of <10 in each plot.<br>
 .
