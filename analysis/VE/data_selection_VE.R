@@ -155,7 +155,7 @@ data_criteria <- data_processed %>%
       has_sex & has_imd & has_ethnicity & has_region &
       vax_pfi_az & vax_date_valid & vax_interval_valid &
       positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check &
-      isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & 
+      isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI2 &
       isnot_censored_early &
       noprevax_covid
      )
