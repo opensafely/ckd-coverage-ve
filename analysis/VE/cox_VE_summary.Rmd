@@ -630,14 +630,14 @@ create_subgroup_table("CKD3", model)
 
 #### Subgroup analysis - CKD4-5
 ```{r, fig.width=21, fig.height=15}
-km_plots = subset_km_plot("CKD4-5")
-model = read_in_subgroup_model("CKD4-5")
-plot_grid(km_plots$g1, km_plots$g1_matched, plot_subgroup_HRs(model), ncol=1,  align="v", axis = c("lr"))
+#km_plots = subset_km_plot("CKD4-5")
+#model = read_in_subgroup_model("CKD4-5")
+#plot_grid(km_plots$g1, km_plots$g1_matched, plot_subgroup_HRs(model), ncol=1,  align="v", axis = c("lr"))
 ```
 <br/><br/>
 
 ```{r}
-create_subgroup_table("CKD4-5", model)
+#create_subgroup_table("CKD4-5", model)
 ```
 <br/><br/>
 
