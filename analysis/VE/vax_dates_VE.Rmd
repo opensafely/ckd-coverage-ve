@@ -45,15 +45,15 @@ data_tte_unmatched <- read_rds(here::here("output", "data", "data_cohort_VE.rds"
 ggplot(data_tte_unmatched, aes(x=vax1_date, group=vax2_type_descr, fill=vax2_type_descr)) + 
      geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=3) +
      scale_x_date(labels = date_format("%m/%y"),
-               limits = c(as.Date("2021-01-01"), as.Date("2021-12-31")), 
-               breaks = c(as.Date("2021-01-01"),as.Date("2021-04-01"),as.Date("2021-07-01"),as.Date("2021-10-01"))) +
+               limits = c(as.Date("2021-01-01"), as.Date("2021-04-01")), 
+               breaks = c(as.Date("2021-01-01"),as.Date("2021-02-01"),as.Date("2021-03-01"),as.Date("2021-04-01"))) +
      theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
      scale_fill_brewer(palette="Dark2", name = "Product") +
      theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
            legend.title = element_text(size=12), legend.text = element_text(size=12)) +
   facet_grid(region~jcvi_simple, scales="free") + 
-  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), ymin = 0, ymax = 10, alpha = 1, colour="grey")
+  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-04-01"), ymin = 0, ymax = 10, alpha = 1, colour="grey")
 ```
 <br><br>
 
@@ -62,8 +62,8 @@ ggplot(data_tte_unmatched, aes(x=vax1_date, group=vax2_type_descr, fill=vax2_typ
 ggplot(data_tte_unmatched, aes(x=vax1_date, colour=vax2_type_descr)) + 
      geom_density(alpha=0.5) +
      scale_x_date(labels = date_format("%m/%y"),
-               limits = c(as.Date("2021-01-01"), as.Date("2021-12-31")), 
-               breaks = c(as.Date("2021-01-01"),as.Date("2021-04-01"),as.Date("2021-07-01"),as.Date("2021-10-01"))) +
+               limits = c(as.Date("2021-01-01"), as.Date("2021-04-01")), 
+               breaks = c(as.Date("2021-01-01"),as.Date("2021-02-01"),as.Date("2021-03-01"),as.Date("2021-04-01"))) +
      theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
      scale_colour_brewer(palette="Dark2", name = "Product") +
      theme(strip.background = element_blank(), strip.text = element_text(size=12),
@@ -78,15 +78,15 @@ ggplot(data_tte_unmatched, aes(x=vax1_date, colour=vax2_type_descr)) +
 ggplot(data_tte_unmatched, aes(x=vax2_date, group=vax2_type_descr, fill=vax2_type_descr)) + 
      geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=3) +
      scale_x_date(labels = date_format("%m/%y"),
-               limits = c(as.Date("2021-01-01"), as.Date("2021-12-31")), 
-               breaks = c(as.Date("2021-01-01"),as.Date("2021-04-01"),as.Date("2021-07-01"),as.Date("2021-10-01"))) +
+               limits = c(as.Date("2021-03-01"), as.Date("2021-07-01")), 
+               breaks = c(as.Date("2021-03-01"),as.Date("2021-04-01"),as.Date("2021-05-01"),as.Date("2021-06-01"))) +
      theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
      scale_fill_brewer(palette="Dark2", name = "Product") +
      theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
            legend.title = element_text(size=12), legend.text = element_text(size=12)) +
   facet_grid(region~jcvi_simple, scales="free") + 
-  annotate("rect", xmin = as.Date("2021-01-01"), xmax = as.Date("2021-12-31"), ymin = 0, ymax = 10, alpha = 1, colour="grey")
+  annotate("rect", xmin = as.Date("2021-03-01"), xmax = as.Date("2021-07-01"), ymin = 0, ymax = 10, alpha = 1, colour="grey")
 ```
 <br><br>
 
@@ -95,8 +95,8 @@ ggplot(data_tte_unmatched, aes(x=vax2_date, group=vax2_type_descr, fill=vax2_typ
 ggplot(data_tte_unmatched, aes(x=vax2_date, colour=vax2_type_descr)) + 
      geom_density(alpha=0.5) +
      scale_x_date(labels = date_format("%m/%y"),
-               limits = c(as.Date("2021-01-01"), as.Date("2021-12-31")), 
-               breaks = c(as.Date("2021-01-01"),as.Date("2021-04-01"),as.Date("2021-07-01"),as.Date("2021-10-01"))) +
+               limits = c(as.Date("2021-03-01"), as.Date("2021-07-01")), 
+               breaks = c(as.Date("2021-03-01"),as.Date("2021-04-01"),as.Date("2021-05-01"),as.Date("2021-06-01"))) +
      theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
      scale_colour_brewer(palette="Dark2", name = "Product") +
      theme(strip.background = element_blank(), strip.text = element_text(size=12),
