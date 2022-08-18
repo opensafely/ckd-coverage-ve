@@ -29,7 +29,7 @@ data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))  
                   unit = "days"))) 
 
 ## Vaccine initiation dates
-first_az = as_date("2021-01-04")
+first_dose_min = as_date("2021-01-18") # AZ in use from 04/01/2022, but JCVI 3 eligibility from 18/01/2022 (https://www.bbc.co.uk/news/uk-55698132)
 
 ## Set analysis end date
 data_processed$end_date = as_date("2021-11-14")
@@ -125,7 +125,7 @@ data_criteria <- data_processed %>%
     
     # Vaccine profile
     vax_pfi_az = (!is.na(vax12_type)) & (vax12_type=="az-az" | vax12_type=="pfizer-pfizer"),
-    vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_az,
+    vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_dose_min,
     vax_interval_valid = (!is.na(tbv1_2)) & tbv1_2>=(8*7) & tbv1_2<=(14*7),
     
     # Postvax events
@@ -140,6 +140,7 @@ data_criteria <- data_processed %>%
     isnot_carehomeresident = !care_home,
     isnot_endoflife = !endoflife,
     isnot_housebound = !housebound,
+    isnot_JCVI2 = jcvi_group != "2 (80+ or health/social care worker)",
     
     # Not censored pre dose 2
     isnot_censored_early = tte_censor>0 | is.na(tte_censor),
@@ -169,10 +170,10 @@ data_cohort <- data_criteria %>%
   droplevels() %>%
   # Additional vaccine/time covariates
   mutate(
-    vax1_day = as.integer(floor((vax1_date - first_az))+1), # day 1 is the day first dose 1 given
-    vax2_day = as.integer(floor((vax2_date - first_az))+1), # day 1 is the day first dose 1 given
-    vax1_week = as.integer(floor((vax1_date - first_az)/7)+1), # week 1 is days 1-7
-    vax2_week = as.integer(floor((vax2_date - first_az)/7)+1), # week 1 is days 1-7
+    vax1_day = as.integer(floor((vax1_date - first_dose_min))+1), # day 1 is the day first dose 1 given
+    vax2_day = as.integer(floor((vax2_date - first_dose_min))+1), # day 1 is the day first dose 1 given
+    vax1_week = as.integer(floor((vax1_date - first_dose_min)/7)+1), # week 1 is days 1-7
+    vax2_week = as.integer(floor((vax2_date - first_dose_min)/7)+1), # week 1 is days 1-7
     week_region = paste0(vax2_week, "_", region),
     vax2_az = (vax2_type=="az")*1
   )
@@ -193,7 +194,7 @@ data_flowchart <- data_criteria %>%
     c6 = c5 & (vax_date_valid),
     c7 = c6 & (vax_interval_valid),
     c8 = c7 & (positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check),
-    c9 = c8 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound),
+    c9 = c8 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI2),
     c10 = c9 & isnot_censored_early,
     c11 = c10 & noprevax_covid
   ) %>%
@@ -221,7 +222,7 @@ data_flowchart <- data_criteria %>%
       crit == "c6" ~ "  received first dose after 04 January 2021",
       crit == "c7" ~ "  dose interval of 8-14 weeks",
       crit == "c8" ~ "  post-vaccination outcomes recorded after second dose",
-      crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, or housebound",
+      crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, housebound, or in JCVI priority group 2",
       crit == "c10" ~ "  not censored before second dose",
       crit == "c11" ~ "  no SARS-CoV-2 in window spanning 90 days before dose 1",
       TRUE ~ NA_character_
@@ -272,16 +273,16 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
     "sex",
     #"ethnicity",
     "ckd_3cat",
-    #"cev",
-    #"prior_covid_cat",
+    "cev",
+    "prior_covid_cat",
     NULL
   )
   
   ## Specify caliper variables
   caliper_variables <- c(
     age = 3,
-    #vax2_day = 3,
-    #vax1_day = 3,
+    vax2_day = 3,
+    vax1_day = 7,
     NULL
   )
   
