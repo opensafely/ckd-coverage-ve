@@ -268,7 +268,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   ## Specify exact matching variables
   exact_variables <- c(
     "region",
-    "jcvi_group",
+    #"jcvi_group",
     "imd",
     "sex",
     "ethnicity",
@@ -277,7 +277,6 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
     "prior_covid_cat",
     "multimorb",
     "any_immunosuppression",
-    "prevax_tests_cat"
     NULL
   )
   
