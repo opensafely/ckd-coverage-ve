@@ -219,7 +219,7 @@ data_flowchart <- data_criteria %>%
       crit == "c3" ~ "  with no RRT mismatch (primary care dialysis/Tx code but absent from UKRR 2020 population)", 
       crit == "c4" ~ "  with no missing demographic information",
       crit == "c5" ~ "  received 2 x ChAdOx1-S or 2 x BNT162b2",
-      crit == "c6" ~ "  received first dose after 04 January 2021",
+      crit == "c6" ~ "  received first dose on or after 18 January 2021",
       crit == "c7" ~ "  dose interval of 8-14 weeks",
       crit == "c8" ~ "  post-vaccination outcomes recorded after second dose",
       crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, housebound, or in JCVI priority group 2",
@@ -271,10 +271,13 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
     "jcvi_group",
     "imd",
     "sex",
-    #"ethnicity",
+    "ethnicity",
     "ckd_3cat",
     "cev",
     "prior_covid_cat",
+    "multimorb",
+    "any_immunosuppression",
+    "prevax_tests_cat"
     NULL
   )
   
@@ -282,7 +285,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   caliper_variables <- c(
     age = 3,
     vax2_day = 3,
-    vax1_day = 7,
+    vax1_day = 3,
     NULL
   )
   
