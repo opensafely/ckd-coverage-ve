@@ -25,10 +25,19 @@ library('scales')
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
 
-## Read in data for cumulative incidence curves
-data_tte_unmatched <- read_rds(here::here("output", "data", "data_cohort_VE.rds")) %>%
-  mutate(#vax2_type_descr = recode(vax2_type_descr, "BNT162b2" = "BNT", "ChAdOx1" = "AZ"),
-         jcvi_simple = recode(jcvi_group, 
+## Read in unfiltered data
+data_unfiltered <- read_rds(here::here("output", "data", "data_processed.rds")) %>%
+  mutate(jcvi_simple = recode(jcvi_group,
+                              "1 (65+ care home resident)" = "JCVI 1",
+                              "2 (80+ or health/social care worker)" = "JCVI 2", 
+                              "3 (75+)" = "JCVI 3",
+                              "4 (70+ or clinically extremely vulnerable)" = "JCVI 4", 
+                              "5 (65+)" = "JCVI 5",
+                              "6 (16-65 and clinically vulnerable)" = "JCVI 6"))
+
+## Read in filtered data
+data_filtered <- read_rds(here::here("output", "data", "data_cohort_VE.rds")) %>%
+  mutate(jcvi_simple = recode(jcvi_group, 
                               "2 (80+ or health/social care worker)" = "JCVI 2", 
                               "3 (75+)" = "JCVI 3",
                               "4 (70+ or clinically extremely vulnerable)" = "JCVI 4", 
@@ -38,11 +47,28 @@ data_tte_unmatched <- read_rds(here::here("output", "data", "data_cohort_VE.rds"
 # data_tte_matched <- read_rds(here::here("output", "data", "data_cohort_VE_matched.rds")) %>%
 #   mutate(vax2_type_descr = recode(vax2_type_descr, "BNT162b2" = "BNT", "ChAdOx1" = "AZ"))
 ```
-<br/><br/>  
+<br><br>  
 
-#### Dose 1 dates by region and JCVI group
+#### Histogram: dose 1 dates by region and JCVI group - unfiltered
 ```{r, fig.width=14, fig.height=10}
-ggplot(data_tte_unmatched, aes(x=vax1_date, group=vax2_type_descr, fill=vax2_type_descr)) + 
+ggplot(data_unfiltered, aes(x=vax1_date, group=vax2_type_descr, fill=vax2_type_descr)) + 
+     geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=3) +
+     scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2020-12-01"), as.Date("2021-04-01")), 
+               breaks = c(as.Date("2021-01-01"),as.Date("2021-02-01"),as.Date("2021-03-01"),as.Date("2021-04-01"))) +
+     theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
+     scale_fill_brewer(palette="Dark2", name = "Product") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free") + 
+  annotate("rect", xmin = as.Date("2020-12-01"), xmax = as.Date("2021-04-01"), ymin = 0, ymax = 10, alpha = 1, colour="grey")
+```
+<br><br>
+
+#### Histogram: dose 1 dates by region and JCVI group - filtered
+```{r, fig.width=14, fig.height=10}
+ggplot(data_filtered, aes(x=vax1_date, group=vax2_type_descr, fill=vax2_type_descr)) + 
      geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=3) +
      scale_x_date(labels = date_format("%m/%y"),
                limits = c(as.Date("2021-01-01"), as.Date("2021-04-01")), 
@@ -57,12 +83,12 @@ ggplot(data_tte_unmatched, aes(x=vax1_date, group=vax2_type_descr, fill=vax2_typ
 ```
 <br><br>
 
-#### Dose 1 dates by region and JCVI group - density
+#### Density: dose 1 dates by region and JCVI group - unfiltered
 ```{r, fig.width=14, fig.height=10}
-ggplot(data_tte_unmatched, aes(x=vax1_date, colour=vax2_type_descr)) + 
+ggplot(data_unfiltered, aes(x=vax1_date, colour=vax2_type_descr)) + 
      geom_density(alpha=0.5) +
      scale_x_date(labels = date_format("%m/%y"),
-               limits = c(as.Date("2021-01-01"), as.Date("2021-04-01")), 
+               limits = c(as.Date("2020-12-01"), as.Date("2021-04-01")), 
                breaks = c(as.Date("2021-01-01"),as.Date("2021-02-01"),as.Date("2021-03-01"),as.Date("2021-04-01"))) +
      theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
      scale_colour_brewer(palette="Dark2", name = "Product") +
@@ -73,9 +99,42 @@ ggplot(data_tte_unmatched, aes(x=vax1_date, colour=vax2_type_descr)) +
 ```
 <br><br>
 
-#### Dose 2 dates by region and JCVI group
+#### Density: dose 1 dates by region and JCVI group - filtered
 ```{r, fig.width=14, fig.height=10}
-ggplot(data_tte_unmatched, aes(x=vax2_date, group=vax2_type_descr, fill=vax2_type_descr)) + 
+ggplot(data_filtered, aes(x=vax1_date, colour=vax2_type_descr)) + 
+     geom_density(alpha=0.5) +
+     scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2020-12-01"), as.Date("2021-04-01")), 
+               breaks = c(as.Date("2021-01-01"),as.Date("2021-02-01"),as.Date("2021-03-01"),as.Date("2021-04-01"))) +
+     theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
+     scale_colour_brewer(palette="Dark2", name = "Product") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free")
+```
+<br><br>
+
+#### Histogram: dose 2 dates by region and JCVI group - unfiltered
+```{r, fig.width=14, fig.height=10}
+ggplot(data_unfiltered, aes(x=vax2_date, group=vax2_type_descr, fill=vax2_type_descr)) + 
+     geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=3) +
+     scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2020-12-01"), as.Date("2021-07-01")), 
+               breaks = c(as.Date("2020-12-01"),as.Date("2021-04-01"),as.Date("2021-05-01"),as.Date("2021-06-01"))) +
+     theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
+     scale_fill_brewer(palette="Dark2", name = "Product") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free") + 
+  annotate("rect", xmin = as.Date("2020-12-01"), xmax = as.Date("2021-07-01"), ymin = 0, ymax = 10, alpha = 1, colour="grey")
+```
+<br><br>
+
+#### Histogram: dose 2 dates by region and JCVI group - filtered
+```{r, fig.width=14, fig.height=10}
+ggplot(data_filtered, aes(x=vax2_date, group=vax2_type_descr, fill=vax2_type_descr)) + 
      geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=3) +
      scale_x_date(labels = date_format("%m/%y"),
                limits = c(as.Date("2021-03-01"), as.Date("2021-07-01")), 
@@ -90,9 +149,25 @@ ggplot(data_tte_unmatched, aes(x=vax2_date, group=vax2_type_descr, fill=vax2_typ
 ```
 <br><br>
 
-#### Dose 2 dates by region and JCVI group - density
+#### Density: dose 2 dates by region and JCVI group - unfiltered
 ```{r, fig.width=14, fig.height=10}
-ggplot(data_tte_unmatched, aes(x=vax2_date, colour=vax2_type_descr)) + 
+ggplot(data_unfiltered, aes(x=vax2_date, colour=vax2_type_descr)) + 
+     geom_density(alpha=0.5) +
+     scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2020-12-01"), as.Date("2021-07-01")), 
+               breaks = c(as.Date("2021-03-01"),as.Date("2021-04-01"),as.Date("2021-05-01"),as.Date("2021-06-01"))) +
+     theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
+     scale_colour_brewer(palette="Dark2", name = "Product") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free")
+```
+<br><br>
+
+#### Density: dose 2 dates by region and JCVI group - filtered
+```{r, fig.width=14, fig.height=10}
+ggplot(data_filtered, aes(x=vax2_date, colour=vax2_type_descr)) + 
      geom_density(alpha=0.5) +
      scale_x_date(labels = date_format("%m/%y"),
                limits = c(as.Date("2021-03-01"), as.Date("2021-07-01")), 
@@ -106,23 +181,39 @@ ggplot(data_tte_unmatched, aes(x=vax2_date, colour=vax2_type_descr)) +
 ```
 <br><br>
 
-#### Dose 1-2 interval by region and JCVI group
+#### Histogram: dose 1-2 interval by region and JCVI group - unfiltered
 ```{r, fig.width=14, fig.height=10}
-ggplot(data_tte_unmatched, aes(x=tbv1_2, group=vax2_type_descr, fill=vax2_type_descr)) + 
+ggplot(data_unfiltered, aes(x=tbv1_2, group=vax2_type_descr, fill=vax2_type_descr)) + 
      geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=1) +
      theme_bw() + xlab("dose 1-2 interval (days)") + #ylab("density (smoothed)") + 
      scale_fill_brewer(palette="Dark2", name = "Product") +
+     xlim(2*7,20*7) +
      theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
            legend.title = element_text(size=12), legend.text = element_text(size=12)) +
   facet_grid(region~jcvi_simple, scales="free") + 
- annotate("rect", xmin = 7*7, xmax = 15*7, ymin = 0, ymax = 10, alpha = 1, colour="grey")
+ annotate("rect", xmin = 2*7, xmax = 20*7, ymin = 0, ymax = 10, alpha = 1, colour="grey")
 ```
 <br><br>
 
-#### Age by region and JCVI group
+#### Histogram: dose 1-2 interval by region and JCVI group - filtered
 ```{r, fig.width=14, fig.height=10}
-ggplot(data_tte_unmatched, aes(x=age, group=vax2_type_descr, fill=vax2_type_descr)) + 
+ggplot(data_filtered, aes(x=tbv1_2, group=vax2_type_descr, fill=vax2_type_descr)) + 
+     geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=1) +
+     theme_bw() + xlab("dose 1-2 interval (days)") + #ylab("density (smoothed)") + 
+     scale_fill_brewer(palette="Dark2", name = "Product") +
+     xlim(2*7,20*7) + 
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free") + 
+ annotate("rect", xmin = 2*7, xmax = 20*7, ymin = 0, ymax = 10, alpha = 1, colour="grey")
+```
+<br><br>
+
+#### Histogram: age by region and JCVI group - unfiltered
+```{r, fig.width=14, fig.height=10}
+ggplot(data_unfiltered, aes(x=age, group=vax2_type_descr, fill=vax2_type_descr)) + 
      geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=1) +
      theme_bw() + xlab("age") + #ylab("density (smoothed)") + 
      scale_fill_brewer(palette="Dark2", name = "Product") +
@@ -134,16 +225,17 @@ ggplot(data_tte_unmatched, aes(x=age, group=vax2_type_descr, fill=vax2_type_desc
 ```
 <br><br>
 
-#### Age by region and JCVI group - density
+#### Histogram: age by region and JCVI group - filtered
 ```{r, fig.width=14, fig.height=10}
-ggplot(data_tte_unmatched, aes(x=age, colour=vax2_type_descr)) + 
-     geom_density(alpha=0.5) +
+ggplot(data_filtered, aes(x=age, group=vax2_type_descr, fill=vax2_type_descr)) + 
+     geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=1) +
      theme_bw() + xlab("age") + #ylab("density (smoothed)") + 
-     scale_colour_brewer(palette="Dark2", name = "Product") +
+     scale_fill_brewer(palette="Dark2", name = "Product") +
      theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
            legend.title = element_text(size=12), legend.text = element_text(size=12)) +
-  facet_grid(region~jcvi_simple, scales="free")
+  facet_grid(region~jcvi_simple, scales="free") + 
+  annotate("rect", xmin = 18, xmax = 100, ymin = 0, ymax = 10, alpha = 1, colour="grey")
 ```
 <br>Grey lines are used to redact values of <10 in each plot.<br>
 .
