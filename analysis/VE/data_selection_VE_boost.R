@@ -21,7 +21,7 @@ source(here::here("analysis", "functions.R"))
 fs::dir_create(here::here("output", "tables"))
 
 ## Import processed data
-data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))  %>%
+data_processed <- read_rds(here::here("output", "data", "data_processed_boost.rds"))  %>%
   # to avoid timestamps causing inequalities for dates on the same day
   mutate(across(where(is.Date), 
                 ~ floor_date(
@@ -29,7 +29,7 @@ data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))  
                   unit = "days"))) 
 
 ## Vaccine initiation dates
-first_az = as_date("2021-01-04")
+first_dose_min = as_date("2021-01-18")
 
 ## Set analysis end date
 data_processed$end_date = as_date("2022-01-31")
@@ -125,7 +125,7 @@ data_criteria <- data_processed %>%
     
     # Vaccine profile
     vax_homol_heterol_pfi = (!is.na(vax123_type)) & (vax123_type=="az-az-pfizer" | vax123_type=="pfizer-pfizer-pfizer"),
-    vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_az,
+    vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_dose_min,
     vax_interval_valid_1_2 = (!is.na(tbv1_2)) & tbv1_2>=(8*7) & tbv1_2<=(14*7),
     vax_interval_valid_2_3 = (!is.na(tbv2_3)) & tbv2_3>=(12*7),
     
@@ -141,6 +141,8 @@ data_criteria <- data_processed %>%
     isnot_carehomeresident = !care_home,
     isnot_endoflife = !endoflife,
     isnot_housebound = !housebound,
+    isnot_JCVI1_2 = jcvi_group!="1 (65+ care home resident)" & jcvi_group!="2 (80+ or health/social care worker)",
+    isnot_inhospital = !inhospital,
     
     # Not censored pre dose dose 3
     isnot_censored_early = tte_censor>0 | is.na(tte_censor),
@@ -155,7 +157,7 @@ data_criteria <- data_processed %>%
       has_sex & has_imd & has_ethnicity & has_region &
       vax_homol_heterol_pfi & vax_date_valid & vax_interval_valid_1_2 & vax_interval_valid_2_3 &
       positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check &
-      isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & 
+      isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI1_2 & isnot_inhospital &
       isnot_censored_early &
       nopreboost_covid
      )
@@ -170,12 +172,12 @@ data_cohort <- data_criteria %>%
   droplevels() %>%
   # Additional vaccine/time covariates
   mutate(
-    vax1_day = as.integer(floor((vax1_date - first_az))+1), # day 1 is the day first dose 1 given
-    vax2_day = as.integer(floor((vax2_date - first_az))+1), # day 1 is the day first dose 1 given
-    vax3_day = as.integer(floor((vax3_date - first_az))+1), # day 1 is the day first dose 1 given
-    vax1_week = as.integer(floor((vax1_date - first_az)/7)+1), # week 1 is days 1-7
-    vax2_week = as.integer(floor((vax2_date - first_az)/7)+1), # week 1 is days 1-7
-    vax3_week = as.integer(floor((vax3_date - first_az)/7)+1), # week 1 is days 1-7
+    vax1_day = as.integer(floor((vax1_date - first_dose_min))+1), # day 1 is the day first dose 1 given
+    vax2_day = as.integer(floor((vax2_date - first_dose_min))+1), # day 1 is the day first dose 1 given
+    vax3_day = as.integer(floor((vax3_date - first_dose_min))+1), # day 1 is the day first dose 1 given
+    vax1_week = as.integer(floor((vax1_date - first_dose_min)/7)+1), # week 1 is days 1-7
+    vax2_week = as.integer(floor((vax2_date - first_dose_min)/7)+1), # week 1 is days 1-7
+    vax3_week = as.integer(floor((vax3_date - first_dose_min)/7)+1), # week 1 is days 1-7
     week_region = paste0(vax3_week, "_", region),
     vax2_az = (vax2_type=="az")*1 # since comparison group is related to primary schedule (homologous vs heterologous), vax2_az can still be used
   )
@@ -196,7 +198,7 @@ data_flowchart <- data_criteria %>%
     c6 = c5 & (vax_date_valid),
     c7 = c6 & (vax_interval_valid_1_2 & vax_interval_valid_2_3),
     c8 = c7 & (positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check),
-    c9 = c8 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound),
+    c9 = c8 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI1_2 & isnot_inhospital),
     c10 = c9 & isnot_censored_early,
     c11 = c10 & nopreboost_covid
   ) %>%
@@ -215,18 +217,18 @@ data_flowchart <- data_criteria %>%
     pct_step = n / lag(n),
     crit = str_extract(criteria, "^c\\d+"),
     criteria = fct_case_when(
-      crit == "c0" ~ "Aged 16+ with serum creatinine record in 2y before index (01-Dec-2020) or in UKRR 2020 population",
+      crit == "c0" ~ "Aged 16+ with serum creatinine record in 2y before boost or in UKRR 2020 population",
       crit == "c1" ~ "  with valid creatinine record (with associated age and no linked operators) or in UKRR population", 
       crit == "c2" ~ "  with eGFR<60 or UKRR 2020 population", 
       crit == "c3" ~ "  with no RRT mismatch (primary care dialysis/Tx code but absent from UKRR 2020 population)", 
       crit == "c4" ~ "  with no missing demographic information",
       crit == "c5" ~ "  received 2 x ChAdOx1-S or 2 x BNT162b2 followed by BNT162b2 boost",
-      crit == "c6" ~ "  received first dose on or after 04 January 2021",
+      crit == "c6" ~ "  received first dose on or after 18 January 2021",
       crit == "c7" ~ "  dose intervals of 8-14 weeks (for doses 1-2) and >=12 weeks (for doses 2-3)",
       crit == "c8" ~ "  post-vaccination outcomes recorded after third dose",
-      crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, or housebound",
+      crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, housebound, in JCVI priority groups 1/2, or hospitalised on day of booster",
       crit == "c10" ~ "  not censored before third dose",
-      crit == "c11" ~ "  no SARS-CoV-2 in window spanning 90 days before dose 1 up to day of dose 3",
+      crit == "c11" ~ "  no SARS-CoV-2 in window spanning 90 days before before dose 3",
       TRUE ~ NA_character_
     )
   )
@@ -271,12 +273,15 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   ## Specify exact matching variables
   exact_variables <- c(
     "region",
-    "jcvi_group",
+    #"jcvi_group",
     "imd",
+    "sex",
     "ethnicity",
     "ckd_3cat",
     "cev",
     "prior_covid_cat",
+    "multimorb",
+    "any_immunosuppression",    
     NULL
   )
   

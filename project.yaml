@@ -9,6 +9,10 @@ expectations:
 
 actions:
 
+#############################
+### Import/processing for primary population
+#############################
+
   # Extract data ----
   generate_study_population:
     run: cohortextractor:latest generate_cohort --study-definition study_definition --output-dir=output/data
@@ -32,6 +36,38 @@ actions:
     outputs:
       moderately_sensitive:
         cohort: output/data_properties/data_processed*.txt
+
+#############################
+### Import/processing for boost population
+#############################
+
+  # Extract data - boost ----
+  generate_study_population_boost:
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_boost --output-dir=output/data
+    outputs:
+      highly_sensitive:
+        cohort: output/data/input_boost.csv
+
+  # Process data - boost ----
+  data_process_boost:
+    run: r:latest analysis/data_process_boost.R
+    needs: [generate_study_population_boost]
+    outputs:
+      highly_sensitive:
+        data: output/data/data_processed_boost.rds
+        csv: output/data/data_processed_boost.csv
+       
+  # Data properties (processed) - boost ----
+  data_properties_process_boost:
+    run: r:latest analysis/data_properties.R output/data/data_processed_boost.rds output/data_properties
+    needs: [data_process_boost]
+    outputs:
+      moderately_sensitive:
+        cohort: output/data_properties/data_processed_boost*.txt
+
+#############################
+### Coverage analyses
+#############################
 
   # Select cohort ----
   data_selection_coverage:
@@ -1728,7 +1764,7 @@ actions:
 # Select cohort (single script used for both matched and unmatched analyses)
   data_selection_VE_boost:
     run: r:latest analysis/VE/data_selection_VE_boost.R
-    needs: [data_process]
+    needs: [data_process_boost]
     outputs:
       highly_sensitive:
         data1: output/data/data_cohort_VE_boost.rds

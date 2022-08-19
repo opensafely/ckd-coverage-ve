@@ -55,9 +55,9 @@ data_processed$other_transplant[data_processed$ckd_6cat %in% c("RRT (Tx)")] = 0
 # Simplify other matching variables to make matching success more likely 
 data_processed <- data_processed %>%
   mutate(
-    stp = sample(factor(c("1", "2")), size=n(), replace=TRUE),
+    #stp = sample(factor(c("1", "2")), size=n(), replace=TRUE),
     #region = sample(factor(c("Midlands", "London")), size=n(), replace=TRUE),
-    imd = sample(factor(c("1 (most deprived)", "2")), size=n(), replace=TRUE),
+    #imd = sample(factor(c("1 (most deprived)", "2")), size=n(), replace=TRUE),
     cev = as.numeric(rcat(n=nsamples, c("0", "1"), c(0.4,0.6))),
     any_immunosuppression = as.numeric(rcat(n=nsamples, c("0", "1"), c(0.4,0.6))),
     prior_covid_cat = as.numeric(rcat(n=nsamples, c("0", "1"), c(0.4,0.6)))
