@@ -181,6 +181,38 @@ ggplot(data_filtered, aes(x=vax2_date, colour=vax2_type_descr)) +
 ```
 <br><br>
 
+#### Histogram: dose 3 dates by region and JCVI group - filtered
+```{r, fig.width=14, fig.height=10}
+ggplot(data_filtered, aes(x=vax3_date, group=vax2_type_descr, fill=vax2_type_descr)) + 
+     geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=3) +
+     scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2021-09-01"), as.Date("2022-01-31")), 
+               breaks = c(as.Date("2021-09-01"),as.Date("2021-11-01"),as.Date("2022-01-01"))) +
+     theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
+     scale_fill_brewer(palette="Dark2", name = "Product") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free") + 
+  annotate("rect", xmin = as.Date("2021-09-01"), xmax = as.Date("2022-01-31"), ymin = 0, ymax = 10, alpha = 1, colour="grey")
+```
+<br><br>
+
+#### Density: dose 3 dates by region and JCVI group - filtered
+```{r, fig.width=14, fig.height=10}
+ggplot(data_filtered, aes(x=vax3_date, colour=vax2_type_descr)) + 
+     geom_density(alpha=0.5) +
+     scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2021-09-01"), as.Date("2022-01-31")), 
+               breaks = c(as.Date("2021-09-01"),as.Date("2021-11-01"),as.Date("2022-01-01"))) +
+     theme_bw() + xlab("date") + #ylab("density (smoothed)") + 
+     scale_colour_brewer(palette="Dark2", name = "Product") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free")
+```
+
 #### Histogram: dose 1-2 interval by region and JCVI group - unfiltered
 ```{r, fig.width=14, fig.height=10}
 ggplot(data_unfiltered, aes(x=tbv1_2, group=vax2_type_descr, fill=vax2_type_descr)) + 
@@ -208,6 +240,19 @@ ggplot(data_filtered, aes(x=tbv1_2, group=vax2_type_descr, fill=vax2_type_descr)
            legend.title = element_text(size=12), legend.text = element_text(size=12)) +
   facet_grid(region~jcvi_simple, scales="free") + 
  annotate("rect", xmin = 2*7, xmax = 20*7, ymin = 0, ymax = 10, alpha = 1, colour="grey")
+```
+<br><br>
+
+#### Histogram: dose 2-3 interval by region and JCVI group - filtered
+```{r, fig.width=14, fig.height=10}
+ggplot(data_filtered, aes(x=tbv2_3, group=vax2_type_descr, fill=vax2_type_descr)) + 
+     geom_histogram(alpha=0.5, adjust = 1.5, position="identity", binwidth=1) +
+     theme_bw() + xlab("dose 2-3 interval (days)") + #ylab("density (smoothed)") + 
+     scale_fill_brewer(palette="Dark2", name = "Product") +
+     theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12)) +
+  facet_grid(region~jcvi_simple, scales="free")
 ```
 <br><br>
 
