@@ -26,7 +26,7 @@ library('scales')
 source(here::here("analysis", "functions.R"))
 
 ## Read in unfiltered data
-data_unfiltered <- read_rds(here::here("output", "data", "data_processed.rds")) %>%
+data_unfiltered <- read_rds(here::here("output", "data", "data_cohort_coverage.rds")) %>%
   mutate(jcvi_simple = recode(jcvi_group,
                               "1 (65+ care home resident)" = "JCVI 1",
                               "2 (80+ or health/social care worker)" = "JCVI 2", 

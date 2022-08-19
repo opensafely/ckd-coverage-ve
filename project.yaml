@@ -235,7 +235,7 @@ actions:
 # Descriptive plots of vaccination profile
   vax_dates_VE:
     run: r:latest -e 'rmarkdown::render("analysis/VE/vax_dates_VE.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
-    needs: [data_process, data_selection_VE]
+    needs: [data_selection_coverage, data_selection_VE]
     outputs:
       moderately_sensitive:
         html: output/markdown/vax_dates_VE.html
