@@ -389,8 +389,8 @@ data_processed <- data_extract %>%
     preboost_covid_cat = as.numeric(!is.na(pmin(preboost_positive_test_date, preboost_primary_care_covid_case_date, preboost_covid_emergency_date, preboost_covid_hospitalisation_date, na.rm=TRUE))),
 
     # Number of tests in pre-vaccination period
-    preboost_tests_conducted_any = ifelse(is.na(preboost_tests_conducted_any), 0, preboost_tests_conducted_any),
-    preboost_tests_cat = cut(preboost_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
+    prevax_tests_conducted_any = ifelse(is.na(preboost_tests_conducted_any), 0, preboost_tests_conducted_any),
+    prevax_tests_cat = cut(preboost_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
     
     # Non-COVID death date
     noncoviddeath_date = if_else(!is.na(death_date) & is.na(postboost_covid_death_date), death_date, as.Date(NA_character_)),
