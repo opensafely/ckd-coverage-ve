@@ -504,17 +504,32 @@ subset_km_plot = function(selected_subgroup = "CKD3") {
 
 ## Function to read in subgroup model outputs
 read_in_subgroup_model = function(selected_subgroup="CKD3") {
-  model = rbind(
-    read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[1],"_",selected_subgroup,".rds"))) %>%
-      mutate(outcome_clean = clean_list[1]),
-    read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[3],"_",selected_subgroup,".rds"))) %>%
-      mutate(outcome_clean = clean_list[3]),
-    read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[4],"_",selected_subgroup,".rds"))) %>%
-      mutate(outcome_clean = clean_list[4]),
-    read_rds(here::here("output", "model","VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[5],"_",selected_subgroup,".rds"))) %>%
-      mutate(outcome_clean = clean_list[5])
-    ) %>% 
-    mutate(model_group = paste0("Person-time"," (",model_name,")"))
+  ## Read CKD4-5 models in separately owing to failure of COVID-related deaths to converge
+  if(selected_subgroup=="CKD4-5") {
+    model = rbind(
+      read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[1],"_",selected_subgroup,".rds"))) %>%
+        mutate(outcome_clean = clean_list[1]),
+      read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[3],"_",selected_subgroup,".rds"))) %>%
+        mutate(outcome_clean = clean_list[3]),
+      #read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[4],"_",selected_subgroup,".rds"))) %>%
+      #  mutate(outcome_clean = clean_list[4]),
+      read_rds(here::here("output", "model","VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[5],"_",selected_subgroup,".rds"))) %>%
+        mutate(outcome_clean = clean_list[5])
+      ) %>% 
+      mutate(model_group = paste0("Person-time"," (",model_name,")"))
+  } else {
+    model = rbind(
+      read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[1],"_",selected_subgroup,".rds"))) %>%
+        mutate(outcome_clean = clean_list[1]),
+      read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[3],"_",selected_subgroup,".rds"))) %>%
+        mutate(outcome_clean = clean_list[3]),
+      read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[4],"_",selected_subgroup,".rds"))) %>%
+        mutate(outcome_clean = clean_list[4]),
+      read_rds(here::here("output", "model","VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[5],"_",selected_subgroup,".rds"))) %>%
+        mutate(outcome_clean = clean_list[5])
+      ) %>% 
+      mutate(model_group = paste0("Person-time"," (",model_name,")"))
+  }    
   
   ## Set factor levels
   model$model_name = factor(model$model_name, levels = c("unadjusted", "region/date adjusted", "fully adjusted"))
@@ -630,15 +645,16 @@ create_subgroup_table("CKD3", model)
 
 #### Subgroup analysis - CKD4-5
 ```{r, fig.width=21, fig.height=15}
-#km_plots = subset_km_plot("CKD4-5")
-#model = read_in_subgroup_model("CKD4-5")
-#plot_grid(km_plots$g1, km_plots$g1_matched, plot_subgroup_HRs(model), ncol=1,  align="v", axis = c("lr"))
+km_plots = subset_km_plot("CKD4-5")
+model = read_in_subgroup_model("CKD4-5")
+plot_grid(km_plots$g1, km_plots$g1_matched, plot_subgroup_HRs(model), ncol=1,  align="v", axis = c("lr"))
 ```
 <br/><br/>
 
 ```{r}
-#create_subgroup_table("CKD4-5", model)
+create_subgroup_table("CKD4-5", model)
 ```
+<br/>Models failed to converge for COVID-related deaths owing to insufficient event counts.
 <br/><br/>
 
 #### Subgroup analysis - RRT
