@@ -37,10 +37,12 @@ if (matching_status=="unmatched" & vaccine=="primary") {
   data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_matched.rds"))
   
   } else if (matching_status=="unmatched" & vaccine=="boost") { 
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds"))
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds")) %>%
+    mutate(prior_covid_cat = prior_covid_cat_dose1)
 
   } else { 
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost_matched.rds"))
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost_matched.rds"))  %>%
+    mutate(prior_covid_cat = prior_covid_cat_dose1)
 }
 
 ## Specify output path names and directory
@@ -63,8 +65,6 @@ if (subgroup=="all") {
 } else if (subgroup=="RRT") {
   data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
   ## JCVI subgroups
-} else if (subgroup=="JCVI2") {
-  data_cohort = subset(data_cohort, jcvi_group == "2 (80+ or health/social care worker)")
 } else if (subgroup=="JCVI3") {
   data_cohort = subset(data_cohort, jcvi_group == "3 (75+)")
 } else if (subgroup=="JCVI4") {

@@ -54,7 +54,7 @@ data_cox_strata <- read_rds(here::here("output", "model", paste0("VE_",vaccine),
 strata = nrow(data_cox_strata) > 0
 
 ## Check dataset not empty
-if (!strata & vaccine == "primary" & subgroup=="all") {
+if (!strata & subgroup=="all") {
   try(stop("Not enough events to fit stratified model."))
 }
 
@@ -110,7 +110,7 @@ if (vaccine=="primary") {
   irr_sub_full <- irr_sub %>% filter(!(period %in% postvax_list$postvax_periods))
 } else if (vaccine=="boost") {
   irr_sub_strata <- irr_sub %>% filter(period %in% postvax_list$postvax_periods)
-  irr_sub_full <- irr_sub_strata
+  irr_sub_full <- irr_sub %>% filter(!(period %in% postvax_list$postvax_periods))
 } else {
   stop ("Arguments not specified correctly.")
 }

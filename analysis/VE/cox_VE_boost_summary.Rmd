@@ -77,7 +77,7 @@ Most people with kidney disease received a 2-dose homologous primary series of e
 * Dose intervals were in the range of 8-14 weeks (doses 1-2) and >=12 weeks (for doses 2-3)
 * Events designated as postvaccination outcomes occurred after the date of the second dose
 * Not a healthcare worker, care home resident, receiving end-of-life care, or housebound
-* No SARS-CoV-2 infection in the interval spanning 90 days before dose 1 up to day of dose 3 (to mitigate the impact of hybrid immunity)
+* No SARS-CoV-2 infection in the interval dose 1 to dose 3 (to mitigate the impact of hybrid immunity)
 
 ### Matching criteria for matched cohort
 * Region   
@@ -256,7 +256,7 @@ generate_km_plot = function(surv_data) {
   ggplot(aes(x = time, y = 1-surv.floor, colour = vax2_type_descr, fill = vax2_type_descr)) + geom_step(size = 0.8) +
   facet_wrap(.~outcome_clean, nrow=1) +
   geom_rect(aes(xmin=lagtime, xmax=time, ymin=1-surv.ll.floor, ymax=1-surv.ul.floor), alpha=0.1, colour="transparent") +
-  scale_x_continuous(breaks=postvaxcuts, limits=c(0, max(postvaxcuts)), expand = c(0, 0)) +
+  scale_x_continuous(breaks=postvaxcuts, limits=c(0, max(postvaxcuts)+period_length), expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(mult=c(0,0.01))) +
   labs(
     x = "",
@@ -343,6 +343,11 @@ model$estimate = as.numeric(model$estimate)
 model$conf.low = as.numeric(model$conf.low)
 model$conf.high = as.numeric(model$conf.high)
 
+## Add left, right, and midpoint for full models
+model$term_midpoint[model$term=="15-126"] = max(postvaxcuts)+period_length/2
+model$term_left[model$term=="15-126"] = max(postvaxcuts)
+model$term_right[model$term=="15-126"] = max(postvaxcuts)+period_length
+
 ## Add redaction text
 model$redaction = NA
 model$redaction[model$p.value=="[Redacted]" & model$model==0] = "[R]"
@@ -354,7 +359,7 @@ model$redaction[model$n_event==0 & model$model==0] = "[N]"
 model_subset = subset(model, model_group %in% c("Person-time (unadjusted)", "Person-time (fully adjusted)", "Calendar-time (fully adjusted)", "Matched"))
 model_subset$model_group = factor(model_subset$model_group, levels = c("Person-time (unadjusted)","Person-time (fully adjusted)", "Calendar-time (fully adjusted)", "Matched"))
 
-## Generate HR plot for 4 ouctomes
+## Generate HR plot for 4 outcomes
 g2 = ggplot(data = model_subset) +
     geom_point(size = 3, aes(y=exp(estimate), x=term_midpoint, colour=model_group), position = position_dodge(width = 50)) +
     geom_linerange(aes(ymin=exp(conf.low), ymax=exp(conf.high), x=term_midpoint, colour=model_group), position = position_dodge(width = 50)) +
@@ -365,7 +370,7 @@ g2 = ggplot(data = model_subset) +
       sec.axis = dup_axis(name="<- Favours BNT / Favours AZ ->", breaks = NULL)
     ) +
   facet_wrap(.~outcome_clean, nrow=1) +
-  scale_x_continuous(breaks=postvaxcuts, limits=c(0, max(postvaxcuts)), expand = c(0, 0)) +
+  scale_x_continuous(breaks=postvaxcuts, limits=c(0, max(postvaxcuts)+period_length), expand = c(0, 0)) +
   scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#7570B3", "#B40F20")) +
   labs(
     y="Hazard ratio (95% CI)",
@@ -374,6 +379,8 @@ g2 = ggplot(data = model_subset) +
     title=NULL
   ) +
   theme_bw()+
+  annotate("rect", xmin = lastfupday, xmax =  lastfupday+period_length, ymin = 0.25, ymax = 4, alpha = .3, fill = "grey") +
+  annotate("text", x =lastfupday+period_length/2, y = 3.3, label = "All", size=7) +
   theme(
     strip.text = element_text(size=20, colour="white"), # set as white to avoid repeating text in aligned plot
     axis.text = element_text(size=20),

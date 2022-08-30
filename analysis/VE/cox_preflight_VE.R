@@ -33,7 +33,7 @@ if(length(args)==0){
   db = "unmatched"
   timescale = "persontime"
   selected_outcome = "covid_postest"
-  subgroup = "JCVI_2"
+  subgroup = "all"
   vaccine = "primary"
 } else {
   db = args[[1]]
@@ -74,6 +74,12 @@ data_cohort <- read_rds(here::here("output", "data", input_name)) %>%
          vax_day = get(selected_vax_day)
   )
 
+## Update prior COVID variable name to be consistent between primary and booster data
+if (vaccine == "boost") {
+  data_cohort <- data_cohort %>%
+    mutate(prior_covid_cat = prior_covid_cat_dose1)
+}
+
 ## Select subset
 if (subgroup=="all") {
   data_cohort = data_cohort
@@ -85,8 +91,6 @@ if (subgroup=="all") {
 } else if (subgroup=="RRT") {
   data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
   ## JCVI subgroups
-} else if (subgroup=="JCVI2") {
-  data_cohort = subset(data_cohort, jcvi_group == "2 (80+ or health/social care worker)")
 } else if (subgroup=="JCVI3") {
   data_cohort = subset(data_cohort, jcvi_group == "3 (75+)")
 } else if (subgroup=="JCVI4") {
@@ -280,8 +284,8 @@ add_covars <- function(.data) {
 
 data_cox_full <- data_cox_full %>% add_covars()
 
-## Create stratified dataset if running model for primary schedule in whole population
-if (subgroup=="all" & vaccine=="primary") strata <- TRUE else strata <- FALSE
+## Create stratified dataset if running model for primary or boost models in whole population
+if (subgroup=="all") strata <- TRUE else strata <- FALSE
 
 if (strata) {
   data_cox_strata <- tmerge(
@@ -343,7 +347,7 @@ if (!full) {
 if (strata) {
   ## Only keep postvaxcuts during which there are >2 events for each level of expo
   data_cox_strata_keep <- data_cox_strata %>%
-    filter(!is.na(timesincevax_pw) & timesincevax_pw!="183+") %>% ## Added to cut periods of 1-14d and 183d+ (primary)
+    filter(!is.na(timesincevax_pw) & timesincevax_pw!="183+" & timesincevax_pw!="127+") %>% ## Added to cut periods of 1-14d and 183d+ (primary) or 127+ (boost)
     group_by(across(all_of(c(vars0, expo)))) %>%
     mutate(check_events_strata = sum(ind_outcome)) %>%
     ungroup() %>%
@@ -359,7 +363,7 @@ if (strata) {
 } 
 
 if (!strata) {
-  if (vaccine=="primary" & subgroup=="all") {
+  if (subgroup=="all") {
     error_message = "Not enough events for stratified model."
   } else {
     error_message = "Stratified model excluded."

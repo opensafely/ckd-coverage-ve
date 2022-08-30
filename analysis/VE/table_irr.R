@@ -68,8 +68,6 @@ if (subgroup=="all") {
 } else if (subgroup=="RRT") {
   data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
   ## JCVI subgroups
-} else if (subgroup=="JCVI2") {
-  data_cohort = subset(data_cohort, jcvi_group == "2 (80+ or health/social care worker)")
 } else if (subgroup=="JCVI3") {
   data_cohort = subset(data_cohort, jcvi_group == "3 (75+)")
 } else if (subgroup=="JCVI4") {
@@ -115,32 +113,43 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
   
       ## Select minimum date of censorship or outcome - used to exclude from analysis
       stop_date = pmin(censor_date, outcome_date, na.rm=TRUE),
-      
-      ## Time to censorship or outcome
-      tte_stop = tte(vax2_date - 1, stop_date, na.censor=TRUE)
-    )
+      )
    
   if (vaccine=="primary") {
     data_cohort_irr = data_cohort_irr %>%
       mutate(
-      ## Person-days contributed to window 1
-      persondays_window1 = ifelse(tte_stop>postvaxcuts[1] & tte_stop<=postvaxcuts[2], tte_stop, period_length),
-      
-      ## Person-days contributed to window 2
-      persondays_window2 = ifelse(tte_stop>postvaxcuts[2] & tte_stop<=postvaxcuts[3], tte_stop-postvaxcuts[2], period_length),
-      persondays_window2 = ifelse(tte_stop<=postvaxcuts[2], 0, persondays_window2),
-      
-      ## Person-days contributed to window 3
-      persondays_window3 = ifelse(tte_stop>postvaxcuts[3] & tte_stop<=postvaxcuts[4], tte_stop-postvaxcuts[3], period_length),
-      persondays_window3 = ifelse(tte_stop<=postvaxcuts[3], 0, persondays_window3),
-      
-      ## Person-days contributed to window 4 (all follow-up)
-      persondays_window4 = tte_stop
+        ## Time to censorship or outcome
+        tte_stop = tte(vax2_date - 1, stop_date, na.censor=TRUE),
+        
+        ## Person-days contributed to window 1
+        persondays_window1 = ifelse(tte_stop>postvaxcuts[1] & tte_stop<=postvaxcuts[2], tte_stop, period_length),
+        
+        ## Person-days contributed to window 2
+        persondays_window2 = ifelse(tte_stop>postvaxcuts[2] & tte_stop<=postvaxcuts[3], tte_stop-postvaxcuts[2], period_length),
+        persondays_window2 = ifelse(tte_stop<=postvaxcuts[2], 0, persondays_window2),
+        
+        ## Person-days contributed to window 3
+        persondays_window3 = ifelse(tte_stop>postvaxcuts[3] & tte_stop<=postvaxcuts[4], tte_stop-postvaxcuts[3], period_length),
+        persondays_window3 = ifelse(tte_stop<=postvaxcuts[3], 0, persondays_window3),
+        
+        ## Person-days contributed to window 4 (all follow-up)
+        persondays_window4 = tte_stop
     )
   } else {
     data_cohort_irr = data_cohort_irr %>%
       mutate(
-        persondays_window1 = tte_stop
+        ## Time to censorship or outcome
+        tte_stop = tte(vax3_date - 1, stop_date, na.censor=TRUE),
+        
+        ## Person-days contributed to window 1
+        persondays_window1 = ifelse(tte_stop>postvaxcuts[1] & tte_stop<=postvaxcuts[2], tte_stop, period_length),
+        
+        ## Person-days contributed to window 2
+        persondays_window2 = ifelse(tte_stop>postvaxcuts[2] & tte_stop<=postvaxcuts[3], tte_stop-postvaxcuts[2], period_length),
+        persondays_window2 = ifelse(tte_stop<=postvaxcuts[2], 0, persondays_window2),
+        
+        ## Person-days contributed to window 3 (all follow-up)
+        persondays_window3 = tte_stop
       )
   }
   
@@ -157,9 +166,9 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
     )
   } else {
     postvax_irr <- data.frame(
-      period = postvax_periods,
-      period_start = postvaxcuts[1]+1,
-      period_end = postvaxcuts[2]
+      period = c(postvax_periods, paste0(postvaxcuts[1]+1,"-",lastfupday)),
+      period_start = c(postvaxcuts[1:2]+1,postvaxcuts[1]+1),
+      period_end = c(postvaxcuts[2:3], lastfupday)
     )
   }
   
@@ -248,6 +257,10 @@ irr_collated$outcome_clean[irr_collated$outcome=="tte_noncovid_death"] = "Non-CO
 ## Simplify output to report on whole study period in subgroup analyses
 if (vaccine=="primary" & subgroup!="all") {
   irr_collated = subset(irr_collated, period=="15-182")
+}
+
+if (vaccine=="boost" & subgroup!="all") {
+  irr_collated = subset(irr_collated, period=="15-126")
 }
 
 ## Save output

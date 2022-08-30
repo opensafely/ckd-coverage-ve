@@ -30,9 +30,10 @@ data_processed <- read_rds(here::here("output", "data", "data_processed_boost.rd
 
 ## Vaccine initiation dates
 first_dose_min = as_date("2021-01-18")
+third_dose_min = as_date("2021-09-01")
 
 ## Set analysis end date
-data_processed$end_date = as_date("2022-01-31")
+data_processed$end_date = as_date("2022-04-21")
 
 ## Set and store outcomes list
 outcomes_list <- list(
@@ -47,9 +48,9 @@ write_rds(
 )
 
 ## Set and store analysis intervals and last follow-up day
-period_length <- 84 # Single 12-week period for post-boost analysis, matching https://github.com/opensafely/comparative-booster/blob/main/lib/design/study-dates.json as of 04 July 2022
-n_periods <- 1
-postvaxcuts <- period_length*0:1
+period_length <- 56 # match primary VE analysis
+n_periods <- 2
+postvaxcuts <- period_length*0:(n_periods)+14
 postvax_periods = paste0(postvaxcuts[1:((length(postvaxcuts)-1))]+1,"-",postvaxcuts[2:length(postvaxcuts)])
 postvax_periods_weeks = paste0((postvaxcuts/7)[1:((length(postvaxcuts)-1))]+1,"-",(postvaxcuts/7)[2:length(postvaxcuts)])
 lastfupday <- max(postvaxcuts)
@@ -125,7 +126,7 @@ data_criteria <- data_processed %>%
     
     # Vaccine profile
     vax_homol_heterol_pfi = (!is.na(vax123_type)) & (vax123_type=="az-az-pfizer" | vax123_type=="pfizer-pfizer-pfizer"),
-    vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_dose_min,
+    vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_dose_min & (!is.na(vax3_date)) & vax3_date>=third_dose_min,
     vax_interval_valid_1_2 = (!is.na(tbv1_2)) & tbv1_2>=(8*7) & tbv1_2<=(14*7),
     vax_interval_valid_2_3 = (!is.na(tbv2_3)) & tbv2_3>=(12*7),
     
@@ -142,12 +143,12 @@ data_criteria <- data_processed %>%
     isnot_endoflife = !endoflife,
     isnot_housebound = !housebound,
     isnot_JCVI1_2 = jcvi_group!="1 (65+ care home resident)" & jcvi_group!="2 (80+ or health/social care worker)",
-    isnot_inhospital = !inhospital,
+    #isnot_inhospital = !inhospital,
     
     # Not censored pre dose dose 3
     isnot_censored_early = tte_censor>0 | is.na(tte_censor),
     
-    # No COVID in window spanning 90 days pre dose 1 to day of dose 3
+    # No COVID in window spanning dose 1 to dose 3
     nopreboost_covid = preboost_covid_cat==0,
     
     # Primary outcome study population
@@ -157,7 +158,7 @@ data_criteria <- data_processed %>%
       has_sex & has_imd & has_ethnicity & has_region &
       vax_homol_heterol_pfi & vax_date_valid & vax_interval_valid_1_2 & vax_interval_valid_2_3 &
       positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check &
-      isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI1_2 & isnot_inhospital &
+      isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI1_2 & #isnot_inhospital &
       isnot_censored_early &
       nopreboost_covid
      )
@@ -198,7 +199,7 @@ data_flowchart <- data_criteria %>%
     c6 = c5 & (vax_date_valid),
     c7 = c6 & (vax_interval_valid_1_2 & vax_interval_valid_2_3),
     c8 = c7 & (positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check),
-    c9 = c8 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI1_2 & isnot_inhospital),
+    c9 = c8 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI1_2),
     c10 = c9 & isnot_censored_early,
     c11 = c10 & nopreboost_covid
   ) %>%
@@ -223,12 +224,12 @@ data_flowchart <- data_criteria %>%
       crit == "c3" ~ "  with no RRT mismatch (primary care dialysis/Tx code but absent from UKRR 2020 population)", 
       crit == "c4" ~ "  with no missing demographic information",
       crit == "c5" ~ "  received 2 x ChAdOx1-S or 2 x BNT162b2 followed by BNT162b2 boost",
-      crit == "c6" ~ "  received first dose on or after 18 January 2021",
+      crit == "c6" ~ "  received first dose on or after 18 January 2021 and 3rd dose on or after 1st September 2021",
       crit == "c7" ~ "  dose intervals of 8-14 weeks (for doses 1-2) and >=12 weeks (for doses 2-3)",
       crit == "c8" ~ "  post-vaccination outcomes recorded after third dose",
-      crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, housebound, in JCVI priority groups 1/2, or hospitalised on day of booster",
+      crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, housebound, or in JCVI priority groups 1/2",
       crit == "c10" ~ "  not censored before third dose",
-      crit == "c11" ~ "  no SARS-CoV-2 in window spanning 90 days before before dose 3",
+      crit == "c11" ~ "  no SARS-CoV-2 in window spanning dose 1 to dose 3",
       TRUE ~ NA_character_
     )
   )
@@ -279,7 +280,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
     "ethnicity",
     "ckd_3cat",
     "cev",
-    "prior_covid_cat",
+    #"prior_covid_cat",
     "multimorb",
     "any_immunosuppression",    
     NULL

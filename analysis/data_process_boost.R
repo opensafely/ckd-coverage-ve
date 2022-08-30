@@ -392,7 +392,7 @@ data_processed <- data_extract %>%
     prior_covid_cat_dose1 = as.numeric(!is.na(pmin(prior_positive_test_date_dose1, prior_primary_care_covid_case_date_dose1, prior_covid_emergency_date_dose1, prior_covid_hospitalisation_date_dose1, na.rm=TRUE))),
     prior_covid_cat_dose3 = as.numeric(!is.na(pmin(prior_positive_test_date_dose3, prior_primary_care_covid_case_date_dose3, prior_covid_emergency_date_dose3, prior_covid_hospitalisation_date_dose3, na.rm=TRUE))),
     
-    # COVID in window spanning 9dose 1 to dose 3
+    # COVID in window spanning dose 1 to dose 3
     preboost_covid_cat = as.numeric(!is.na(pmin(preboost_positive_test_date, preboost_primary_care_covid_case_date, preboost_covid_emergency_date, preboost_covid_hospitalisation_date, na.rm=TRUE))),
 
     # Number of tests in pre-vaccination period
