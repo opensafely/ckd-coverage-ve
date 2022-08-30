@@ -18,8 +18,8 @@ from cohortextractor import (
 from codelists import *
 
 ### Set initial date parameters
-start_date = "2021-09-01" # third primary dose eligibility in immunosuppressed (
-end_date = "2022-01-31" # matches comparative booster end date (https://www.medrxiv.org/content/10.1101/2022.07.29.22278186v1.full)
+start_date = "2021-09-01" # third primary dose eligibility in immunosuppressed
+end_date = "2022-04-30" # 2 months (rounded up) after launch of spring booster campaign (21-02-2022)
 
 study = StudyDefinition(
     # Configure the expectations framework
@@ -397,7 +397,7 @@ study = StudyDefinition(
     returning = "date_of_death",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-05-11"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
       "rate": "uniform",
       "incidence": 0.05
     },
@@ -936,12 +936,79 @@ study = StudyDefinition(
     on_or_before = "covid_vax_date_3 - 1 day"
   ),
   
-  ################################################
-  ############ pre-index COVID events ############
-  ################################################
+  #################################################
+  ############ pre dose 1 COVID events ############
+  #################################################
   
-  ## Covid-related positive test prior to study period
-  prior_positive_test_date = patients.with_test_result_in_sgss(
+  ## Covid-related positive test prior to dose 1
+  prior_positive_test_date_dose1 = patients.with_test_result_in_sgss(
+    pathogen = "SARS-CoV-2",
+    test_result = "positive",
+    returning = "date",
+    date_format = "YYYY-MM-DD",
+    on_or_before = "covid_vax_date_1 - 1 day",
+    find_first_match_in_period = True,
+    restrict_to_earliest_specimen_date = False,
+    return_expectations = {
+      "date": {"earliest": "2020-02-01", "latest": "2020-12-01"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
+      "incidence": 0.02,
+    },
+  ),
+  
+  ## Covid-related case identification prior to dose 1
+  prior_primary_care_covid_case_date_dose1 = patients.with_these_clinical_events(
+    combine_codelists(
+      covid_primary_care_code,
+      covid_primary_care_positive_test,
+      covid_primary_care_sequalae,
+    ),
+    returning = "date",
+    date_format = "YYYY-MM-DD",
+    on_or_before = "covid_vax_date_1 - 1 day",
+    find_first_match_in_period=True,
+    return_expectations = {
+      "date": {"earliest": "2020-02-01", "latest": "2020-12-01"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
+      "incidence": 0.02,
+    },
+  ),
+
+  ## Covid-related A&E prior to dose 1
+  prior_covid_emergency_date_dose1 = patients.attended_emergency_care(
+    returning="date_arrived",
+    with_these_diagnoses = covid_emergency,
+    on_or_before = "covid_vax_date_1 - 1 day",
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2020-02-01", "latest": "2020-12-01"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
+      "incidence": 0.005,
+    },
+  ),
+  
+  ## Covid-related admission prior to dose 1
+  prior_covid_hospitalisation_date_dose1 = patients.admitted_to_hospital(
+    returning = "date_admitted",
+    with_these_diagnoses = covid_icd10,
+    with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
+    on_or_before = "covid_vax_date_1 - 1 day",
+    date_format = "YYYY-MM-DD",
+    find_first_match_in_period = True,
+    return_expectations = {
+      "date": {"earliest": "2020-02-01", "latest": "2020-12-01"}, # need both earliest/latest to obtain expected incidence
+      "rate": "uniform",
+      "incidence": 0.005,
+    },
+  ),
+  
+  #################################################
+  ############ pre dose 3 COVID events ############
+  #################################################
+  
+  ## Covid-related positive test prior to dose 3
+  prior_positive_test_date_dose3 = patients.with_test_result_in_sgss(
     pathogen = "SARS-CoV-2",
     test_result = "positive",
     returning = "date",
@@ -956,8 +1023,8 @@ study = StudyDefinition(
     },
   ),
   
-  ## Covid-related case identification prior to study period
-  prior_primary_care_covid_case_date = patients.with_these_clinical_events(
+  ## Covid-related case identification prior to dose 3
+  prior_primary_care_covid_case_date_dose3 = patients.with_these_clinical_events(
     combine_codelists(
       covid_primary_care_code,
       covid_primary_care_positive_test,
@@ -974,8 +1041,8 @@ study = StudyDefinition(
     },
   ),
 
-  ## Covid-related A&E prior to study period
-  prior_covid_emergency_date = patients.attended_emergency_care(
+  ## Covid-related A&E prior to dose 3
+  prior_covid_emergency_date_dose3 = patients.attended_emergency_care(
     returning="date_arrived",
     with_these_diagnoses = covid_emergency,
     on_or_before = "covid_vax_date_3 - 1 day",
@@ -988,8 +1055,8 @@ study = StudyDefinition(
     },
   ),
   
-  ## Covid-related admission prior to study period
-  prior_covid_hospitalisation_date = patients.admitted_to_hospital(
+  ## Covid-related admission prior to dose 3
+  prior_covid_hospitalisation_date_dose3 = patients.admitted_to_hospital(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
     with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
@@ -1017,11 +1084,11 @@ study = StudyDefinition(
     test_result = "positive",
     returning = "date",
     date_format = "YYYY-MM-DD",
-    between=["covid_vax_date_3 - 90 days","covid_vax_date_3 - 1 day"], # 90 days preceding booster dose
+    between=["covid_vax_date_1","covid_vax_date_3 - 1 day"], # exclude influence of infections between primary course and booster dose
     find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
     return_expectations = {
-      "date": {"earliest": "2021-06-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-12-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.02,
     },
@@ -1036,10 +1103,10 @@ study = StudyDefinition(
     ),
     returning = "date",
     date_format = "YYYY-MM-DD",
-    between=["covid_vax_date_1 - 90 days","covid_vax_date_1 - 1 day"], # 90 days preceding booster dose
+    between=["covid_vax_date_1","covid_vax_date_3 - 1 day"], # exclude influence of infections between primary course and booster dose
     find_first_match_in_period=True,
     return_expectations = {
-      "date": {"earliest": "2021-06-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-12-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.02,
     },
@@ -1049,11 +1116,11 @@ study = StudyDefinition(
   preboost_covid_emergency_date = patients.attended_emergency_care(
     returning="date_arrived",
     with_these_diagnoses = covid_emergency,
-    between=["covid_vax_date_1 - 90 days","covid_vax_date_1 - 1 day"], # 90 days preceding booster dose
+    between=["covid_vax_date_1","covid_vax_date_3 - 1 day"], # exclude influence of infections between primary course and booster dose
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-06-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-12-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.005,
     },
@@ -1064,11 +1131,11 @@ study = StudyDefinition(
     returning = "date_admitted",
     with_these_diagnoses = covid_icd10,
     with_admission_method = ["21", "22", "23", "24", "25", "2A", "2B", "2C", "2D", "28"],
-    between=["covid_vax_date_1 - 90 days","covid_vax_date_1 - 1 day"], # 90 days preceding booster dose
+    between=["covid_vax_date_1","covid_vax_date_3 - 1 day"], # exclude influence of infections between primary course and booster dose
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-06-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-12-01", "latest": "2021-08-31"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.005,
     },
@@ -1118,7 +1185,7 @@ study = StudyDefinition(
     returning = "date",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-01-31"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
       "rate": "uniform",
       "incidence": 0.4,
     },
@@ -1132,7 +1199,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-01-31"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
       "rate": "uniform",
       "incidence": 0.2,
     },
@@ -1147,7 +1214,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-01-31"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
       "rate": "uniform",
       "incidence": 0.2,
     },
@@ -1160,7 +1227,7 @@ study = StudyDefinition(
     between=["covid_vax_date_3",end_date],
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-01-31"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
       "rate": "uniform",
       "incidence": 0.1
     },
@@ -1176,7 +1243,7 @@ study = StudyDefinition(
     returning = "date",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-01-31"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
       "rate": "uniform",
       "incidence": 0.5,
     },

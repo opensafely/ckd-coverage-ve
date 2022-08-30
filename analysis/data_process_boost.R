@@ -67,13 +67,19 @@ data_extract <- read_csv(
     immunosuppression_medication_date = col_date(format="%Y-%m-%d"),
     
     # Dates for Covid-related variables
-    # Pre-index events
-    prior_positive_test_date = col_date(format="%Y-%m-%d"),
-    prior_primary_care_covid_case_date = col_date(format="%Y-%m-%d"),
-    prior_covid_emergency_date = col_date(format="%Y-%m-%d"),
-    prior_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
+    # Pre dose 1 events
+    prior_positive_test_date_dose1 = col_date(format="%Y-%m-%d"),
+    prior_primary_care_covid_case_date_dose1 = col_date(format="%Y-%m-%d"),
+    prior_covid_emergency_date_dose1 = col_date(format="%Y-%m-%d"),
+    prior_covid_hospitalisation_date_dose1 = col_date(format="%Y-%m-%d"),
+    
+    # Pre dose 3 events
+    prior_positive_test_date_dose3 = col_date(format="%Y-%m-%d"),
+    prior_primary_care_covid_case_date_dose3 = col_date(format="%Y-%m-%d"),
+    prior_covid_emergency_date_dose3 = col_date(format="%Y-%m-%d"),
+    prior_covid_hospitalisation_date_dose3 = col_date(format="%Y-%m-%d"),
 
-    # Pre-vax events (90 days pre boost)
+    # Pre-vax events (dose 1 to pre dose 3)
     preboost_positive_test_date	= col_date(format="%Y-%m-%d"),
     preboost_primary_care_covid_case_date	= col_date(format="%Y-%m-%d"),
     preboost_covid_emergency_date	= col_date(format="%Y-%m-%d"),
@@ -382,10 +388,11 @@ data_processed <- data_extract %>%
     # Any immunosuppression (transplant, cancer, haematologic cancer, asplenia)
     any_immunosuppression = ifelse(ukrr_2020_group=="Tx" | other_transplant==1 | immunosuppression==1 | haem_cancer==1 | asplenia==1, 1, 0), 
     
-    # Prior COVID - index
-    prior_covid_cat = as.numeric(!is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_emergency_date, prior_covid_hospitalisation_date, na.rm=TRUE))),
+    # Prior COVID
+    prior_covid_cat_dose1 = as.numeric(!is.na(pmin(prior_positive_test_date_dose1, prior_primary_care_covid_case_date_dose1, prior_covid_emergency_date_dose1, prior_covid_hospitalisation_date_dose1, na.rm=TRUE))),
+    prior_covid_cat_dose3 = as.numeric(!is.na(pmin(prior_positive_test_date_dose3, prior_primary_care_covid_case_date_dose3, prior_covid_emergency_date_dose3, prior_covid_hospitalisation_date_dose3, na.rm=TRUE))),
     
-    # COVID in window spanning 90 days pre boost
+    # COVID in window spanning 9dose 1 to dose 3
     preboost_covid_cat = as.numeric(!is.na(pmin(preboost_positive_test_date, preboost_primary_care_covid_case_date, preboost_covid_emergency_date, preboost_covid_hospitalisation_date, na.rm=TRUE))),
 
     # Number of tests in pre-vaccination period
