@@ -426,6 +426,10 @@ names(table_irr) <- c("Period (days)", "n, BNT (total)", "n, BNT (events)", "per
                       "n, AZ (total)", "n, AZ (events)", "person-years, AZ", "rate, AZ", 
                       "IRR", "outcome_clean")
 
+## Redact rates if number of events = 0
+table_irr$`rate, BNT`[table_irr$`n, BNT (events)`==0] = "--"
+table_irr$`rate, AZ`[table_irr$`n, AZ (events)`==0] = "--"
+
 ## Generate table of HRs
 HR_summary <- model %>% select(model_group, term, estimate, conf.low, conf.high, outcome_clean) %>%
   mutate(
