@@ -25,24 +25,22 @@ if(length(args)==0){
   vaccine = "primary"
 } else {
   matching_status = args[[1]] # can be unmatched or matched
-  subgroup = args[[2]] # can be all / CKD3 / CKD4-5 / RRT / JCVI2 / JCVI3 / JCVI4 / JCVI5 / JCVI6 
+  subgroup = args[[2]] # can be all / CKD3 / CKD4-5 / RRT / Tx
   vaccine = args[[3]] # can be primary or boost
 }
 
 ## Import data
 if (matching_status=="unmatched" & vaccine=="primary") { 
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE.rds"))
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_primary.rds"))
 
   } else if (matching_status=="matched" & vaccine=="primary") { 
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_matched.rds"))
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_primary_matched.rds"))
   
   } else if (matching_status=="unmatched" & vaccine=="boost") { 
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds")) %>%
-    mutate(prior_covid_cat = prior_covid_cat_dose1)
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds"))
 
   } else { 
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost_matched.rds"))  %>%
-    mutate(prior_covid_cat = prior_covid_cat_dose1)
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost_matched.rds"))
 }
 
 ## Specify output path names and directory
@@ -64,15 +62,8 @@ if (subgroup=="all") {
   data_cohort = subset(data_cohort, ckd_3cat == "CKD4-5")
 } else if (subgroup=="RRT") {
   data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
-  ## JCVI subgroups
-} else if (subgroup=="JCVI3") {
-  data_cohort = subset(data_cohort, jcvi_group == "3 (75+)")
-} else if (subgroup=="JCVI4") {
-  data_cohort = subset(data_cohort, jcvi_group == "4 (70+ or clinically extremely vulnerable)")
-} else if (subgroup=="JCVI5") {
-  data_cohort = subset(data_cohort, jcvi_group == "5 (65+)")
-} else if (subgroup=="JCVI6") {
-  data_cohort = subset(data_cohort, jcvi_group == "6 (16-65 and clinically vulnerable)")
+} else if (subgroup=="Tx") {
+  data_cohort = subset(data_cohort, ckd_5cat == "RRT (Tx)")
 } else {
   stop ("Arguments not specified correctly.")
 }
@@ -102,7 +93,6 @@ counts0 <- data_cohort %>%
          kidney_transplant,
          
          ## Risk group (clinical)
-         prior_covid_cat,
          immunosuppression, 
          sev_obesity,
          diabetes,
@@ -117,9 +107,14 @@ counts0 <- data_cohort %>%
          sev_mental_ill,
          cev,
          
-         ## Summary comorbidity metrics
-         any_immunosuppression,
+         ## Summary comorbidity metric
          multimorb,
+         
+         ## Prior SARS-CoV-2
+         prior_covid_cat,
+         
+         ## Pre-vax tests
+         prevax_tests_fixed_cat,
          
          ## Other descriptors of interest
          region,
@@ -160,7 +155,6 @@ table1$Variable[table1$Variable=="cev"] = "Clinically extremely vulnerable"
 table1$Variable[table1$Variable=="chronic_kidney_disease_stages_3_5"] = "CKD3-5 code"
 table1$Variable[table1$Variable=="dialysis"] = "Dialysis code"
 table1$Variable[table1$Variable=="kidney_transplant"] = "Kidney transplant code"
-table1$Variable[table1$Variable=="any_immunosuppression"] = "Any immunosuppression"
 
 # Relabel groups for plotting
 table1$Group[table1$Group=="ageband2"] = "Age"
@@ -172,12 +166,13 @@ table1$Group[table1$Group=="jcvi_group"] = "JCVI group"
 table1$Group[table1$Group=="rural_urban_group"] = "Setting"
 table1$Group[table1$Group=="ckd_5cat"] = "Kidney disease subgroup"
 table1$Group[table1$Group=="multimorb"] = "Comorbidity count"
+table1$Group[table1$Group=="prevax_tests_fixed_cat"] = "No. of SARS-CoV-2 tests in 90-day window pre-vaccination"
 table1$Group[(table1$Variable %in% c("CKD3-5 code", "Dialysis code", "Kidney transplant code"))] = "Primary care coding of kidney disease"
-table1$Group[(table1$Variable %in% c("Care home resident", "Health/social care worker", "Housebound", "End of life care"))] = "Risk group (occupation/access)"
-table1$Group[table1$Variable %in% c("Prior SARS-CoV-2", "Immunosuppression", "Any immunosuppression", "Severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
+table1$Group[table1$Variable %in% c("Immunosuppression", "Severe obesity", "Diabetes", "Chronic respiratory disease (inc. asthma)",
                                               "Chronic heart disease", "Chronic liver disease","Asplenia", "Haematologic cancer", "Obesity", 
                                               "Organ transplant (non-kidney)", "Chronic neurological disease", "Learning disability", "Severe mental illness", 
-                                              "Clinically extremely vulnerable")] = "Risk group (clinical)"
+                                              "Clinically extremely vulnerable")] = "Morbidities"
+table1$Group[table1$Variable %in% c("Prior SARS-CoV-2")] = "Prior SARS-CoV-2"
 table1$Group[table1$Variable=="N"] = "N"
 
 ## Calculate rounded total

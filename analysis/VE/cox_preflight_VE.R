@@ -34,7 +34,7 @@ if(length(args)==0){
   timescale = "persontime"
   selected_outcome = "covid_postest"
   subgroup = "all"
-  vaccine = "primary"
+  vaccine = "boost"
 } else {
   db = args[[1]]
   timescale = args[[2]]

@@ -202,30 +202,30 @@ create_rounded_surv_table = function(outcome_number, input_data) {
       N = plyr::round_any(max(n.risk, na.rm=TRUE),threshold),
       cml.event = cumsum(replace_na(n.event, 0)),
       cml.censor = cumsum(replace_na(n.censor, 0)),
-      cml.event.floor = floor_any(cml.event, threshold),
-      cml.censor.floor = floor_any(cml.censor, threshold),
-      n.event.floor = diff(c(0,cml.event.floor)),
-      n.censor.floor = diff(c(0,cml.censor.floor)),
-      n.risk.floor = N - lag(cml.event.floor + cml.censor.floor,1,0),
-      summand.floor = n.event.floor / ((n.risk.floor - n.event.floor) * n.risk.floor),
-      surv.floor = cumprod(1 - n.event.floor / n.risk.floor),
-      surv.se.floor = surv.floor * sqrt(cumsum(replace_na(summand.floor, 0))),
-      llsurv.floor = log(-log(surv.floor)),
-      llsurv.se.floor = sqrt((1 / log(surv.floor)^2) * cumsum(summand.floor)),
-      surv.ll.floor = exp(-exp(llsurv.floor + qnorm(0.025)*llsurv.se.floor)),
-      surv.ul.floor = exp(-exp(llsurv.floor + qnorm(0.975)*llsurv.se.floor)),
-      cum.in.floor = 1 - surv.floor,
-      haz.floor = -(surv.floor-lag(surv.floor, 1, 1))/lag(surv.floor, 1, 1), # n.event / (n.risk * interval),
-      haz.se.floor = haz.floor * sqrt((n.risk.floor - n.event.floor) / (n.risk.floor* n.event.floor)),
-      cml.haz.floor = cumsum(haz.floor),
-      cml.haz.se.floor = surv.se.floor/surv.floor,
+      cml.event = floor_any(cml.event, threshold),
+      cml.censor = floor_any(cml.censor, threshold),
+      n.event = diff(c(0,cml.event)),
+      n.censor = diff(c(0,cml.censor)),
+      n.risk = N - lag(cml.event + cml.censor,1,0),
+      summand = n.event / ((n.risk - n.event) * n.risk),
+      surv = cumprod(1 - n.event / n.risk),
+      surv.se = surv * sqrt(cumsum(replace_na(summand, 0))),
+      llsurv = log(-log(surv)),
+      llsurv.se = sqrt((1 / log(surv)^2) * cumsum(summand)),
+      surv.ll = exp(-exp(llsurv + qnorm(0.025)*llsurv.se)),
+      surv.ul = exp(-exp(llsurv + qnorm(0.975)*llsurv.se)),
+      cum.in = 1 - surv,
+      haz = -(surv-lag(surv, 1, 1))/lag(surv, 1, 1), # n.event / (n.risk * interval),
+      haz.se = haz * sqrt((n.risk - n.event) / (n.risk* n.event)),
+      cml.haz = cumsum(haz),
+      cml.haz.se = surv.se/surv,
     ) %>%
     select(
       vax2_type_descr, time, lagtime, leadtime, interval,
-      n.risk.floor, n.event.floor, n.censor.floor, summand.floor,
-      surv.floor, surv.se.floor, surv.ll.floor, surv.ul.floor,
-      haz.floor, haz.se.floor,
-      cml.haz.floor, cml.haz.se.floor
+      n.risk, n.event, n.censor, summand,
+      surv, surv.se, surv.ll, surv.ul,
+      haz, haz.se,
+      cml.haz, cml.haz.se
     )
   #write.csv(data_surv_rounded, "data_surv_rounded.csv")
   data_surv_rounded
@@ -233,13 +233,22 @@ create_rounded_surv_table = function(outcome_number, input_data) {
 
 ## Collate unmatched survival data
 surv_covid_postest = create_rounded_surv_table(1, data_tte_unmatched) %>% mutate(outcome_clean = clean_list[1])
-#surv_covid_emergency = create_rounded_surv_table(2) %>% mutate(outcome_clean = clean_list[2])
 surv_covid_hosp = create_rounded_surv_table(3, data_tte_unmatched) %>% mutate(outcome_clean = clean_list[3])
 surv_covid_death = create_rounded_surv_table(4, data_tte_unmatched) %>% mutate(outcome_clean = clean_list[4])
 surv_noncovid_death = create_rounded_surv_table(5, data_tte_unmatched) %>% mutate(outcome_clean = clean_list[5])
 
 ## Collate across outcomes
 surv_collated = rbind(surv_covid_postest, surv_covid_hosp, surv_covid_death, surv_noncovid_death)
+surv_collated$outcome_clean = factor(surv_collated$outcome_clean, levels = clean_list)
+
+## Collate KM contrasts for unmatched survival data
+surv_covid_postest_contrast = kmcontrast(surv_covid_postest) %>% mutate(outcome_clean = clean_list[1])
+surv_covid_hosp_contrast = kmcontrast(surv_covid_hosp) %>% mutate(outcome_clean = clean_list[3])
+surv_covid_death_contrast = kmcontrast(surv_covid_death) %>% mutate(outcome_clean = clean_list[4])
+surv_noncovid_death_contrast = kmcontrast(surv_noncovid_death) %>% mutate(outcome_clean = clean_list[5])
+
+## Collate across outcomes
+surv_collated_contrast = rbind(surv_covid_postest_contrast, surv_covid_hosp_contrast, surv_covid_death_contrast, surv_noncovid_death_contrast)
 surv_collated$outcome_clean = factor(surv_collated$outcome_clean, levels = clean_list)
 
 ## Collate matched survival data
@@ -256,9 +265,9 @@ surv_collated_matched$outcome_clean = factor(surv_collated_matched$outcome_clean
 ## Generate KM plot across 4 outcomes
 generate_km_plot = function(surv_data) {
   surv_data %>%
-  ggplot(aes(x = time, y = 1-surv.floor, colour = vax2_type_descr, fill = vax2_type_descr)) + geom_step(size = 0.8) +
+  ggplot(aes(x = time, y = 1-surv, colour = vax2_type_descr, fill = vax2_type_descr)) + geom_step(size = 0.8) +
   facet_wrap(.~outcome_clean, nrow=1) +
-  geom_rect(aes(xmin=lagtime, xmax=time, ymin=1-surv.ll.floor, ymax=1-surv.ul.floor), alpha=0.1, colour="transparent") +
+  geom_rect(aes(xmin=lagtime, xmax=time, ymin=1-surv.ll, ymax=1-surv.ul), alpha=0.1, colour="transparent") +
   scale_x_continuous(breaks=postvaxcuts, limits=c(0, max(postvaxcuts)+period_length), expand = c(0, 0)) +
   scale_y_continuous(expand = expansion(mult=c(0,0.01))) +
   labs(

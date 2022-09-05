@@ -21,7 +21,7 @@ source(here::here("analysis", "functions.R"))
 fs::dir_create(here::here("output", "tables"))
 
 ## Import processed data
-data_processed <- read_rds(here::here("output", "data", "data_processed_boost.rds"))  %>%
+data_processed <- read_rds(here::here("output", "data", "data_processed_VE_boost.rds"))  %>%
   # to avoid timestamps causing inequalities for dates on the same day
   mutate(across(where(is.Date), 
                 ~ floor_date(
@@ -39,7 +39,8 @@ data_processed$end_date = as_date("2022-04-21")
 outcomes_list <- list(
   short_name = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death", "noncovid_death"),
   clean_name = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death", "Non-COVID death"),
-  date_name = c("postboost_positive_test_date", "postboost_covid_emergency_date", "postboost_covid_hospitalisation_date", "postboost_covid_death_date", "noncoviddeath_date")
+  short_name = c("SARS-CoV-2+", "COVID-19 A&E", "COVID-19 hosp.", "COVID-19 death", "Non-COVID death"),
+  date_name = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date", "noncoviddeath_date")
 )
 dir.create(here::here("output", "lib"), showWarnings = FALSE, recursive=TRUE)
 write_rds(
@@ -72,24 +73,24 @@ data_processed <- data_processed %>%
     ind_censor = dplyr::if_else((censor_date>censor_date) | is.na(censor_date), FALSE, TRUE),
     
     # time to positive test
-    tte_covid_postest = tte(vax3_date - 1, postboost_positive_test_date, censor_date, na.censor=TRUE),
-    tte_covid_postest_or_censor = tte(vax3_date - 1, postboost_positive_test_date, censor_date, na.censor=FALSE),
-    ind_covid_postest = dplyr::if_else((postboost_positive_test_date>censor_date) | is.na(postboost_positive_test_date), FALSE, TRUE),
+    tte_covid_postest = tte(vax3_date - 1, postvax_positive_test_date, censor_date, na.censor=TRUE),
+    tte_covid_postest_or_censor = tte(vax3_date - 1, postvax_positive_test_date, censor_date, na.censor=FALSE),
+    ind_covid_postest = dplyr::if_else((postvax_positive_test_date>censor_date) | is.na(postvax_positive_test_date), FALSE, TRUE),
     
     # time to COVID-19 A&E attendance
-    tte_covid_emergency = tte(vax3_date - 1, postboost_covid_emergency_date, censor_date, na.censor=TRUE),
-    tte_covid_emergency_or_censor = tte(vax3_date - 1, postboost_covid_emergency_date, censor_date, na.censor=FALSE),
-    ind_covid_emergency = dplyr::if_else((postboost_covid_emergency_date>censor_date) | is.na(postboost_covid_emergency_date), FALSE, TRUE),
+    tte_covid_emergency = tte(vax3_date - 1, postvax_covid_emergency_date, censor_date, na.censor=TRUE),
+    tte_covid_emergency_or_censor = tte(vax3_date - 1, postvax_covid_emergency_date, censor_date, na.censor=FALSE),
+    ind_covid_emergency = dplyr::if_else((postvax_covid_emergency_date>censor_date) | is.na(postvax_covid_emergency_date), FALSE, TRUE),
     
     # time to COVID-19 hospitalisation
-    tte_covid_hosp = tte(vax3_date - 1, postboost_covid_hospitalisation_date, censor_date, na.censor=TRUE),
-    tte_covid_hosp_or_censor = tte(vax3_date - 1, postboost_covid_hospitalisation_date, censor_date, na.censor=FALSE),
-    ind_covid_hosp = dplyr::if_else((postboost_covid_hospitalisation_date>censor_date) | is.na(postboost_covid_hospitalisation_date), FALSE, TRUE),
+    tte_covid_hosp = tte(vax3_date - 1, postvax_covid_hospitalisation_date, censor_date, na.censor=TRUE),
+    tte_covid_hosp_or_censor = tte(vax3_date - 1, postvax_covid_hospitalisation_date, censor_date, na.censor=FALSE),
+    ind_covid_hosp = dplyr::if_else((postvax_covid_hospitalisation_date>censor_date) | is.na(postvax_covid_hospitalisation_date), FALSE, TRUE),
     
     # time to COVID-19 death
-    tte_covid_death = tte(vax3_date - 1, postboost_covid_death_date, censor_date, na.censor=TRUE),
-    tte_covid_death_or_censor = tte(vax3_date - 1, postboost_covid_death_date, censor_date, na.censor=FALSE),
-    ind_covid_death = dplyr::if_else((postboost_covid_death_date>censor_date) | is.na(postboost_covid_death_date), FALSE, TRUE),
+    tte_covid_death = tte(vax3_date - 1, postvax_covid_death_date, censor_date, na.censor=TRUE),
+    tte_covid_death_or_censor = tte(vax3_date - 1, postvax_covid_death_date, censor_date, na.censor=FALSE),
+    ind_covid_death = dplyr::if_else((postvax_covid_death_date>censor_date) | is.na(postvax_covid_death_date), FALSE, TRUE),
     
     # time to non-COVID-19 death
     tte_noncovid_death = tte(vax3_date - 1, noncoviddeath_date, censor_date, na.censor=TRUE),
@@ -130,26 +131,25 @@ data_criteria <- data_processed %>%
     vax_interval_valid_1_2 = (!is.na(tbv1_2)) & tbv1_2>=(8*7) & tbv1_2<=(14*7),
     vax_interval_valid_2_3 = (!is.na(tbv2_3)) & tbv2_3>=(12*7),
     
-    # Post-boost events
-    positive_test_date_check = is.na(postboost_positive_test_date) | postboost_positive_test_date>=vax3_date,
-    emergency_date_check = is.na(postboost_covid_emergency_date) | postboost_covid_emergency_date>=vax3_date,
-    hospitalisation_date_check = is.na(postboost_covid_hospitalisation_date) | postboost_covid_hospitalisation_date>=vax3_date,
-    death_date_check = is.na(postboost_covid_death_date) | postboost_covid_death_date>=vax3_date,
-    noncoviddeath_date_check = is.na(noncoviddeath_date) | noncoviddeath_date>=vax3_date,
-    
     # Population exclusions
     isnot_hscworker = !hscworker,
     isnot_carehomeresident = !care_home,
     isnot_endoflife = !endoflife,
     isnot_housebound = !housebound,
-    isnot_JCVI1_2 = jcvi_group!="1 (65+ care home resident)" & jcvi_group!="2 (80+ or health/social care worker)",
+    isnot_JCVI2 = jcvi_group != "2 (80+ or health/social care worker)",
     #isnot_inhospital = !inhospital,
     
-    # Not censored pre dose dose 3
+    # Postvax events
+    positive_test_date_check = is.na(postvax_positive_test_date) | postvax_positive_test_date>=vax3_date,
+    hospitalisation_date_check = is.na(postvax_covid_hospitalisation_date) | postvax_covid_hospitalisation_date>=vax3_date,
+    death_date_check = is.na(postvax_covid_death_date) | postvax_covid_death_date>=vax3_date,
+    noncoviddeath_date_check = is.na(noncoviddeath_date) | noncoviddeath_date>=vax3_date,
+    
+    # Not censored pre dose 3
     isnot_censored_early = tte_censor>0 | is.na(tte_censor),
     
     # No COVID in window spanning dose 1 to dose 3
-    nopreboost_covid = preboost_covid_cat==0,
+    nointervax_covid = intervax_covid_cat==0,
     
     # Primary outcome study population
     include = (
@@ -157,10 +157,9 @@ data_criteria <- data_processed %>%
       has_valid_creatinine_or_ukrr & has_ckd_egfr_ukrr & has_no_rrt_mismatch &
       has_sex & has_imd & has_ethnicity & has_region &
       vax_homol_heterol_pfi & vax_date_valid & vax_interval_valid_1_2 & vax_interval_valid_2_3 &
-      positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check &
-      isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI1_2 & #isnot_inhospital &
-      isnot_censored_early &
-      nopreboost_covid
+      isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI2 & #isnot_inhospital &
+      positive_test_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check & isnot_censored_early &
+      nointervax_covid
      )
   )
 
@@ -198,10 +197,9 @@ data_flowchart <- data_criteria %>%
     c5 = c4 & (vax_homol_heterol_pfi),
     c6 = c5 & (vax_date_valid),
     c7 = c6 & (vax_interval_valid_1_2 & vax_interval_valid_2_3),
-    c8 = c7 & (positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check),
-    c9 = c8 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI1_2),
-    c10 = c9 & isnot_censored_early,
-    c11 = c10 & nopreboost_covid
+    c8 = c7 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI2),
+    c9 = c8 &  (positive_test_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check & isnot_censored_early),
+    c10 = c9 & nointervax_covid,
   ) %>%
   summarise(
     across(.fns=sum)
@@ -218,18 +216,17 @@ data_flowchart <- data_criteria %>%
     pct_step = n / lag(n),
     crit = str_extract(criteria, "^c\\d+"),
     criteria = fct_case_when(
-      crit == "c0" ~ "Aged 16+ with serum creatinine record in 2y before boost or in UKRR 2020 population",
-      crit == "c1" ~ "  with valid creatinine record (with associated age and no linked operators) or in UKRR population", 
-      crit == "c2" ~ "  with eGFR<60 or UKRR 2020 population", 
-      crit == "c3" ~ "  with no RRT mismatch (primary care dialysis/Tx code but absent from UKRR 2020 population)", 
-      crit == "c4" ~ "  with no missing demographic information",
-      crit == "c5" ~ "  received 2 x ChAdOx1-S or 2 x BNT162b2 followed by BNT162b2 boost",
-      crit == "c6" ~ "  received first dose on or after 18 January 2021 and 3rd dose on or after 1st September 2021",
-      crit == "c7" ~ "  dose intervals of 8-14 weeks (for doses 1-2) and >=12 weeks (for doses 2-3)",
-      crit == "c8" ~ "  post-vaccination outcomes recorded after third dose",
-      crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, housebound, or in JCVI priority groups 1/2",
-      crit == "c10" ~ "  not censored before third dose",
-      crit == "c11" ~ "  no SARS-CoV-2 in window spanning dose 1 to dose 3",
+      crit == "c0" ~ "Aged ≥16 years on 31st March 2021 with any serum creatinine measurement in 2 years preceding definition date or in UK Renal Registry on 31st December 2020",
+      crit == "c1" ~ "Valid record for most recent creatinine measurement (with associated date and no linked operators) or in UK Renal Registry on 31st December 2020", 
+      crit == "c2" ~ "eGFR <60 ml/min/1.73 m2 based on most recent creatinine measurement or in UK Renal Registry on 31st December 2020", 
+      crit == "c3" ~ "No RRT status mismatch (primary care code indicating dialysis or kidney transplant but not in UK Renal Registry on 31st December 2020)", 
+      crit == "c4" ~ "No missing demographic information (sex, region, index of multiple deprivation, or ethnicity)",
+      crit == "c5" ~ "Received AZ–AZ-BNT/BNT–BNT-BNT",
+      crit == "c6" ~ "Received first dose on or after 18th January 2021 and third dose on or after 1st September 2021",
+      crit == "c7" ~ "Dose 1–2 interval of 8–14 weeks and dose 2-3 interval of ≥12 weeks",
+      crit == "c8" ~ "Not healthcare worker, care home resident, receiving end-of-life care, housebound, or in JCVI priority group 2",
+      crit == "c9" ~ "No outcome or censoring events recorded before start of follow-up",
+      crit == "c10" ~ "No documented SARS-CoV-2 infection between doses 1 and 3",
       TRUE ~ NA_character_
     )
   )
@@ -274,14 +271,12 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   ## Specify exact matching variables
   exact_variables <- c(
     "region",
-    #"jcvi_group",
     "imd",
     "sex",
     "ethnicity",
-    "ckd_3cat",
+    "ckd_5cat",
     "cev",
-    #"prior_covid_cat",
-    "multimorb",
+    "prior_covid_cat",
     "any_immunosuppression",    
     NULL
   )

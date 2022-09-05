@@ -21,7 +21,7 @@ source(here::here("analysis", "functions.R"))
 fs::dir_create(here::here("output", "tables"))
 
 ## Import processed data
-data_processed <- read_rds(here::here("output", "data", "data_processed.rds"))  %>%
+data_processed <- read_rds(here::here("output", "data", "data_processed_VE_primary.rds"))  %>%
   # to avoid timestamps causing inequalities for dates on the same day
   mutate(across(where(is.Date), 
                 ~ floor_date(
@@ -38,6 +38,7 @@ data_processed$end_date = as_date("2021-11-14")
 outcomes_list <- list(
   short_name = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death", "noncovid_death"),
   clean_name = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death", "Non-COVID death"),
+  short_name = c("SARS-CoV-2+", "COVID-19 A&E", "COVID-19 hosp.", "COVID-19 death", "Non-COVID death"),
   date_name = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date", "noncoviddeath_date")
 )
 dir.create(here::here("output", "lib"), showWarnings = FALSE, recursive=TRUE)
@@ -128,13 +129,6 @@ data_criteria <- data_processed %>%
     vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_dose_min,
     vax_interval_valid = (!is.na(tbv1_2)) & tbv1_2>=(8*7) & tbv1_2<=(14*7),
     
-    # Postvax events
-    positive_test_date_check = is.na(postvax_positive_test_date) | postvax_positive_test_date>=vax2_date,
-    emergency_date_check = is.na(postvax_covid_emergency_date) | postvax_covid_emergency_date>=vax2_date,
-    hospitalisation_date_check = is.na(postvax_covid_hospitalisation_date) | postvax_covid_hospitalisation_date>=vax2_date,
-    death_date_check = is.na(postvax_covid_death_date) | postvax_covid_death_date>=vax2_date,
-    noncoviddeath_date_check = is.na(noncoviddeath_date) | noncoviddeath_date>=vax2_date,
-    
     # Population exclusions
     isnot_hscworker = !hscworker,
     isnot_carehomeresident = !care_home,
@@ -142,11 +136,20 @@ data_criteria <- data_processed %>%
     isnot_housebound = !housebound,
     isnot_JCVI2 = jcvi_group != "2 (80+ or health/social care worker)",
     
+    # Postvax events
+    positive_test_date_check = is.na(postvax_positive_test_date) | postvax_positive_test_date>=vax2_date,
+    hospitalisation_date_check = is.na(postvax_covid_hospitalisation_date) | postvax_covid_hospitalisation_date>=vax2_date,
+    death_date_check = is.na(postvax_covid_death_date) | postvax_covid_death_date>=vax2_date,
+    noncoviddeath_date_check = is.na(noncoviddeath_date) | noncoviddeath_date>=vax2_date,
+    
     # Not censored pre dose 2
     isnot_censored_early = tte_censor>0 | is.na(tte_censor),
     
     # No COVID in window spanning 90 days pre dose 1
     noprevax_covid = prevax_covid_cat==0,
+
+    # No COVID in window spanning dose 1 to dose 2
+    nointervax_covid = intervax_covid_cat==0,
     
     # Primary outcome study population
     include = (
@@ -154,10 +157,10 @@ data_criteria <- data_processed %>%
       has_valid_creatinine_or_ukrr & has_ckd_egfr_ukrr & has_no_rrt_mismatch &
       has_sex & has_imd & has_ethnicity & has_region &
       vax_pfi_az & vax_date_valid & vax_interval_valid &
-      positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check &
       isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI2 &
-      isnot_censored_early &
-      noprevax_covid
+      positive_test_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check & isnot_censored_early &
+      noprevax_covid & 
+      nointervax_covid
      )
   )
 
@@ -179,8 +182,8 @@ data_cohort <- data_criteria %>%
   )
 
 ## Save data
-write_rds(data_cohort, here::here("output", "data", "data_cohort_VE.rds"), compress="gz")
-write_csv(data_cohort, here::here("output", "data", "data_cohort_VE.csv"))
+write_rds(data_cohort, here::here("output", "data", "data_cohort_VE_primary.rds"), compress="gz")
+write_csv(data_cohort, here::here("output", "data", "data_cohort_VE_primary.csv"))
 
 ## Create and save flow chart
 data_flowchart <- data_criteria %>%
@@ -193,10 +196,10 @@ data_flowchart <- data_criteria %>%
     c5 = c4 & (vax_pfi_az),
     c6 = c5 & (vax_date_valid),
     c7 = c6 & (vax_interval_valid),
-    c8 = c7 & (positive_test_date_check & emergency_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check),
-    c9 = c8 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI2),
-    c10 = c9 & isnot_censored_early,
-    c11 = c10 & noprevax_covid
+    c8 = c7 & (isnot_hscworker & isnot_carehomeresident & isnot_endoflife & isnot_housebound & isnot_JCVI2),
+    c9 = c8 & (positive_test_date_check & hospitalisation_date_check & death_date_check & noncoviddeath_date_check & isnot_censored_early),
+    c10 = c9 & noprevax_covid,
+    c11 = c10 & nointervax_covid
   ) %>%
   summarise(
     across(.fns=sum)
@@ -213,22 +216,22 @@ data_flowchart <- data_criteria %>%
     pct_step = n / lag(n),
     crit = str_extract(criteria, "^c\\d+"),
     criteria = fct_case_when(
-      crit == "c0" ~ "Aged 16+ with serum creatinine record in 2y before index (01-Dec-2020) or in UKRR 2020 population",
-      crit == "c1" ~ "  with valid creatinine record (with associated age and no linked operators) or in UKRR population", 
-      crit == "c2" ~ "  with eGFR<60 or UKRR 2020 population", 
-      crit == "c3" ~ "  with no RRT mismatch (primary care dialysis/Tx code but absent from UKRR 2020 population)", 
-      crit == "c4" ~ "  with no missing demographic information",
-      crit == "c5" ~ "  received 2 x ChAdOx1-S or 2 x BNT162b2",
-      crit == "c6" ~ "  received first dose on or after 18 January 2021",
-      crit == "c7" ~ "  dose interval of 8-14 weeks",
-      crit == "c8" ~ "  post-vaccination outcomes recorded after second dose",
-      crit == "c9" ~ "  not healthcare worker, care home resident, receiving end-of-life care, housebound, or in JCVI priority group 2",
-      crit == "c10" ~ "  not censored before second dose",
-      crit == "c11" ~ "  no SARS-CoV-2 in window spanning 90 days before dose 1",
+      crit == "c0" ~ "Aged ≥16 years on 31st March 2021 with any serum creatinine measurement in 2 years preceding definition date or in UK Renal Registry on 31st December 2020",
+      crit == "c1" ~ "Valid record for most recent creatinine measurement (with associated date and no linked operators) or in UK Renal Registry on 31st December 2020", 
+      crit == "c2" ~ "eGFR <60 ml/min/1.73 m2 based on most recent creatinine measurement or in UK Renal Registry on 31st December 2020", 
+      crit == "c3" ~ "No RRT status mismatch (primary care code indicating dialysis or kidney transplant but not in UK Renal Registry on 31st December 2020)", 
+      crit == "c4" ~ "No missing demographic information (sex, region, index of multiple deprivation, or ethnicity)",
+      crit == "c5" ~ "Received AZ–AZ/BNT–BNT",
+      crit == "c6" ~ "Received first dose on or after 18th January 2021",
+      crit == "c7" ~ "Dose 1–2 interval of 8–14 weeks",
+      crit == "c8" ~ "Not healthcare worker, care home resident, receiving end-of-life care, housebound, or in JCVI priority group 2",
+      crit == "c9" ~ "No outcome or censoring events recorded before start of follow-up",
+      crit == "c10" ~ "No documented SARS-CoV-2 infection in window spanning 90 days before dose 1",
+      crit == "c11" ~ "No documented SARS-CoV-2 infection between doses 1 and 2",
       TRUE ~ NA_character_
     )
   )
-write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE.csv"))
+write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE_primary.csv"))
 
 
 
@@ -250,32 +253,30 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   data_cohort$patient_id = sample.int(100000, nrow(data_cohort), replace = FALSE)
   
   ## Override data
-  write_rds(data_cohort, here::here("output", "data", "data_cohort_VE.rds"), compress="gz")
-  write_csv(data_cohort, here::here("output", "data", "data_cohort_VE.csv"))
+  write_rds(data_cohort, here::here("output", "data", "data_cohort_VE_primary.rds"), compress="gz")
+  write_csv(data_cohort, here::here("output", "data", "data_cohort_VE_primary.csv"))
   
   ## Save inflated cohort into unmatched data 
-  write_rds(data_cohort, here::here("output", "data", "data_cohort_VE_matched.rds"), compress="gz")
-  write_csv(data_cohort, here::here("output", "data", "data_cohort_VE_matched.csv"))
+  write_rds(data_cohort, here::here("output", "data", "data_cohort_VE_primary_matched.rds"), compress="gz")
+  write_csv(data_cohort, here::here("output", "data", "data_cohort_VE_primary_matched.csv"))
   
   ## Create dummy matched selection flowchart
   data_flowchart = data_flowchart[1:2,]
   data_flowchart$criteria = c("Unmatched VE cohort", "Matched VE cohort")
   data_flowchart$n = max(data_flowchart$n)
-  write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE_matched.csv"))
+  write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE_primary_matched.csv"))
   
 } else {
   
   ## Specify exact matching variables
   exact_variables <- c(
     "region",
-    #"jcvi_group",
     "imd",
     "sex",
     "ethnicity",
-    "ckd_3cat",
+    "ckd_5cat",
     "cev",
     "prior_covid_cat",
-    "multimorb",
     "any_immunosuppression",
     NULL
   )
@@ -284,7 +285,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
   caliper_variables <- c(
     age = 3,
     vax2_day = 3,
-    vax1_day = 3,
+    vax1_day = 7,
     NULL
   )
   
@@ -326,8 +327,8 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
     ) 
   
   ## Save data
-  write_rds(data_matched, here::here("output", "data", "data_cohort_VE_matched.rds"), compress="gz")
-  write_csv(data_matched, here::here("output", "data", "data_cohort_VE_matched.csv"))
+  write_rds(data_matched, here::here("output", "data", "data_cohort_VE_primary_matched.rds"), compress="gz")
+  write_csv(data_matched, here::here("output", "data", "data_cohort_VE_primary_matched.csv"))
   
   ## Define selection criteria
   data_criteria <- data_cohort %>%
@@ -364,5 +365,6 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
         TRUE ~ NA_character_
       )
     )
-  write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE_matched.csv"))
+  write_csv(data_flowchart, here::here("output", "tables", "flowchart_VE_primary_matched.csv"))
 }
+

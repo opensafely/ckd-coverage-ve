@@ -27,16 +27,16 @@ if(length(args)==0){
   vaccine = "primary"
 } else {
   matching_status = args[[1]] # can be unmatched or matched
-  subgroup = args[[2]] # can be all / CKD3 / CKD4-5 / RRT / JCVI2 / JCVI3 / JCVI4 / JCVI5 / JCVI6 
+  subgroup = args[[2]] # can be all / CKD3 / CKD4-5 / RRT / Tx
   vaccine = args[[3]] # can be primary or boost
 }
 
 ## Import data
 if (matching_status=="unmatched" & vaccine=="primary") { 
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE.rds"))
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_primary.rds"))
   
 } else if (matching_status=="matched" & vaccine=="primary") { 
-  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_matched.rds"))
+  data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_primary_matched.rds"))
   
 } else if (matching_status=="unmatched" & vaccine=="boost") { 
   data_cohort <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds"))
@@ -67,15 +67,8 @@ if (subgroup=="all") {
   data_cohort = subset(data_cohort, ckd_3cat == "CKD4-5")
 } else if (subgroup=="RRT") {
   data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
-  ## JCVI subgroups
-} else if (subgroup=="JCVI3") {
-  data_cohort = subset(data_cohort, jcvi_group == "3 (75+)")
-} else if (subgroup=="JCVI4") {
-  data_cohort = subset(data_cohort, jcvi_group == "4 (70+ or clinically extremely vulnerable)")
-} else if (subgroup=="JCVI5") {
-  data_cohort = subset(data_cohort, jcvi_group == "5 (65+)")
-} else if (subgroup=="JCVI6") {
-  data_cohort = subset(data_cohort, jcvi_group == "6 (16-65 and clinically vulnerable)")
+} else if (subgroup=="Tx") {
+  data_cohort = subset(data_cohort, ckd_5cat == "RRT (Tx)")
 } else {
   stop ("Arguments not specified correctly.")
 }
@@ -223,27 +216,17 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
 }
 
 ## Collate IRR table based on function above
-if (vaccine=="primary") {
-  irr_collated = rbind(
+irr_collated = rbind(
     redacted_irr_table(ind_endpoint = "ind_covid_postest", endpoint_date = "postvax_positive_test_date", tte_endpoint = "tte_covid_postest"),
-    redacted_irr_table(ind_endpoint = "ind_covid_emergency", endpoint_date = "postvax_covid_emergency_date", tte_endpoint = "tte_covid_emergency"),
+    #redacted_irr_table(ind_endpoint = "ind_covid_emergency", endpoint_date = "postvax_covid_emergency_date", tte_endpoint = "tte_covid_emergency"),
     redacted_irr_table(ind_endpoint = "ind_covid_hosp", endpoint_date = "postvax_covid_hospitalisation_date", tte_endpoint = "tte_covid_hosp"),
     redacted_irr_table(ind_endpoint = "ind_covid_death", endpoint_date = "postvax_covid_death_date", tte_endpoint = "tte_covid_death"),
     redacted_irr_table(ind_endpoint = "ind_noncovid_death", endpoint_date = "noncoviddeath_date", tte_endpoint = "tte_noncovid_death")
   )
-} else {
-  irr_collated = rbind(
-    redacted_irr_table(ind_endpoint = "ind_covid_postest", endpoint_date = "postboost_positive_test_date", tte_endpoint = "tte_covid_postest"),
-    redacted_irr_table(ind_endpoint = "ind_covid_emergency", endpoint_date = "postboost_covid_emergency_date", tte_endpoint = "tte_covid_emergency"),
-    redacted_irr_table(ind_endpoint = "ind_covid_hosp", endpoint_date = "postboost_covid_hospitalisation_date", tte_endpoint = "tte_covid_hosp"),
-    redacted_irr_table(ind_endpoint = "ind_covid_death", endpoint_date = "postboost_covid_death_date", tte_endpoint = "tte_covid_death"),
-    redacted_irr_table(ind_endpoint = "ind_noncovid_death", endpoint_date = "noncoviddeath_date", tte_endpoint = "tte_noncovid_death")
-  )
-}
 
 ## Add clean names
 irr_collated$outcome_clean = "Positive SARS-CoV-2 test"
-irr_collated$outcome_clean[irr_collated$outcome=="tte_covid_emergency"] = "COVID-related A&E admission"
+#irr_collated$outcome_clean[irr_collated$outcome=="tte_covid_emergency"] = "COVID-related A&E admission"
 irr_collated$outcome_clean[irr_collated$outcome=="tte_covid_hosp"] = "COVID-related hospitalisation"
 irr_collated$outcome_clean[irr_collated$outcome=="tte_covid_death"] = "COVID-related death"
 irr_collated$outcome_clean[irr_collated$outcome=="tte_noncovid_death"] = "Non-COVID death"

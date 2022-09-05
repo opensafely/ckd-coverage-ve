@@ -23,7 +23,7 @@ dir.create(here::here("output", "data"), showWarnings = FALSE, recursive=TRUE)
 sessionInfo()
 
 ## Print variable names
-read_csv(here::here("output", "data", "input_boost.csv"),
+read_csv(here::here("output", "data", "input_VE_primary.csv"),
          n_max = 0,
          col_types = cols()) %>%
   names() %>%
@@ -31,7 +31,7 @@ read_csv(here::here("output", "data", "input_boost.csv"),
 
 ## Read in data and set variable types
 data_extract <- read_csv(
-  here::here("output", "data", "input_boost.csv"),
+  here::here("output", "data", "input_VE_primary.csv"),
   col_types = cols_only(
     
     # Identifier
@@ -67,30 +67,30 @@ data_extract <- read_csv(
     immunosuppression_medication_date = col_date(format="%Y-%m-%d"),
     
     # Dates for Covid-related variables
-    # Pre dose 1 events
-    prior_positive_test_date_dose1 = col_date(format="%Y-%m-%d"),
-    prior_primary_care_covid_case_date_dose1 = col_date(format="%Y-%m-%d"),
-    prior_covid_emergency_date_dose1 = col_date(format="%Y-%m-%d"),
-    prior_covid_hospitalisation_date_dose1 = col_date(format="%Y-%m-%d"),
+    # Pre-dose 1 events
+    prior_positive_test_date = col_date(format="%Y-%m-%d"),
+    prior_primary_care_covid_case_date = col_date(format="%Y-%m-%d"),
+    prior_covid_emergency_date = col_date(format="%Y-%m-%d"),
+    prior_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
     
-    # Pre dose 3 events
-    prior_positive_test_date_dose3 = col_date(format="%Y-%m-%d"),
-    prior_primary_care_covid_case_date_dose3 = col_date(format="%Y-%m-%d"),
-    prior_covid_emergency_date_dose3 = col_date(format="%Y-%m-%d"),
-    prior_covid_hospitalisation_date_dose3 = col_date(format="%Y-%m-%d"),
-
-    # Pre-vax events (dose 1 to pre dose 3)
-    preboost_positive_test_date	= col_date(format="%Y-%m-%d"),
-    preboost_primary_care_covid_case_date	= col_date(format="%Y-%m-%d"),
-    preboost_covid_emergency_date	= col_date(format="%Y-%m-%d"),
-    preboost_covid_hospitalisation_date	= col_date(format="%Y-%m-%d"),
+    # Pre-vax events (90 days pre dose 1)
+    prevax_positive_test_date	= col_date(format="%Y-%m-%d"),
+    prevax_primary_care_covid_case_date	= col_date(format="%Y-%m-%d"),
+    prevax_covid_emergency_date	= col_date(format="%Y-%m-%d"),
+    prevax_covid_hospitalisation_date	= col_date(format="%Y-%m-%d"),
     
-    # Post-vax events (dose 3 onwards)
-    postboost_positive_test_date = col_date(format="%Y-%m-%d"),
-    postboost_covid_emergency_date = col_date(format="%Y-%m-%d"),
-    postboost_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
-    postboost_covid_death_date = col_date(format="%Y-%m-%d"),
-    postboost_any_test_date	= col_date(format="%Y-%m-%d"),
+    # Inter-vax events (dose 1 to dose 2)
+    intervax_positive_test_date	= col_date(format="%Y-%m-%d"),
+    intervax_primary_care_covid_case_date	= col_date(format="%Y-%m-%d"),
+    intervax_covid_emergency_date	= col_date(format="%Y-%m-%d"),
+    intervax_covid_hospitalisation_date	= col_date(format="%Y-%m-%d"),
+    
+    # Post-vax events (dose 2 onwards)
+    postvax_positive_test_date = col_date(format="%Y-%m-%d"),
+    postvax_covid_emergency_date = col_date(format="%Y-%m-%d"),
+    postvax_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
+    postvax_covid_death_date = col_date(format="%Y-%m-%d"),
+    postvax_any_test_date	= col_date(format="%Y-%m-%d"),
     
     # CKD groups
     creatinine = col_double(), 
@@ -119,7 +119,6 @@ data_extract <- read_csv(
     age_index = col_integer(),
     age_august2021 = col_integer(),
     sex = col_character(),
-    bmi = col_character(),
     ethnicity_6 = col_character(),
     ethnicity_6_sus = col_character(),
     imd = col_character(),
@@ -142,8 +141,8 @@ data_extract <- read_csv(
     non_kidney_transplant = col_logical(),
     
     # Other
-    preboost_tests_conducted_any = col_double(),
-    inhospital = col_logical()
+    prevax_tests_conducted_any = col_double(),
+    prevax_tests_conducted_any_fixed = col_double()
   ),
   na = character() # more stable to convert to missing later
 )
@@ -214,11 +213,11 @@ data_extract <- data_extract %>%
     ukrr_2021_group = "None",
     ukrr_2021_group = ifelse((!is.na(ukrr_2021_mod)) & ukrr_2021_mod == "Tx", "Tx", ukrr_2021_group),
     ukrr_2021_group = ifelse((!is.na(ukrr_2021_mod)) & (ukrr_2021_mod == "ICHD" | ukrr_2021_mod == "HHD" | ukrr_2021_mod == "HD" | ukrr_2021_mod == "PD"), "Dialysis", ukrr_2021_group),
-
+    
     # Set modalities as 'None' instead of NA
     ukrr_2020_mod = ifelse(is.na(ukrr_2020_mod), "None", ukrr_2020_mod), 
     ukrr_2021_mod = ifelse(is.na(ukrr_2021_mod), "None", ukrr_2020_mod), 
-    
+
     # Flag issues with ambiguous creatinine entries - either no creatinine-associated age or creatinine-linked operator (impacting interpretation of numeric values)
     creatinine_date_issue = ifelse((!is.na(creatinine)) & is.na(age_creatinine),1,0),
     creatinine_operator_issue = ifelse((!is.na(creatinine_operator)) & creatinine_operator %in% c("~", ">=", ">", "<", "<="),1,0)
@@ -274,15 +273,15 @@ data_processed <- data_extract %>%
     rrt_mismatch = ifelse((ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b" | ckd_5cat=="CKD4-5") & (dialysis==1 | kidney_transplant==1), 1, 0),
     
     # Age
-    ageband2 = cut(
+    ageband = cut(
       age,
-      breaks = c(16, 65, 70, 75, 80, Inf),
-      labels = c("16-64", "65-69", "70-74", "75-79", "80+"),
+      breaks = c(16, 70, 80, Inf),
+      labels = c("16-69", "70-79", "80+"),
       right = FALSE
     ),
     
-    ageband2_boost = cut(
-      age_august2021,
+    ageband2 = cut(
+      age,
       breaks = c(16, 65, 70, 75, 80, Inf),
       labels = c("16-64", "65-69", "70-74", "75-79", "80+"),
       right = FALSE
@@ -302,7 +301,7 @@ data_processed <- data_extract %>%
     ),
     
     # Updated JCVI priority groups: https://www.england.nhs.uk/coronavirus/wp-content/uploads/sites/52/2021/07/C1327-covid-19-vaccination-autumn-winter-phase-3-planning.pdf
-    jcvi_group_boost = fct_case_when(
+    jcvi_group_update = fct_case_when(
       care_home==1 | hscworker==1  ~ "1 (care home resident or health/social care worker)",
       care_home==0 & age_august2021>=80 ~ "2 (80+)",
       care_home==0 & age_august2021>=75 ~ "3 (75+)",
@@ -317,10 +316,6 @@ data_processed <- data_extract %>%
       sex == "M" ~ "Male",
       TRUE ~ NA_character_
     ),
-    
-    # Obesity
-    obesity = ifelse(bmi == "Not obese",0,1),
-    mod_sev_obesity = ifelse(bmi == "Obese II (35-39.9)" | bmi == "Obese III (40+)", 1, 0),
     
     # Ethnicity
     ethnicity_filled = ifelse(is.na(ethnicity_6), ethnicity_6_sus, ethnicity_6),
@@ -365,16 +360,6 @@ data_processed <- data_extract %>%
     # Any respiratory disease
     any_resp_dis= ifelse(chronic_resp_dis==1 | asthma==1, 1, 0), 
     
-    # Any cancer
-    any_cancer = ifelse(cancer==1 | haem_cancer==1, 1, 0), 
-
-    # CEV other
-    rrt_2020 = ifelse(ukrr_2020_group=="Tx" | ukrr_2020_group=="Dialysis", 1, 0),
-    any_comorb = pmax(rrt_2020, 
-                      immunosuppression, sev_obesity, diabetes, any_resp_dis,
-                      chd, cld, asplenia, any_cancer, other_transplant, chronic_neuro_dis_inc_sig_learn_dis, sev_mental_ill),
-    cev_other = ifelse(cev==1 & any_comorb==0, 1, 0),
-    
     # Multiple comorbidities (non-CKD-related) - 0, 1, or 2+
     multimorb =
       (sev_obesity) +
@@ -388,19 +373,25 @@ data_processed <- data_extract %>%
     # Any immunosuppression (transplant, cancer, haematologic cancer, asplenia)
     any_immunosuppression = ifelse(ukrr_2020_group=="Tx" | other_transplant==1 | immunosuppression==1 | haem_cancer==1 | asplenia==1, 1, 0), 
     
-    # Prior COVID
-    prior_covid_cat_dose1 = as.numeric(!is.na(pmin(prior_positive_test_date_dose1, prior_primary_care_covid_case_date_dose1, prior_covid_emergency_date_dose1, prior_covid_hospitalisation_date_dose1, na.rm=TRUE))),
-    prior_covid_cat_dose3 = as.numeric(!is.na(pmin(prior_positive_test_date_dose3, prior_primary_care_covid_case_date_dose3, prior_covid_emergency_date_dose3, prior_covid_hospitalisation_date_dose3, na.rm=TRUE))),
+    # Prior COVID - dose 1
+    prior_covid_cat = as.numeric(!is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_emergency_date, prior_covid_hospitalisation_date, na.rm=TRUE))),
     
-    # COVID in window spanning dose 1 to dose 3
-    preboost_covid_cat = as.numeric(!is.na(pmin(preboost_positive_test_date, preboost_primary_care_covid_case_date, preboost_covid_emergency_date, preboost_covid_hospitalisation_date, na.rm=TRUE))),
+    # COVID in window spanning 90 days pre dose 1
+    prevax_covid_cat = as.numeric(!is.na(pmin(prevax_positive_test_date, prevax_primary_care_covid_case_date, prevax_covid_emergency_date, prevax_covid_hospitalisation_date, na.rm=TRUE))),
+
+    # COVID in window spanning dose 1 to dose 2
+    intervax_covid_cat = as.numeric(!is.na(pmin(intervax_positive_test_date, intervax_primary_care_covid_case_date, intervax_covid_emergency_date, intervax_covid_hospitalisation_date, na.rm=TRUE))),
 
     # Number of tests in pre-vaccination period
-    preboost_tests_conducted_any = ifelse(is.na(preboost_tests_conducted_any), 0, preboost_tests_conducted_any),
-    prevax_tests_cat = cut(preboost_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
+    prevax_tests_conducted_any = ifelse(is.na(prevax_tests_conducted_any), 0, prevax_tests_conducted_any),
+    prevax_tests_cat = cut(prevax_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
+    
+    # Number of tests in pre-vaccination period
+    prevax_tests_conducted_any_fixed = ifelse(is.na(prevax_tests_conducted_any_fixed), 0, prevax_tests_conducted_any_fixed),
+    prevax_tests_fixed_cat = cut(prevax_tests_conducted_any_fixed, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
     
     # Non-COVID death date
-    noncoviddeath_date = if_else(!is.na(death_date) & is.na(postboost_covid_death_date), death_date, as.Date(NA_character_)),
+    noncoviddeath_date = if_else(!is.na(death_date) & is.na(postvax_covid_death_date), death_date, as.Date(NA_character_)),
   ) %>%
   # Drop superseded variables
   select(-c(care_home_code, care_home_tpp, ethnicity_6, ethnicity_filled, 
@@ -414,7 +405,6 @@ print(sum(data_processed$rrt_mismatch))
 ## Summarise CKD subgroup
 print("Cross-tabulate CKD subgroup")
 print(table(data_processed$ckd_5cat))
-
 
 ## Apply dummy data script if not running in the server
 if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")){
@@ -572,5 +562,5 @@ data_processed_updated <- data_processed_updated %>%
   )
 
 ## Save dataset
-write_rds(data_processed_updated, here::here("output", "data", "data_processed_boost.rds"), compress = "gz")
-write_csv(data_processed_updated, here::here("output", "data", "data_processed_boost.csv"))
+write_rds(data_processed_updated, here::here("output", "data", "data_processed_VE_primary.rds"), compress = "gz")
+write_csv(data_processed_updated, here::here("output", "data", "data_processed_VE_primary.csv"))

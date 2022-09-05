@@ -17,16 +17,17 @@ rcat <- function(n, levels, p){
   sample(x=levels, size=n, replace=TRUE, prob=p)
 }
 
-## Import data
+# determine sample count
 nsamples <- nrow(data_processed)
 
 # Set vaccination start date
 start_date <- date("2020-12-08")
-end_date <- date("2022-05-11")
+end_date <- date("2022-06-22")
 
 # Set distribution of CKD groups
 data_processed$ckd_6cat <- rcat(n=nsamples, c("No CKD", "CKD3a", "CKD3b", "CKD4", "CKD5",
                                               "RRT (dialysis)", "RRT (Tx)"), c(0.10,0.50,0.25,0.06,0.03,0.03,0.03))
+
 # Recalculate CKD categories and RRT mismatch based on random assignments above
 data_processed <- data_processed %>%
   mutate(
@@ -44,10 +45,11 @@ data_processed <- data_processed %>%
   )
 
 # Increase proportion of cev_other to 10% to ensure effective running of later models
-data_processed$cev_other <- as.numeric(rcat(n=nsamples, c("0", "1"), c(0.9,0.1)))
-
-# Set cev_other to 0 if in dialysis or Tx group
-data_processed$cev_other[data_processed$ckd_6cat %in% c("RRT (dialysis)", "RRT (Tx)")] = 0
+if ("cev_other" %in% names(data_processed)) {
+  data_processed$cev_other <- as.numeric(rcat(n=nsamples, c("0", "1"), c(0.9,0.1)))
+  # Set cev_other to 0 if in dialysis or Tx group
+  data_processed$cev_other[data_processed$ckd_6cat %in% c("RRT (dialysis)", "RRT (Tx)")] = 0
+}
 
 # Set other_transplant to 0 if in Tx group
 data_processed$other_transplant[data_processed$ckd_6cat %in% c("RRT (Tx)")] = 0

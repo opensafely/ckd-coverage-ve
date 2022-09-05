@@ -1,0 +1,572 @@
+---
+title: "Kaplan-Meier and risk ratio plots"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+## Import libraries
+library('here')
+library('tidyverse')
+library('readr')
+library('tidyr')
+library('lubridate')
+library('glue')
+library('gt')
+library('gtsummary')
+library('reshape2')
+library('kableExtra')
+library('cowplot')
+library('fs')
+library('survival')
+library('survminer')
+library('scales')
+
+## Import custom user functions
+source(here::here("analysis", "functions.R"))
+
+## Set list of outcomes and date variable names
+outcomes <- read_rds(
+  here::here("output", "lib", "outcomes.rds")
+)
+outcome_list = outcomes$short_name
+clean_list = outcomes$clean_name
+date_list = outcomes$date_name
+
+## Read in primary vaccination cohort data 
+data_tte_unmatched <- read_rds(here::here("output", "data", "data_cohort_VE_primary.rds")) %>%
+  mutate(vax2_type_descr = recode(vax2_type_descr, "BNT162b2" = "BNT", "ChAdOx1" = "AZ"))
+
+data_tte_matched <- read_rds(here::here("output", "data", "data_cohort_VE_primary_matched.rds")) %>%
+  mutate(vax2_type_descr = recode(vax2_type_descr, "BNT162b2" = "BNT", "ChAdOx1" = "AZ"))
+
+## Import outcome time periods
+postvax_list <- read_rds(
+  here::here("output", "lib", "postvax_list.rds")
+)
+postvaxcuts = postvax_list$postvaxcuts
+postvax_periods = postvax_list$postvax_periods
+period_length = postvaxcuts[2]-postvaxcuts[1]
+lastfupday = max(postvaxcuts)
+
+## Read in booster cohort data for cumulative incidence curves
+data_tte_unmatched_boost <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds")) %>%
+  mutate(vax2_type_descr = recode(vax2_type_descr, "BNT162b2" = "BNT", "ChAdOx1" = "AZ"))
+
+data_tte_matched_boost <- read_rds(here::here("output", "data", "data_cohort_VE_boost_matched.rds")) %>%
+  mutate(vax2_type_descr = recode(vax2_type_descr, "BNT162b2" = "BNT", "ChAdOx1" = "AZ"))
+
+## Import outcome time periods
+postvax_list_boost <- read_rds(
+  here::here("output", "lib", "postboost_list.rds")
+)
+postvaxcuts_boost = postvax_list_boost$postvaxcuts
+postvax_periods_boost = postvax_list_boost$postvax_periods
+period_length_boost = postvaxcuts_boost[2]-postvaxcuts_boost[1]
+lastfupday_boost = max(postvaxcuts_boost)
+
+## Set rounding threshold for calculation of KM steps
+threshold = 5
+```
+<br/><br/>  
+
+#### Summary of population size by vaccine type and kidney disease status
+
+##### Unmatched primary vaccination cohort
+```{r}
+round_any(table(data_tte_unmatched$vax2_type_descr, data_tte_unmatched$ckd_5cat), 5)
+```
+
+##### Unmatched booster cohort
+```{r}
+round_any(table(data_tte_matched_boost$vax2_type_descr, data_tte_matched_boost$ckd_5cat), 5)
+```
+
+##### Matched primary vaccination cohort
+```{r}
+round_any(table(data_tte_matched$vax2_type_descr, data_tte_matched$ckd_5cat), 5)
+```
+
+##### Matched booster cohort
+```{r}
+round_any(table(data_tte_matched_boost$vax2_type_descr, data_tte_matched_boost$ckd_5cat), 5)
+```
+<br/><br/>
+
+#### Cumulative incidence plots and risk ratios over time 
+Cumulative incidence = 1 - Kaplan-Meier estimate for probability of survival in unadjusted models. Steps occur every 5 events.
+```{r}
+### Functions for data manipulation and plotting 
+
+## Function to create rounded KM survival table, with steps delayed until number of events specified by threshold
+create_rounded_surv_table = function(outcome_number, input_data, boost=FALSE) {
+  
+  if (boost==TRUE) { plot_max = lastfupday_boost } else { plot_max = lastfupday }
+  
+  data_surv <-
+    input_data %>%
+    mutate(
+      ind_outcome = get(paste0("ind_",outcome_list[outcome_number])),
+      tte_outcome = get(paste0("tte_",outcome_list[outcome_number],"_or_censor"))
+    ) %>%
+    group_by(vax2_type_descr) %>%
+    nest() %>%
+    mutate(
+      n_events = map_int(data, ~sum(.x$ind_outcome, na.rm=TRUE)),
+      surv_obj = map(data, ~{
+        survfit(Surv(tte_outcome, ind_outcome) ~ 1, data = .x, conf.type="log-log")
+      }),
+      surv_obj_tidy = map(surv_obj, ~tidy_surv(.x, times=seq_len(plot_max))), # return survival table for each day of follow up
+    ) %>%
+    select(vax2_type_descr, n_events, surv_obj_tidy) %>%
+    unnest(surv_obj_tidy)
+
+  data_surv_rounded <-
+    data_surv %>%
+    mutate(
+      N = plyr::round_any(max(n.risk, na.rm=TRUE),threshold),
+      cml.event = cumsum(replace_na(n.event, 0)),
+      cml.censor = cumsum(replace_na(n.censor, 0)),
+      cml.event = floor_any(cml.event, threshold),
+      cml.censor = floor_any(cml.censor, threshold),
+      n.event = diff(c(0,cml.event)),
+      n.censor = diff(c(0,cml.censor)),
+      n.risk = N - lag(cml.event + cml.censor,1,0),
+      summand = n.event / ((n.risk - n.event) * n.risk),
+      surv = cumprod(1 - n.event / n.risk),
+      surv.se = surv * sqrt(cumsum(replace_na(summand, 0))),
+      llsurv = log(-log(surv)),
+      llsurv.se = sqrt((1 / log(surv)^2) * cumsum(summand)),
+      surv.ll = exp(-exp(llsurv + qnorm(0.025)*llsurv.se)),
+      surv.ul = exp(-exp(llsurv + qnorm(0.975)*llsurv.se)),
+      cum.in = 1 - surv,
+      haz = -(surv-lag(surv, 1, 1))/lag(surv, 1, 1), # n.event / (n.risk * interval),
+      haz.se = haz * sqrt((n.risk - n.event) / (n.risk* n.event)),
+      cml.haz = cumsum(haz),
+      cml.haz.se = surv.se/surv,
+    ) %>%
+    select(
+      vax2_type_descr, time, lagtime, leadtime, interval,
+      n.risk, n.event, n.censor, summand,
+      surv, surv.se, surv.ll, surv.ul,
+      haz, haz.se,
+      cml.haz, cml.haz.se
+    )
+  #write.csv(data_surv_rounded, "data_surv_rounded.csv")
+  data_surv_rounded
+}
+
+## Calculate quantities relating to kaplan-meier curve and their ratio / difference / etc
+## Adapted from https://github.com/opensafely/comparative-booster
+kmcontrast <- function(data, cuts=NULL){
+  
+  if(is.null(cuts)){cuts <- unique(c(0,data$time))}
+  
+  data %>%
+    filter(time!=0) %>%
+    mutate(treatment = vax2_type_descr) %>% # added to original function
+    transmute(
+      #!!subgroup_sym, # redacted from original function
+      treatment,
+      
+      time, lagtime, interval,
+      period_start = as.integer(as.character(cut(time, cuts, right=TRUE, label=cuts[-length(cuts)]))),
+      period_end = as.integer(as.character(cut(time, cuts, right=TRUE, label=cuts[-1]))),
+      period = cut(time, cuts, right=TRUE, label=paste0(cuts[-length(cuts)]+1, " - ", cuts[-1])),
+      
+      n.atrisk = n.risk,
+      n.event, n.censor, summand,
+      
+      cml.persontime = cumsum(n.atrisk*interval),
+      cml.event = cumsum(replace_na(n.event, 0)),
+      cml.censor = cumsum(replace_na(n.censor, 0)),
+      cml.summand = cumsum(summand),
+      
+      rate = n.event / n.atrisk,
+      cml.rate = cml.event / cml.persontime,
+      
+      surv, surv.se, surv.ll, surv.ul,
+      
+      risk = 1 - surv,
+      risk.se = surv.se,
+      risk.ll = 1 - surv.ul,
+      risk.ul = 1 - surv.ll,
+      
+      haz, haz.se,
+      cml.haz, cml.haz.se
+      
+    ) %>%
+    # group_by(!!subgroup_sym, treatment, period_start, period_end, period) %>% # original
+    group_by(treatment, period_start, period_end, period) %>%
+    summarise(
+      
+      ## time-period-specific quantities
+      
+      persontime = sum(n.atrisk*interval), # total person-time at risk within time period
+      
+      n.atrisk = first(n.atrisk), # number at risk at start of time period
+      n.event = sum(n.event, na.rm=TRUE), # number of events within time period
+      n.censor = sum(n.censor, na.rm=TRUE), # number censored within time period
+      
+      rate = n.event/persontime, # = weighted.mean(haz, n.atrisk*interval), incidence rate. this is equivalent to a weighted average of the hazard ratio, with time-exposed as the weights
+      
+      interval = sum(interval), # width of time period
+      
+      ## quantities calculated from time zero until end of time period
+      # these should be the same as the daily values as at the end of the time period
+      
+      surv = last(surv),
+      surv.se = last(surv.se),
+      surv.ll = last(surv.ll),
+      surv.ul = last(surv.ul),
+      
+      risk = last(risk),
+      risk.se = last(risk.se),
+      risk.ll = last(risk.ul),
+      risk.ul = last(risk.ll),
+      
+      cml.haz = last(cml.haz),  # cumulative hazard from time zero to end of time period
+      
+      cml.rate = last(cml.rate), # event rate from time zero to end of time period
+      
+      # cml.persontime = last(cml.persontime), # total person-time at risk from time zero to end of time period
+      cml.event = last(cml.event), # number of events from time zero to end of time period
+      # cml.censor = last(cml.censor), # number censored from time zero to end of time period
+      
+      # cml.summand = last(cml.summand), # summand used for estimation of SE of survival
+      
+      .groups="drop"
+    ) %>%
+    ungroup() %>%
+    pivot_wider(
+      id_cols= c("period_start", "period_end", "period",  "interval"),
+     # id_cols= c(subgroup, "period_start", "period_end", "period",  "interval"),
+      names_from=treatment,
+      names_glue="{.value}_{treatment}",
+      values_from=c(
+        
+        persontime, n.atrisk, n.event, n.censor,
+        rate,
+        
+        cml.haz,
+        surv, surv.se, surv.ll, surv.ul,
+        risk, risk.se, risk.ll, risk.ul,
+        
+        cml.event, cml.rate
+      )
+    ) %>%
+    mutate(
+      n.nonevent_BNT = n.atrisk_BNT - n.event_BNT, # _BNT replaces _0 for remaining lines
+      n.nonevent_AZ = n.atrisk_AZ - n.event_AZ, # _AZ replaces _1 for remaining lines
+      
+      
+      ## time-period-specific quantities
+      
+      # hazard ratio, standard error and confidence limits
+      
+      # incidence rate ratio
+      irr = rate_AZ / rate_BNT,
+      irr.ln.se = sqrt((1/n.event_BNT) + (1/n.event_AZ)),
+      irr.ll = exp(log(irr) + qnorm(0.025)*irr.ln.se),
+      irr.ul = exp(log(irr) + qnorm(0.975)*irr.ln.se),
+      
+      # incidence rate difference
+      #ird = rate_AZ - rate_BNT,
+      
+      ## quantities calculated from time zero until end of time period
+      # these should be the same as values calculated on each day of follow up
+      
+      # survival ratio, standard error, and confidence limits
+      kmsr = surv_AZ / surv_BNT,
+      #kmsr.ln = log(kmsr),
+      kmsr.ln.se = (surv.se_BNT/surv_BNT) + (surv.se_AZ/surv_AZ), #because cmlhaz = -log(surv) and cmlhaz.se = surv.se/surv
+      kmsr.ll = exp(log(kmsr) + qnorm(0.025)*kmsr.ln.se),
+      kmsr.ul = exp(log(kmsr) + qnorm(0.975)*kmsr.ln.se),
+      
+      # risk ratio, standard error, and confidence limits, using delta method
+      kmrr = risk_AZ / risk_BNT,
+      #kmrr.ln = log(kmrr),
+      kmrr.ln.se = sqrt((risk.se_AZ/risk_AZ)^2 + (risk.se_BNT/risk_BNT)^2),
+      kmrr.ll = exp(log(kmrr) + qnorm(0.025)*kmrr.ln.se),
+      kmrr.ul = exp(log(kmrr) + qnorm(0.975)*kmrr.ln.se),
+      
+      #kmrr.se = (kmrr^2)*((risk.se_AZ/risk_AZ)^2 + (risk.se_BNT/risk_BNT)^2),
+      #kmrr.ll2 = kmrr + qnorm(0.025)*kmrr.se,
+      #kmrr.ul2 = kmrr + qnorm(0.975)*kmrr.se,
+      
+      
+      # risk difference, standard error and confidence limits
+      kmrd = risk_AZ - risk_BNT,
+      #kmrd.se = sqrt( ((n.event_AZ*n.nonevent_AZ)/(n.atrisk_AZ^3)) + ((n.event_BNT*n.nonevent_BNT)/(n.atrisk_BNT^3)) ), # ignores censoring
+      kmrd.se = sqrt( (risk.se_BNT^2) + (risk.se_AZ^2) ), # combining SEs from greenwood's formula
+      kmrd.ll = kmrd + qnorm(0.025)*kmrd.se,
+      kmrd.ul = kmrd + qnorm(0.975)*kmrd.se,
+      
+      
+      # cumulative incidence rate ratio
+      cmlirr = cml.rate_AZ / cml.rate_BNT,
+      cmlirr.ln.se = sqrt((1/cml.event_BNT) + (1/cml.event_AZ)),
+      cmlirr.ll = exp(log(cmlirr) + qnorm(0.025)*cmlirr.ln.se),
+      cmlirr.ul = exp(log(cmlirr) + qnorm(0.975)*cmlirr.ln.se),
+      
+      # cumulative incidence rate difference
+      #cmlird = cml.rate_AZ - cml.rate_BNT
+    )
+}
+
+## Generate KM plot across 4 outcomes
+generate_km_plot = function(surv_data) {
+  
+  surv_data %>%
+    ggplot(aes(x = time, y = 1-surv, colour = vax2_type_descr, fill = vax2_type_descr)) + geom_step(size = 0.5) +
+    facet_grid(outcome_clean~dose, scales="free", space="free_x") +
+    geom_rect(aes(xmin=lagtime, xmax=time, ymin=1-surv.ll, ymax=1-surv.ul), alpha=0.1, colour="transparent") +
+    scale_x_continuous(breaks=postvaxcuts, expand = c(0, 0)) +
+    scale_y_continuous(expand = expansion(mult=c(0,0.01))) +
+    labs(
+      x="Time since vaccination (days)",
+      y = "Cumulative incidence",
+      colour = "Vaccine (primary course)",
+      title = "") +
+    theme_bw() +
+    guides(fill="none") +
+    scale_colour_manual(values = c("#CC79A7", "#0072B2")) +
+    scale_fill_manual(values = c("#CC79A7", "#0072B2")) +
+    theme(
+      strip.text.x = element_text(size=15), 
+      strip.text.y = element_text(size=12),   
+      axis.title.y.left = element_text(size=15, margin = margin(t = 0, r = 10, b = 0, l = 0)),
+      axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+      axis.text = element_text(size=13),
+      axis.title = element_text(size=15),
+      legend.text = element_text(size=15),
+      legend.title = element_text(size=15),
+      panel.border = element_blank(),
+      axis.line.y = element_line(colour = "black"),
+      panel.grid.minor.x = element_blank(),
+      panel.grid.minor.y = element_blank(),
+      strip.background = element_blank(),
+      strip.placement = "outside",
+      strip.text.y.left = element_text(angle = 0),
+      panel.spacing = unit(2, "lines"),
+      plot.title = element_text(hjust = 0),
+      plot.title.position = "plot",
+      plot.caption.position = "plot",
+      plot.caption = element_text(hjust = 0, face= "italic"),
+      legend.position = "top",
+      plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")
+      )
+}
+
+## Generate KM plot across 4 outcomes
+generate_km_contrast_plot = function(surv_contrast) {
+  
+  surv_contrast %>%
+    ggplot(aes(x = period_start, y = kmrr)) + geom_step(size = 0.5, colour="#023858") +
+    facet_grid(outcome_clean~dose, scales="free", space="free_x") +
+    geom_rect(aes(xmin=period_start, xmax=period_end, ymin=kmrr.ll, ymax=kmrr.ul), alpha=0.1, colour="transparent", fill = "#023858") +
+    geom_hline(aes(yintercept=1), colour='black', linetype="dotted", size=0.5) +
+    scale_x_continuous(breaks=postvaxcuts, expand = c(0, 0)) +
+    scale_y_log10(
+      limits = c(0.25,4),
+      breaks=c(0.25, 0.5, 1, 2, 4),
+      sec.axis = dup_axis(name="<- Favours BNT-BNT primary / Favours AZ-AZ primary ->", breaks = NULL)
+    ) +
+    labs(
+      x="Time since vaccination (days)",
+      y = "Risk ratio",
+      colour = "",
+      title = "") +
+    theme_bw() +
+    guides(fill="none") +
+    #scale_colour_manual(values = c("#CC79A7", "#0072B2")) +
+    #scale_fill_manual(values = c("#CC79A7", "#0072B2")) +
+    theme(
+      strip.text.x = element_text(size=15), 
+      strip.text.y = element_text(size=12),   
+      axis.title.y.left = element_text(size=15, margin = margin(t = 0, r = 10, b = 0, l = 0)),
+      axis.title.y.right = element_text(size=15, margin = margin(t = 0, r = 0, b = 0, l = 20)),
+      axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+      axis.text = element_text(size=13),
+      axis.title = element_text(size=15),
+      legend.text = element_text(size=15),
+      panel.border = element_blank(),
+      axis.line.y.left = element_line(colour = "black"),
+      panel.grid.minor.x = element_blank(),
+      panel.grid.minor.y = element_blank(),
+      strip.background = element_blank(),
+      strip.placement = "outside",
+      strip.text.y.left = element_text(angle = 0),
+      panel.spacing = unit(2, "lines"),
+      plot.title = element_text(hjust = 0),
+      plot.title.position = "plot",
+      plot.caption.position = "plot",
+      plot.caption = element_text(hjust = 0, face= "italic"),
+      legend.position = "right",
+      plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")
+      )
+}
+
+## Function to collate rounded survival tables 
+collate_rounded_km = function(data_tte_primary, data_tte_boost) {
+  
+  ## Collate primary vaccination cohort data 
+  surv_covid_postest = create_rounded_surv_table(1, data_tte_primary, boost=FALSE) %>% mutate(outcome_clean = clean_list[1])
+  surv_covid_hosp = create_rounded_surv_table(3, data_tte_primary, boost=FALSE) %>% mutate(outcome_clean = clean_list[3])
+  surv_covid_death = create_rounded_surv_table(4, data_tte_primary, boost=FALSE) %>% mutate(outcome_clean = clean_list[4])
+  surv_noncovid_death = create_rounded_surv_table(5, data_tte_primary, boost=FALSE) %>% mutate(outcome_clean = clean_list[5])
+  surv_collated = rbind(surv_covid_postest, surv_covid_hosp, surv_covid_death, surv_noncovid_death) %>% mutate(dose = "Primary vaccination")
+  surv_collated$outcome_clean = factor(surv_collated$outcome_clean, levels = clean_list)
+  
+  ## Collate booster cohort data 
+  surv_covid_postest_boost = create_rounded_surv_table(1, data_tte_boost, boost=TRUE) %>% mutate(outcome_clean = clean_list[1])
+  surv_covid_hosp_boost = create_rounded_surv_table(3, data_tte_boost, boost=TRUE) %>% mutate(outcome_clean = clean_list[3])
+  surv_covid_death_boost = create_rounded_surv_table(4, data_tte_boost, boost=TRUE) %>% mutate(outcome_clean = clean_list[4])
+  surv_noncovid_death_boost = create_rounded_surv_table(5, data_tte_boost, boost=TRUE) %>% mutate(outcome_clean = clean_list[5])
+  surv_collated_boost = rbind(surv_covid_postest_boost, surv_covid_hosp_boost, surv_covid_death_boost, surv_noncovid_death_boost) %>% mutate(dose = "BNT boost")
+  surv_collated_boost$outcome_clean = factor(surv_collated_boost$outcome_clean, levels = clean_list)
+  
+  ## Collate across doses
+  surv_combined = rbind(surv_collated, surv_collated_boost)
+  surv_combined$dose = factor(surv_combined$dose, levels = unique(surv_combined$dose))
+  
+  ## Simplify outcome names for plotting
+  surv_combined$outcome_clean <- recode_factor(surv_combined$outcome_clean, 
+                                               `Positive SARS-CoV-2 test` = "SARS-CoV-2+", 
+                                               `COVID-related hospitalisation` = "COVID-19 hosp.",
+                                               `COVID-related death` = "COVID-19 death") 
+  return(surv_combined)
+}
+
+## Function to collate contrast data
+collate_km_contrasts = function(data_tte_primary, data_tte_boost) {
+  
+  ## Collate primary vaccination cohort data 
+  surv_covid_postest_contrast = kmcontrast(create_rounded_surv_table(1, data_tte_primary, boost=FALSE)) %>% mutate(outcome_clean = clean_list[1])
+  surv_covid_hosp_contrast = kmcontrast(create_rounded_surv_table(3, data_tte_primary, boost=FALSE)) %>% mutate(outcome_clean = clean_list[3])
+  surv_covid_death_contrast = kmcontrast(create_rounded_surv_table(4, data_tte_primary, boost=FALSE)) %>% mutate(outcome_clean = clean_list[4])
+  surv_noncovid_death_contrast = kmcontrast(create_rounded_surv_table(5, data_tte_primary, boost=FALSE)) %>% mutate(outcome_clean = clean_list[5])
+  surv_collated_contrast = rbind(surv_covid_postest_contrast, surv_covid_hosp_contrast, surv_covid_death_contrast, surv_noncovid_death_contrast) %>% mutate(dose = "Primary vaccination")
+  surv_collated_contrast$outcome_clean = factor(surv_collated_contrast$outcome_clean, levels = clean_list)
+  
+  ## Collate booster cohort data 
+  surv_covid_postest_contrast_boost = kmcontrast(create_rounded_surv_table(1, data_tte_boost, boost=TRUE)) %>% mutate(outcome_clean = clean_list[1])
+  surv_covid_hosp_contrast_boost = kmcontrast(create_rounded_surv_table(3, data_tte_boost, boost=TRUE)) %>% mutate(outcome_clean = clean_list[3])
+  surv_covid_death_contrast_boost = kmcontrast(create_rounded_surv_table(4, data_tte_boost, boost=TRUE)) %>% mutate(outcome_clean = clean_list[4])
+  surv_noncovid_death_contrast_boost = kmcontrast(create_rounded_surv_table(5, data_tte_boost, boost=TRUE)) %>% mutate(outcome_clean = clean_list[5])
+  surv_collated_contrast_boost = rbind(surv_covid_postest_contrast_boost, surv_covid_hosp_contrast_boost, surv_covid_death_contrast_boost, surv_noncovid_death_contrast_boost) %>% mutate(dose = "BNT boost")
+  surv_collated_contrast_boost$outcome_clean = factor(surv_collated_contrast_boost$outcome_clean, levels = clean_list)
+  
+  ## Collate across doses
+  surv_combined_contrast = rbind(surv_collated_contrast, surv_collated_contrast_boost)
+  surv_combined_contrast$dose = factor(surv_combined_contrast$dose, levels = unique(surv_combined_contrast$dose))
+  
+  ## Simplify outcome names for plotting
+  surv_combined_contrast$outcome_clean <- recode_factor(surv_combined_contrast$outcome_clean, 
+                                               `Positive SARS-CoV-2 test` = "SARS-CoV-2+", 
+                                               `COVID-related hospitalisation` = "COVID-19 hosp.",
+                                               `COVID-related death` = "COVID-19 death") 
+  return(surv_combined_contrast)
+}
+```
+
+#### Whole population - unmatched
+```{r fig.width=14, fig.height=9}
+surv_combined = collate_rounded_km(data_tte_unmatched, data_tte_unmatched_boost)
+surv_contrasts = collate_km_contrasts(data_tte_unmatched, data_tte_unmatched_boost)
+plot_grid(generate_km_plot(surv_combined), 
+          generate_km_contrast_plot(surv_contrasts),
+          ncol=2, align = "h", axis = "tb")
+```
+<br><br>
+
+#### Whole population - matched
+```{r fig.width=14, fig.height=9}
+surv_combined = collate_rounded_km(data_tte_matched, data_tte_matched_boost)
+surv_contrasts = collate_km_contrasts(data_tte_matched, data_tte_matched_boost)
+plot_grid(generate_km_plot(surv_combined), 
+          generate_km_contrast_plot(surv_contrasts),
+          ncol=2, align = "h", axis = "tb")
+```
+<br><br>
+
+#### CKD3 - unmatched
+```{r fig.width=14, fig.height=9}
+surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="CKD3"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD3"))
+surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="CKD3"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD3"))
+plot_grid(generate_km_plot(surv_combined), 
+          generate_km_contrast_plot(surv_contrasts),
+          ncol=2, align = "h", axis = "tb")
+```
+<br><br>
+
+#### CKD3 - matched
+```{r fig.width=14, fig.height=9}
+surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="CKD3"), subset(data_tte_matched_boost, ckd_3cat=="CKD3"))
+surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="CKD3"), subset(data_tte_matched_boost, ckd_3cat=="CKD3"))
+plot_grid(generate_km_plot(surv_combined), 
+          generate_km_contrast_plot(surv_contrasts),
+          ncol=2, align = "h", axis = "tb")
+```
+<br><br>
+
+#### CKD4-5 - unmatched
+```{r fig.width=14, fig.height=9}
+surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="CKD4-5"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD4-5"))
+surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="CKD4-5"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD4-5"))
+plot_grid(generate_km_plot(surv_combined), 
+          generate_km_contrast_plot(surv_contrasts),
+          ncol=2, align = "h", axis = "tb")
+```
+<br><br>
+
+#### CKD4-5 - matched
+```{r fig.width=14, fig.height=9}
+surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="CKD4-5"), subset(data_tte_matched_boost, ckd_3cat=="CKD4-5"))
+surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="CKD4-5"), subset(data_tte_matched_boost, ckd_3cat=="CKD4-5"))
+plot_grid(generate_km_plot(surv_combined), 
+          generate_km_contrast_plot(surv_contrasts),
+          ncol=2, align = "h", axis = "tb")
+```
+<br><br>
+
+#### RRT (any) - unmatched
+```{r fig.width=14, fig.height=9}
+surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="RRT (any)"), subset(data_tte_unmatched_boost, ckd_3cat=="RRT (any)"))
+surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="RRT (any)"), subset(data_tte_unmatched_boost, ckd_3cat=="RRT (any)"))
+plot_grid(generate_km_plot(surv_combined), 
+          generate_km_contrast_plot(surv_contrasts),
+          ncol=2, align = "h", axis = "tb")
+```
+<br><br>
+
+#### RRT (any) - matched
+```{r fig.width=14, fig.height=9}
+surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="RRT (any)"), subset(data_tte_matched_boost, ckd_3cat=="RRT (any)"))
+surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="RRT (any)"), subset(data_tte_matched_boost, ckd_3cat=="RRT (any)"))
+plot_grid(generate_km_plot(surv_combined), 
+          generate_km_contrast_plot(surv_contrasts),
+          ncol=2, align = "h", axis = "tb")
+```
+<br><br>
+
+#### RRT (Tx) - unmatched
+```{r fig.width=14, fig.height=9}
+surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_5cat=="RRT (Tx)"), subset(data_tte_unmatched_boost, ckd_5cat=="RRT (Tx)"))
+surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_5cat=="RRT (Tx)"), subset(data_tte_unmatched_boost, ckd_5cat=="RRT (Tx)"))
+plot_grid(generate_km_plot(surv_combined), 
+          generate_km_contrast_plot(surv_contrasts),
+          ncol=2, align = "h", axis = "tb")
+```
+<br><br>
+
+#### RRT (Tx) - matched
+```{r fig.width=14, fig.height=9}
+surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_5cat=="RRT (Tx)"), subset(data_tte_matched_boost, ckd_5cat=="RRT (Tx)"))
+surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_5cat=="RRT (Tx)"), subset(data_tte_matched_boost, ckd_5cat=="RRT (Tx)"))
+plot_grid(generate_km_plot(surv_combined), 
+          generate_km_contrast_plot(surv_contrasts),
+          ncol=2, align = "h", axis = "tb")
+```
+.

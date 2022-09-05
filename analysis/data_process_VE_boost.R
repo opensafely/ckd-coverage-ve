@@ -23,7 +23,7 @@ dir.create(here::here("output", "data"), showWarnings = FALSE, recursive=TRUE)
 sessionInfo()
 
 ## Print variable names
-read_csv(here::here("output", "data", "input.csv"),
+read_csv(here::here("output", "data", "input_VE_boost.csv"),
          n_max = 0,
          col_types = cols()) %>%
   names() %>%
@@ -31,7 +31,7 @@ read_csv(here::here("output", "data", "input.csv"),
 
 ## Read in data and set variable types
 data_extract <- read_csv(
-  here::here("output", "data", "input.csv"),
+  here::here("output", "data", "input_VE_boost.csv"),
   col_types = cols_only(
     
     # Identifier
@@ -67,11 +67,30 @@ data_extract <- read_csv(
     immunosuppression_medication_date = col_date(format="%Y-%m-%d"),
     
     # Dates for Covid-related variables
-    # Pre-index events
+    # Pre-dose 1 events
     prior_positive_test_date = col_date(format="%Y-%m-%d"),
     prior_primary_care_covid_case_date = col_date(format="%Y-%m-%d"),
     prior_covid_emergency_date = col_date(format="%Y-%m-%d"),
     prior_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
+
+    # Pre-vax events (90 days pre dose 3)
+    prevax_positive_test_date	= col_date(format="%Y-%m-%d"),
+    prevax_primary_care_covid_case_date	= col_date(format="%Y-%m-%d"),
+    prevax_covid_emergency_date	= col_date(format="%Y-%m-%d"),
+    prevax_covid_hospitalisation_date	= col_date(format="%Y-%m-%d"),
+    
+    # Inter-vax events (dose 1 to dose 3)
+    intervax_positive_test_date	= col_date(format="%Y-%m-%d"),
+    intervax_primary_care_covid_case_date	= col_date(format="%Y-%m-%d"),
+    intervax_covid_emergency_date	= col_date(format="%Y-%m-%d"),
+    intervax_covid_hospitalisation_date	= col_date(format="%Y-%m-%d"),
+    
+    # Post-vax events (dose 3 onwards)
+    postvax_positive_test_date = col_date(format="%Y-%m-%d"),
+    postvax_covid_emergency_date = col_date(format="%Y-%m-%d"),
+    postvax_covid_hospitalisation_date = col_date(format="%Y-%m-%d"),
+    postvax_covid_death_date = col_date(format="%Y-%m-%d"),
+    postvax_any_test_date	= col_date(format="%Y-%m-%d"),
     
     # CKD groups
     creatinine = col_double(), 
@@ -79,10 +98,10 @@ data_extract <- read_csv(
     kidney_transplant = col_logical(), 
     chronic_kidney_disease_diagnostic = col_logical(), 
     chronic_kidney_disease_stages_3_5 = col_logical(), 
-    ukrr_2019 = col_logical(), 
-    ukrr_2019_mod = col_character(), 
     ukrr_2020 = col_logical(), 
     ukrr_2020_mod = col_character(), 
+    ukrr_2021 = col_logical(), 
+    ukrr_2021_mod = col_character(), 
     creatinine_operator = col_character(), 
     age_creatinine = col_integer(),
     
@@ -100,7 +119,6 @@ data_extract <- read_csv(
     age_index = col_integer(),
     age_august2021 = col_integer(),
     sex = col_character(),
-    bmi = col_character(),
     ethnicity_6 = col_character(),
     ethnicity_6_sus = col_character(),
     imd = col_character(),
@@ -121,6 +139,11 @@ data_extract <- read_csv(
     sev_mental_ill = col_logical(),
     organ_transplant = col_logical(),
     non_kidney_transplant = col_logical(),
+    
+    # Other
+    prevax_tests_conducted_any = col_double(),
+    prevax_tests_conducted_any_fixed = col_double(),
+    inhospital = col_logical()
   ),
   na = character() # more stable to convert to missing later
 )
@@ -182,30 +205,20 @@ data_extract <- data_extract %>%
 ## Define UKRR groups
 data_extract <- data_extract %>%
   mutate(
-    # Add UKRR modality at index date - either 2020 modality, or 2019 modality if died between index date and end of 2020
-    ukrr_index_mod = ifelse(((!is.na(death_date)) & death_date>=as_date("2020-12-01") & death_date<=as_date("2020-12-31")) |
-                             ((!is.na(dereg_date)) & dereg_date>=as_date("2020-12-01") & dereg_date<=as_date("2020-12-31")), ukrr_2019_mod, ukrr_2020_mod),
-
-    # 2019
-    ukrr_2019_group = "None",
-    ukrr_2019_group = ifelse((!is.na(ukrr_2019_mod)) & ukrr_2019_mod == "Tx", "Tx", ukrr_2019_group),
-    ukrr_2019_group = ifelse((!is.na(ukrr_2019_mod)) & (ukrr_2019_mod == "ICHD" | ukrr_2019_mod == "HHD" | ukrr_2019_mod == "HD" | ukrr_2019_mod == "PD"), "Dialysis", ukrr_2019_group),
-    
     # 2020
     ukrr_2020_group = "None",
     ukrr_2020_group = ifelse((!is.na(ukrr_2020_mod)) & ukrr_2020_mod == "Tx", "Tx", ukrr_2020_group),
     ukrr_2020_group = ifelse((!is.na(ukrr_2020_mod)) & (ukrr_2020_mod == "ICHD" | ukrr_2020_mod == "HHD" | ukrr_2020_mod == "HD" | ukrr_2020_mod == "PD"), "Dialysis", ukrr_2020_group),
     
-    # Index (01-Dec-2020)
-    ukrr_index_group = "None",
-    ukrr_index_group = ifelse((!is.na(ukrr_index_mod)) & ukrr_index_mod == "Tx", "Tx", ukrr_index_group),
-    ukrr_index_group = ifelse((!is.na(ukrr_index_mod)) & (ukrr_index_mod == "ICHD" | ukrr_index_mod == "HHD" | ukrr_index_mod == "HD" | ukrr_index_mod == "PD"), "Dialysis", ukrr_index_group),
+    # 2021
+    ukrr_2021_group = "None",
+    ukrr_2021_group = ifelse((!is.na(ukrr_2021_mod)) & ukrr_2021_mod == "Tx", "Tx", ukrr_2021_group),
+    ukrr_2021_group = ifelse((!is.na(ukrr_2021_mod)) & (ukrr_2021_mod == "ICHD" | ukrr_2021_mod == "HHD" | ukrr_2021_mod == "HD" | ukrr_2021_mod == "PD"), "Dialysis", ukrr_2021_group),
 
     # Set modalities as 'None' instead of NA
-    ukrr_2019_mod = ifelse(is.na(ukrr_2019_mod), "None", ukrr_2019_mod), 
     ukrr_2020_mod = ifelse(is.na(ukrr_2020_mod), "None", ukrr_2020_mod), 
-    ukrr_index_mod = ifelse(is.na(ukrr_index_mod), "None", ukrr_index_mod), 
-
+    ukrr_2021_mod = ifelse(is.na(ukrr_2021_mod), "None", ukrr_2020_mod), 
+    
     # Flag issues with ambiguous creatinine entries - either no creatinine-associated age or creatinine-linked operator (impacting interpretation of numeric values)
     creatinine_date_issue = ifelse((!is.na(creatinine)) & is.na(age_creatinine),1,0),
     creatinine_operator_issue = ifelse((!is.na(creatinine_operator)) & creatinine_operator %in% c("~", ">=", ">", "<", "<="),1,0)
@@ -219,29 +232,16 @@ print(sum(data_extract$creatinine_operator_issue))
 
 print("Cross-tabulate 2020 modalities")
 print(table(data_extract$ukrr_2020_mod))
-print("Cross-tabulate index modalities")
-print(table(data_extract$ukrr_index_mod))
-print("Cross-tabulate 2019 vs 2020 modalities")
-print(table(data_extract$ukrr_2019_mod, data_extract$ukrr_2020_mod))
-print("Cross-tabulate index vs 2020 modalities")
-print(table(data_extract$ukrr_index_mod, data_extract$ukrr_2020_mod))
+print("Cross-tabulate 2020 vs 2021 modalities")
+print(table(data_extract$ukrr_2020_mod, data_extract$ukrr_2021_mod))
 
 print("Cross-tabulate 2020 groups")
 print(table(data_extract$ukrr_2020_group))
-print("Cross-tabulate index groups")
-print(table(data_extract$ukrr_index_group))
-print("Cross-tabulate 2019 vs 2020 groups")
-print(table(data_extract$ukrr_2019_group, data_extract$ukrr_2020_group))
-print("Cross-tabulate index vs 2020 groups")
-print(table(data_extract$ukrr_index_group, data_extract$ukrr_2020_group))
+print("Cross-tabulate 2020 vs 2021 groups")
+print(table(data_extract$ukrr_2020_group, data_extract$ukrr_2021_group))
 
-print("Cross-tabulate UKRR at index (dialysis/Tx) vs primary care dialysis/Tx flag")
-print(table((data_extract$ukrr_index_group=="Dialysis" | data_extract$ukrr_index_group=="Tx"), (data_extract$dialysis==1 | data_extract$kidney_transplant)))
-
-print("Sum UKRR 2019 population with dereg/death between 01-Dec-2020 and 31-Dec-2020")
-print(sum(data_extract$ukrr_2019==1 &
-  (((!is.na(data_extract$death_date)) & data_extract$death_date>=as_date("2020-12-01") & data_extract$death_date<=as_date("2020-12-31")) |
-            ((!is.na(data_extract$dereg_date)) & data_extract$dereg_date>=as_date("2020-12-01") & data_extract$dereg_date<=as_date("2020-12-31")))))
+print("Cross-tabulate UKRR 2020 status (dialysis/Tx) vs primary care dialysis/Tx flag")
+print(table((data_extract$ukrr_2020_group=="Dialysis" | data_extract$ukrr_2020_group=="Tx"), (data_extract$dialysis==1 | data_extract$kidney_transplant)))
 
 ## Add derived variables
 data_processed <- data_extract %>%
@@ -274,13 +274,6 @@ data_processed <- data_extract %>%
     rrt_mismatch = ifelse((ckd_5cat=="CKD3a" | ckd_5cat=="CKD3b" | ckd_5cat=="CKD4-5") & (dialysis==1 | kidney_transplant==1), 1, 0),
     
     # Age
-    ageband = cut(
-      age,
-      breaks = c(16, 70, 80, Inf),
-      labels = c("16-69", "70-79", "80+"),
-      right = FALSE
-    ),
-    
     ageband2 = cut(
       age,
       breaks = c(16, 65, 70, 75, 80, Inf),
@@ -317,10 +310,6 @@ data_processed <- data_extract %>%
       sex == "M" ~ "Male",
       TRUE ~ NA_character_
     ),
-    
-    # Obesity
-    obesity = ifelse(bmi == "Not obese",0,1),
-    mod_sev_obesity = ifelse(bmi == "Obese II (35-39.9)" | bmi == "Obese III (40+)", 1, 0),
     
     # Ethnicity
     ethnicity_filled = ifelse(is.na(ethnicity_6), ethnicity_6_sus, ethnicity_6),
@@ -365,16 +354,6 @@ data_processed <- data_extract %>%
     # Any respiratory disease
     any_resp_dis= ifelse(chronic_resp_dis==1 | asthma==1, 1, 0), 
     
-    # Any cancer
-    any_cancer = ifelse(cancer==1 | haem_cancer==1, 1, 0), 
-
-    # CEV other
-    rrt_2020 = ifelse(ukrr_2020_group=="Tx" | ukrr_2020_group=="Dialysis", 1, 0),
-    any_comorb = pmax(rrt_2020, 
-                      immunosuppression, sev_obesity, diabetes, any_resp_dis,
-                      chd, cld, asplenia, any_cancer, other_transplant, chronic_neuro_dis_inc_sig_learn_dis, sev_mental_ill),
-    cev_other = ifelse(cev==1 & any_comorb==0, 1, 0),
-    
     # Multiple comorbidities (non-CKD-related) - 0, 1, or 2+
     multimorb =
       (sev_obesity) +
@@ -388,8 +367,25 @@ data_processed <- data_extract %>%
     # Any immunosuppression (transplant, cancer, haematologic cancer, asplenia)
     any_immunosuppression = ifelse(ukrr_2020_group=="Tx" | other_transplant==1 | immunosuppression==1 | haem_cancer==1 | asplenia==1, 1, 0), 
     
-    # Prior COVID - index
+    # Prior COVID - dose 1
     prior_covid_cat = as.numeric(!is.na(pmin(prior_positive_test_date, prior_primary_care_covid_case_date, prior_covid_emergency_date, prior_covid_hospitalisation_date, na.rm=TRUE))),
+    
+    # COVID in window spanning 90 days pre dose 3
+    prevax_covid_cat = as.numeric(!is.na(pmin(prevax_positive_test_date, prevax_primary_care_covid_case_date, prevax_covid_emergency_date, prevax_covid_hospitalisation_date, na.rm=TRUE))),
+    
+    # COVID in window spanning dose 1 to dose 3
+    intervax_covid_cat = as.numeric(!is.na(pmin(intervax_positive_test_date, intervax_primary_care_covid_case_date, intervax_covid_emergency_date, intervax_covid_hospitalisation_date, na.rm=TRUE))),
+    
+    # Number of tests in pre-vaccination period
+    prevax_tests_conducted_any = ifelse(is.na(prevax_tests_conducted_any), 0, prevax_tests_conducted_any),
+    prevax_tests_cat = cut(prevax_tests_conducted_any, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
+    
+    # Number of tests in pre-vaccination period
+    prevax_tests_conducted_any_fixed = ifelse(is.na(prevax_tests_conducted_any_fixed), 0, prevax_tests_conducted_any_fixed),
+    prevax_tests_fixed_cat = cut(prevax_tests_conducted_any_fixed, breaks=c(0, 1, 2, 3, Inf), labels=c("0", "1", "2", "3+"), right=FALSE),
+    
+    # Non-COVID death date
+    noncoviddeath_date = if_else(!is.na(death_date) & is.na(postvax_covid_death_date), death_date, as.Date(NA_character_)),
   ) %>%
   # Drop superseded variables
   select(-c(care_home_code, care_home_tpp, ethnicity_6, ethnicity_filled, 
@@ -551,17 +547,15 @@ data_processed_updated <- data_processed %>%
 data_processed_updated <- data_processed_updated %>%
   mutate(
     imd = factor(imd, levels = c("1 (most deprived)", "2", "3", "4", "5 (least deprived)")),
-    ukrr_2019_mod = factor(ukrr_2019_mod, levels = c("None", "HD", "ICHD", "HHD", "PD", "Tx")),
     ukrr_2020_mod = factor(ukrr_2020_mod, levels = c("None", "HD", "ICHD", "HHD", "PD", "Tx")),
-    ukrr_index_mod = factor(ukrr_index_mod, levels = c("None", "HD", "ICHD", "HHD", "PD", "Tx")),
-    ukrr_2019_group = factor(ukrr_2019_group, levels = c("None", "Dialysis", "Tx")),
+    ukrr_2021_mod = factor(ukrr_2021_mod, levels = c("None", "HD", "ICHD", "HHD", "PD", "Tx")),
     ukrr_2020_group = factor(ukrr_2020_group, levels = c("None", "Dialysis", "Tx")),
-    ukrr_index_group = factor(ukrr_index_group, levels = c("None", "Dialysis", "Tx")),
+    ukrr_2021_group = factor(ukrr_2021_group, levels = c("None", "Dialysis", "Tx")),
     ckd_6cat = factor(ckd_6cat, levels = c("No CKD", "CKD3a", "CKD3b", "CKD4", "CKD5", "RRT (dialysis)", "RRT (Tx)")),
     ckd_5cat = factor(ckd_5cat, levels = c("No CKD", "CKD3a", "CKD3b", "CKD4-5", "RRT (dialysis)", "RRT (Tx)")),
     ckd_3cat = factor(ckd_3cat, levels = c("No CKD", "CKD3", "CKD4-5", "RRT (any)")),
   )
 
 ## Save dataset
-write_rds(data_processed_updated, here::here("output", "data", "data_processed.rds"), compress = "gz")
-write_csv(data_processed_updated, here::here("output", "data", "data_processed.csv"))
+write_rds(data_processed_updated, here::here("output", "data", "data_processed_VE_boost.rds"), compress = "gz")
+write_csv(data_processed_updated, here::here("output", "data", "data_processed_VE_boost.csv"))
