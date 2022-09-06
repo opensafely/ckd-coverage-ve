@@ -80,7 +80,7 @@ round_any(table(data_tte_unmatched$vax2_type_descr, data_tte_unmatched$ckd_5cat)
 
 ##### Unmatched booster cohort
 ```{r}
-round_any(table(data_tte_matched_boost$vax2_type_descr, data_tte_matched_boost$ckd_5cat), 5)
+round_any(table(data_tte_unmatched_boost$vax2_type_descr, data_tte_unmatched_boost$ckd_5cat), 5)
 ```
 
 ##### Matched primary vaccination cohort
@@ -96,6 +96,7 @@ round_any(table(data_tte_matched_boost$vax2_type_descr, data_tte_matched_boost$c
 
 #### Cumulative incidence plots and risk ratios over time 
 Cumulative incidence = 1 - Kaplan-Meier estimate for probability of survival in unadjusted models. Steps occur every 5 events.
+<br/><br/>
 ```{r}
 ### Functions for data manipulation and plotting 
 
@@ -362,6 +363,10 @@ generate_km_plot = function(surv_data) {
 ## Generate KM plot across 4 outcomes
 generate_km_contrast_plot = function(surv_contrast) {
   
+  # surv_contrast$kmrr[surv_contrast$kmrr>4] = 4
+  # surv_contrast$kmrr.ul[surv_contrast$kmrr.ul>4] = 4
+  # surv_contrast$kmrr[surv_contrast$kmrr<0.25] = 0.25
+  # surv_contrast$kmrr[surv_contrast$kmrr.ll<0.25] = 0.25
   surv_contrast %>%
     filter(period_start>=14) %>%
     ggplot(aes(x = period_start, y = kmrr)) + geom_step(size = 0.5, colour="#023858") +
@@ -370,8 +375,8 @@ generate_km_contrast_plot = function(surv_contrast) {
     geom_hline(aes(yintercept=1), colour='black', linetype="dotted", size=0.5) +
     scale_x_continuous(breaks=postvaxcuts, expand = c(0, 0)) +
     scale_y_log10(
-      #limits = c(0.25,4),
-      #breaks=c(0.25, 0.5, 1, 2, 4),
+      limits = c(0.25,4),
+      breaks=c(0.25, 0.5, 1, 2, 4),
       sec.axis = dup_axis(name="<- Favours BNT-BNT primary / Favours AZ-AZ primary ->", breaks = NULL)
     ) +
     labs(

@@ -118,7 +118,7 @@ table_1 <- rbind(
   read_rds(here::here("output", "tables", "table1_VE_boost_redacted_unmatched_CKD3.rds")) %>% mutate(subgroup = "CKD3", subgroup_id = 3),
   read_rds(here::here("output", "tables", "table1_VE_boost_redacted_unmatched_CKD4-5.rds")) %>% mutate(subgroup = "CKD4-5", subgroup_id = 4),
   read_rds(here::here("output", "tables", "table1_VE_boost_redacted_unmatched_RRT.rds")) %>% mutate(subgroup = "RRT (any)", subgroup_id = 5),
-  read_rds(here::here("output", "tables", "table1_VE_boost_redacted_unmatched_Tx.rds")) %>% mutate(subgroup = "RRT (Tx)", subgroup_id = 5)
+  read_rds(here::here("output", "tables", "table1_VE_boost_redacted_unmatched_Tx.rds")) %>% mutate(subgroup = "RRT (Tx)", subgroup_id = 6)
 )
 
 table_1_wide = table_1 %>% 
@@ -153,7 +153,7 @@ table_1_wide %>%
     ) %>%
     tab_spanner(
       label = "RRT (Tx) subgroup (unmatched)",
-      columns = paste0(c("ChAdOx1-S", "BNT162b2")," [5]")
+      columns = paste0(c("ChAdOx1-S", "BNT162b2")," [6]")
     ) %>%
 
     tab_options(table.font.size = pct(70)) %>%

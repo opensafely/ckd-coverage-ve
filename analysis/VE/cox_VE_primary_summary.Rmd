@@ -388,7 +388,8 @@ collate_subgroups = rbind(
   create_subgroup_table("all"),
   create_subgroup_table("CKD3"),
   create_subgroup_table("CKD4-5"),
-  create_subgroup_table("RRT")
+  create_subgroup_table("RRT"),
+  create_subgroup_table("Tx")
 ) %>% arrange(outcome_clean)
 
 ## Save collated table
