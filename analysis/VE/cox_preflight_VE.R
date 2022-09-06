@@ -45,11 +45,11 @@ if(length(args)==0){
 
 ## Specify input data
 if (db == "unmatched" & vaccine == "primary") { 
-  input_name = "data_cohort_VE.rds"
+  input_name = "data_cohort_VE_primary.rds"
   selected_vax_date = "vax2_date"
   selected_vax_day = "vax2_day"
 } else if (db == "matched" & vaccine == "primary") { 
-  input_name = "data_cohort_VE_matched.rds"
+  input_name = "data_cohort_VE_primary_matched.rds"
   selected_vax_date = "vax2_date"
   selected_vax_day = "vax2_day"
 } else if (db == "unmatched" & vaccine == "boost") { 
