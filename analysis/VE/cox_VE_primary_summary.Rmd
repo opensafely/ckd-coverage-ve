@@ -1,5 +1,5 @@
 ---
-title: "Comparative effectiveness of BNT162b2 boost following BNT162b2 vs ChAdOx1-S primary series in people with kidney disease"
+title: "Comparative effectiveness of 2 x BNT162b2 vs 2 x ChAdOx1-S in people with kidney disease"
 output: html_document
 ---
 
@@ -27,22 +27,22 @@ source(here::here("analysis", "functions.R"))
 
 ## Set list of outcomes and date variable names
 outcomes <- read_rds(
-  here::here("output", "lib", "outcomes_boost.rds")
+  here::here("output", "lib", "outcomes.rds")
 )
 outcome_list = outcomes$short_name
 clean_list = outcomes$clean_name
 date_list = outcomes$date_name
 
 ## Read in data for cumulative incidence curves
-data_tte_unmatched <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds")) %>%
+data_tte_unmatched <- read_rds(here::here("output", "data", "data_cohort_VE_primary.rds")) %>%
   mutate(vax2_type_descr = recode(vax2_type_descr, "BNT162b2" = "BNT", "ChAdOx1" = "AZ"))
 
-data_tte_matched <- read_rds(here::here("output", "data", "data_cohort_VE_boost_matched.rds")) %>%
+data_tte_matched <- read_rds(here::here("output", "data", "data_cohort_VE_primary_matched.rds")) %>%
   mutate(vax2_type_descr = recode(vax2_type_descr, "BNT162b2" = "BNT", "ChAdOx1" = "AZ"))
 
 ## Import outcome time periods
 postvax_list <- read_rds(
-  here::here("output", "lib", "postboost_list.rds")
+  here::here("output", "lib", "postvax_list.rds")
 )
 postvaxcuts = postvax_list$postvaxcuts
 postvax_periods = postvax_list$postvax_periods
@@ -66,35 +66,34 @@ Vaccine recommendations for people with kidney disease in the UK have evolved ov
 Most people with kidney disease received a 2-dose homologous primary series of either BNT162b2 or ChAdOx1-S between January and June 2021 (see Supplementary Table 1 of [coverage preprint](https://www.medrxiv.org/content/10.1101/2022.06.14.22276391v1)). Subsequently, individuals received a third primary or first booster dose of an RNA vaccine (either BNT162b2 or ChAdOx1-S). The primary comparison of interest in the present study was post-vaccination outcomes for BNT162b2 vs ChAdOx1-S, with outcomes after receipt of BNT162b2 booster doses as a secondary analyses.
 <br/><br/>
 
-#### Inclusion criteria for booster cohort
-* Registered for at least 3m before booster dose 
+#### Inclusion criteria for primary cohort
+* Registered for at least 3m before first dose    
 * Aged ≥16 as of 31-Mar-2021
-* eGFR<60 in 2 years before booster dose OR present in UK Renal Registry (UKRR) on 31-Dec-2020 (the status update closest to the index date)  
+* eGFR<60 in 2 years before first dose OR present in UK Renal Registry (UKRR) on 31-Dec-2020 (the status update closest to the index date)  
 * No RRT mismatch (primary care dialysis/Tx code but absent from UKRR 2020 population)
 * No missing demographic data   
-* Received 2 x ChAdOx1-S or 2 x BNT162b2 as first two vaccine doses followed by BNT162b2 boost
-* Received first dose on or after 04-Jan-2021 (the period in which vaccines were in use) and third dose on or after 01-Sep-2021
-* Dose 1-2 interval was in the range of 8-14 weeks and dose 2-3 interval was >=12 weeks
+* Received 2 x ChAdOx1-S or 2 x BNT162b2 as first two vaccine doses
+* Received first dose after 04-Jan-2021 (the period in which vaccines were in use)
+* Dose 1-2 interval was in the range of 8-14 weeks
 * Not a healthcare worker, care home resident, receiving end-of-life care, housebound, or in JCVI priority group 2
 * Events designated as post-vaccination outcomes occurred after the date of the second dose
-* No SARS-CoV-2 infection in the interval dose 1 to dose 3 (to mitigate the impact of hybrid immunity)
+* No SARS-CoV-2 infection in the 90 days preceding dose 1
+* No SARS-CoV-2 infection between doses 1 and 2 (to mitigate the impact of hybrid immunity)
 
 ### Matching criteria for matched cohort
 * Region   
 * Age (within 3y)      
-* Dose 3 date (within 3d)         
-* Dose 2 date (within 14d)         
-* JCVI group    
+* Dose 2 date (within 3d)         
+* Dose 1 date (within 7d)         
 * IMD    
-* Ethnicity    
 * Kidney disease category (CDK3a, CKD3b, CKD4-5, dialysis, Tx)    
 * Clinically extremely vulnerable    
-* Prior SARS-CoV-2
+* Prior SARS-CoV-2 at index date    
 * Any indicator of immunosuppression (imunosuppressive condition, recent immunosuppressive medication, asplenia, transplant, or haematologic malignancy)
 
 #### Cohort selection - unmatched
 ```{r}
-flowchart <- read.csv(here::here("output", "tables", "flowchart_VE_boost.csv"))
+flowchart <- read.csv(here::here("output", "tables", "flowchart_VE_primary.csv"))
 names(flowchart)[1] = "Criteria"
 
 # Render flowchart
@@ -113,12 +112,12 @@ Of the **`r prettyNum(rounded_n_unmatched)`** individuals in the unmatched cohor
 #### Table 1: Summary of primary outcome population
 ```{r}
 table_1 <- rbind(
-  read_rds(here::here("output", "tables", "table1_VE_boost_redacted_unmatched_all.rds")) %>% mutate(subgroup = "All", subgroup_id = 1),
-  read_rds(here::here("output", "tables", "table1_VE_boost_redacted_matched_all.rds")) %>% mutate(subgroup = "Matched (all)", subgroup_id = 2),
-  read_rds(here::here("output", "tables", "table1_VE_boost_redacted_unmatched_CKD3.rds")) %>% mutate(subgroup = "CKD3", subgroup_id = 3),
-  read_rds(here::here("output", "tables", "table1_VE_boost_redacted_unmatched_CKD4-5.rds")) %>% mutate(subgroup = "CKD4-5", subgroup_id = 4),
-  read_rds(here::here("output", "tables", "table1_VE_boost_redacted_unmatched_RRT.rds")) %>% mutate(subgroup = "RRT (any)", subgroup_id = 5),
-  read_rds(here::here("output", "tables", "table1_VE_boost_redacted_unmatched_Tx.rds")) %>% mutate(subgroup = "RRT (Tx)", subgroup_id = 5)
+  read_rds(here::here("output", "tables", "table1_VE_primary_redacted_unmatched_all.rds")) %>% mutate(subgroup = "All", subgroup_id = 1),
+  read_rds(here::here("output", "tables", "table1_VE_primary_redacted_matched_all.rds")) %>% mutate(subgroup = "Matched (all)", subgroup_id = 2),
+  read_rds(here::here("output", "tables", "table1_VE_primary_redacted_unmatched_CKD3.rds")) %>% mutate(subgroup = "CKD3", subgroup_id = 3),
+  read_rds(here::here("output", "tables", "table1_VE_primary_redacted_unmatched_CKD4-5.rds")) %>% mutate(subgroup = "CKD4-5", subgroup_id = 4),
+  read_rds(here::here("output", "tables", "table1_VE_primary_redacted_unmatched_RRT.rds")) %>% mutate(subgroup = "RRT (any)", subgroup_id = 5),
+  read_rds(here::here("output", "tables", "table1_VE_primary_redacted_unmatched_Tx.rds")) %>% mutate(subgroup = "RRT (Tx)", subgroup_id = 6)
 )
 
 table_1_wide = table_1 %>% 
@@ -153,7 +152,7 @@ table_1_wide %>%
     ) %>%
     tab_spanner(
       label = "RRT (Tx) subgroup (unmatched)",
-      columns = paste0(c("ChAdOx1-S", "BNT162b2")," [5]")
+      columns = paste0(c("ChAdOx1-S", "BNT162b2")," [6]")
     ) %>%
 
     tab_options(table.font.size = pct(70)) %>%
@@ -175,7 +174,7 @@ table_1_wide %>%
        locations = cells_body(columns = "Variable")
      )
 ```
-Data are n (%) after rounding to the nearest 5. Any cells with rounded counts or non-counts (relative to the denominator) of >0 and <=10 are redacted. Primary care codes and risk groups are coded by separate binary variables; percentages in these subheadings therefore do not sum to 100. **Prior SARS-CoV-2** was determined based on evidence of a positive SARS-CoV-2 test, COVID-19-related primary care code, COVID-19-related A&E admission, or COVID-19-related hospitalisation as of the booster dose. JCVI group was inferred based on age and shielding code lists (to define **Clinically extremely vulnerable** individuals). **Comorbidity count** includes severe obesity, chronic heart disease, diabetes, chronic liver disease, any respiratory disease (including asthma), and chronic neurological disease. CKD, chronic kidney disease; CND, chronic neurological disease; RRT, renal replacement therapy. 
+Data are n (%) after rounding to the nearest 5. Any cells with rounded counts or non-counts (relative to the denominator) of >0 and <=10 are redacted. Primary care codes and risk groups are coded by separate binary variables; percentages in these subheadings therefore do not sum to 100. **Prior SARS-CoV-2** was determined based on evidence of a positive SARS-CoV-2 test, COVID-19-related primary care code, COVID-19-related A&E admission, or COVID-19-related hospitalisation as of the first dose. JCVI group was inferred based on age and shielding code lists (to define **Clinically extremely vulnerable** individuals). **Comorbidity count** includes severe obesity, chronic heart disease, diabetes, chronic liver disease, any respiratory disease (including asthma), and chronic neurological disease. CKD, chronic kidney disease; CND, chronic neurological disease; RRT, renal replacement therapy. 
 <br/><br/>
 
 #### Cumulative incidence plots
@@ -185,39 +184,39 @@ See outputs of *km_rr_plots.Rmd* script for Kaplan-Meier and risk ratio plots.
 ```{r, fig.width=21, fig.height=15}
 ## Read in persontime models
 model_persontime = rbind(
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[1],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[1],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[1]),
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[3],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[3],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[3]),
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[4],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[4],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[4]),
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[5],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[5],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[5])
   ) %>% 
   mutate(model_group = paste0("Person-time"," (",model_name,")"))
 
 ## Read in calendartime models
 model_calendartime = rbind(
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_unmatched_calendartime_",outcome_list[1],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_calendartime_",outcome_list[1],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[1]),
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_unmatched_calendartime_",outcome_list[3],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_calendartime_",outcome_list[3],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[3]),
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_unmatched_calendartime_",outcome_list[4],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_calendartime_",outcome_list[4],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[4]),
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_unmatched_calendartime_",outcome_list[5],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_calendartime_",outcome_list[5],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[5])
   ) %>% 
   mutate(model_group = paste0("Calendar-time"," (",model_name,")"))
 
 ## Read in matched models
 model_matched = rbind(
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_matched_persontime_",outcome_list[1],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_matched_persontime_",outcome_list[1],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[1]),
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_matched_persontime_",outcome_list[3],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_matched_persontime_",outcome_list[3],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[3]),
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_matched_persontime_",outcome_list[4],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_matched_persontime_",outcome_list[4],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[4]),
-  read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_matched_persontime_",outcome_list[5],"_all.rds"))) %>%
+  read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_matched_persontime_",outcome_list[5],"_all.rds"))) %>%
     mutate(outcome_clean = clean_list[5])
   ) %>% 
   mutate(model_group = "Matched")
@@ -235,8 +234,8 @@ model$conf.low = as.numeric(model$conf.low)
 model$conf.high = as.numeric(model$conf.high)
 
 ## Read in table of IRRs
-table_irr <- read_rds(here::here("output", "tables", "table_irr_boost_redacted_unmatched_all.rds"))
-table_irr_matched <- read_rds(here::here("output", "tables", "table_irr_boost_redacted_matched_all.rds"))
+table_irr <- read_rds(here::here("output", "tables", "table_irr_primary_redacted_unmatched_all.rds"))
+table_irr_matched <- read_rds(here::here("output", "tables", "table_irr_primary_redacted_matched_all.rds"))
 
 ## Append matched counts (total/events)
 if (all(table_irr$period==table_irr_matched$period) & all(table_irr$outcome==table_irr_matched$outcome)) {
@@ -284,17 +283,17 @@ HR_summary <- model %>% select(model_group, term, estimate, conf.low, conf.high,
 table_irr = left_join(table_irr, HR_summary, by = c("Period (days)", "outcome_clean"))
 
 ## Save collated table
-write_csv(table_irr, here::here("output", "tables", "irr_hr_summary_VE_boost.csv"))
+write_csv(table_irr, here::here("output", "tables", "irr_hr_summary_VE_primary.csv"))
 
-## Merge tables
+## Render table
 table_irr %>%
   gt(groupname_col = "outcome_clean") %>%
   tab_spanner(
-    label = "BNT-BNT-BNT",
+    label = "BNT-BNT",
     columns = c("N, BNT", "N events, BNT", "Person-years, BNT", "Rate (per p-y), BNT", "N, matched, BNT", "N events, matched, BNT")
   ) %>%
   tab_spanner(
-    label = "AZ-AZ-BNT",
+    label = "AZ-AZ",
     columns = c("N, AZ", "N events, AZ", "Person-years, AZ", "Rate (per p-y), AZ", "N, matched, AZ", "N events, matched, AZ")
   ) %>%
   tab_spanner(
@@ -316,8 +315,8 @@ table_irr %>%
 ```{r, fig.width=21, fig.height=15}
 create_subgroup_table = function(selected_subgroup="CKD3") {
   ## Read in table of IRRs
-  table_irr <- read_rds(here::here("output", "tables", paste0("table_irr_boost_redacted_unmatched_",selected_subgroup,".rds")))
-  table_irr_matched <- read_rds(here::here("output", "tables", paste0("table_irr_boost_redacted_matched_",selected_subgroup,".rds")))
+  table_irr <- read_rds(here::here("output", "tables", paste0("table_irr_primary_redacted_unmatched_",selected_subgroup,".rds")))
+  table_irr_matched <- read_rds(here::here("output", "tables", paste0("table_irr_primary_redacted_matched_",selected_subgroup,".rds")))
   
   ## Append matched counts (total/events)
   if (all(table_irr$period==table_irr_matched$period) & all(table_irr$outcome==table_irr_matched$outcome)) {
@@ -335,7 +334,7 @@ create_subgroup_table = function(selected_subgroup="CKD3") {
   ## Update column names
   table_irr$Subgroup = selected_subgroup
   table_irr <- table_irr %>%
-    filter(period == "15-126") %>%
+    filter(period == "15-182") %>%
     select(c(outcome_clean, Subgroup, 
            BNT_n, BNT_events, BNT_personyears, BNT_rate, BNT_n_matched, BNT_events_matched,
            AZ_n, AZ_events, AZ_personyears, AZ_rate, AZ_n_matched, AZ_events_matched,
@@ -351,16 +350,16 @@ create_subgroup_table = function(selected_subgroup="CKD3") {
 
   ## Read in model outputs
   model = rbind(
-      read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[1],"_",selected_subgroup,".rds"))) %>%
+      read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[1],"_",selected_subgroup,".rds"))) %>%
         mutate(outcome_clean = clean_list[1]),
-      read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[3],"_",selected_subgroup,".rds"))) %>%
+      read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[3],"_",selected_subgroup,".rds"))) %>%
         mutate(outcome_clean = clean_list[3]),
-      read_rds(here::here("output", "model", "VE_boost", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[4],"_",selected_subgroup,".rds"))) %>%
+      read_rds(here::here("output", "model", "VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[4],"_",selected_subgroup,".rds"))) %>%
         mutate(outcome_clean = clean_list[4]),
-      read_rds(here::here("output", "model","VE_boost", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[5],"_",selected_subgroup,".rds"))) %>%
+      read_rds(here::here("output", "model","VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[5],"_",selected_subgroup,".rds"))) %>%
         mutate(outcome_clean = clean_list[5])
       ) %>% 
-      filter(model == 2, term == "15-126") %>%
+      filter(model == 2, term == "15-182") %>%
     select(c(outcome_clean, estimate, conf.low, conf.high))
 
   ## Remove redacted components from plot
@@ -389,12 +388,11 @@ collate_subgroups = rbind(
   create_subgroup_table("all"),
   create_subgroup_table("CKD3"),
   create_subgroup_table("CKD4-5"),
-  create_subgroup_table("RRT"),
-  create_subgroup_table("Tx")
+  create_subgroup_table("RRT")
 ) %>% arrange(outcome_clean)
 
 ## Save collated table
-write_csv(collate_subgroups, here::here("output", "tables", "irr_hr_summary_VE_boost_subgroups.csv"))
+write_csv(collate_subgroups, here::here("output", "tables", "irr_hr_summary_VE_primary_subgroups.csv"))
 
 ## Render table
 collate_subgroups %>%

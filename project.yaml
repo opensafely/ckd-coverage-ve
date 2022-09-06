@@ -1149,49 +1149,59 @@ actions:
         
         
   ### summary of primary VE analysis
-  cox_VE_summary:
-    run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
+  cox_VE_primary_summary:
+    run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_primary_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
     needs:
     - data_selection_VE_primary
     - table_1_VE_all_unmatched
     - table_1_VE_CKD3_unmatched
     - table_1_VE_CKD4_5_unmatched
     - table_1_VE_RRT_unmatched
+    - table_1_VE_Tx_unmatched
     - table_1_VE_all_matched
     - table_irr_unmatched_all
     - table_irr_unmatched_CKD3
     - table_irr_unmatched_CKD4_5
     - table_irr_unmatched_RRT
+    - table_irr_unmatched_Tx
     - table_irr_matched_all
+    - table_irr_matched_CKD3
+    - table_irr_matched_CKD4_5
+    - table_irr_matched_RRT
+    - table_irr_matched_Tx
     - cox_model_unmatched_persontime_covid_postest_VE_all
     - cox_model_matched_persontime_covid_postest_VE_all
     - cox_model_unmatched_calendartime_covid_postest_VE_all
     - cox_model_unmatched_persontime_covid_postest_VE_CKD3
     - cox_model_unmatched_persontime_covid_postest_VE_CKD4_5
     - cox_model_unmatched_persontime_covid_postest_VE_RRT
+    - cox_model_unmatched_persontime_covid_postest_VE_Tx
     - cox_model_unmatched_persontime_covid_hosp_VE_all
     - cox_model_matched_persontime_covid_hosp_VE_all
     - cox_model_unmatched_calendartime_covid_hosp_VE_all
     - cox_model_unmatched_persontime_covid_hosp_VE_CKD3
     - cox_model_unmatched_persontime_covid_hosp_VE_CKD4_5
     - cox_model_unmatched_persontime_covid_hosp_VE_RRT
+    - cox_model_unmatched_persontime_covid_hosp_VE_Tx
     - cox_model_unmatched_persontime_covid_death_VE_all
     - cox_model_matched_persontime_covid_death_VE_all
     - cox_model_unmatched_calendartime_covid_death_VE_all
     - cox_model_unmatched_persontime_covid_death_VE_CKD3
-    #- cox_model_unmatched_persontime_covid_death_VE_CKD4_5
+    - cox_model_unmatched_persontime_covid_death_VE_CKD4_5
     - cox_model_unmatched_persontime_covid_death_VE_RRT
+    - cox_model_unmatched_persontime_covid_death_VE_Tx
     - cox_model_unmatched_persontime_noncovid_death_VE_all
     - cox_model_matched_persontime_noncovid_death_VE_all
     - cox_model_unmatched_calendartime_noncovid_death_VE_all
     - cox_model_unmatched_persontime_noncovid_death_VE_CKD3
     - cox_model_unmatched_persontime_noncovid_death_VE_CKD4_5
     - cox_model_unmatched_persontime_noncovid_death_VE_RRT
+    - cox_model_unmatched_persontime_noncovid_death_VE_Tx
     outputs:
       moderately_sensitive:
-        html: output/markdown/cox_VE_summary.html
-
-
+        html: output/markdown/cox_VE_primary_summary.html
+        csv1: output/tables/irr_hr_summary_VE_primary.csv
+        csv2: output/tables/irr_hr_summary_VE_primary_subgroups.csv
 
 
 
@@ -2065,39 +2075,51 @@ actions:
     needs:
     - data_selection_VE_boost
     - table_1_VE_boost_all_unmatched
+    - table_1_VE_boost_all_matched
     - table_1_VE_boost_CKD3_unmatched
     - table_1_VE_boost_CKD4_5_unmatched
     - table_1_VE_boost_RRT_unmatched
-    - table_1_VE_boost_all_matched
+    - table_1_VE_boost_Tx_unmatched
     - table_irr_boost_unmatched_all
     - table_irr_boost_unmatched_CKD3
     - table_irr_boost_unmatched_CKD4_5
     - table_irr_boost_unmatched_RRT
+    - table_irr_boost_unmatched_Tx
     - table_irr_boost_matched_all
+    - table_irr_boost_matched_CKD3
+    - table_irr_boost_matched_CKD4_5
+    - table_irr_boost_matched_RRT
+    - table_irr_boost_matched_Tx
     - cox_boost_model_unmatched_persontime_covid_postest_VE_all
     - cox_boost_model_matched_persontime_covid_postest_VE_all
     - cox_boost_model_unmatched_calendartime_covid_postest_VE_all
     - cox_boost_model_unmatched_persontime_covid_postest_VE_CKD3
     - cox_boost_model_unmatched_persontime_covid_postest_VE_CKD4_5
     - cox_boost_model_unmatched_persontime_covid_postest_VE_RRT
+    - cox_boost_model_unmatched_persontime_covid_postest_VE_Tx
     - cox_boost_model_unmatched_persontime_covid_hosp_VE_all
     - cox_boost_model_matched_persontime_covid_hosp_VE_all
     - cox_boost_model_unmatched_calendartime_covid_hosp_VE_all
     - cox_boost_model_unmatched_persontime_covid_hosp_VE_CKD3
     - cox_boost_model_unmatched_persontime_covid_hosp_VE_CKD4_5
     - cox_boost_model_unmatched_persontime_covid_hosp_VE_RRT
+    - cox_boost_model_unmatched_persontime_covid_hosp_VE_Tx
     - cox_boost_model_unmatched_persontime_covid_death_VE_all
     - cox_boost_model_matched_persontime_covid_death_VE_all
     - cox_boost_model_unmatched_calendartime_covid_death_VE_all
     - cox_boost_model_unmatched_persontime_covid_death_VE_CKD3
     - cox_boost_model_unmatched_persontime_covid_death_VE_CKD4_5
     - cox_boost_model_unmatched_persontime_covid_death_VE_RRT
+    - cox_boost_model_unmatched_persontime_covid_death_VE_Tx
     - cox_boost_model_unmatched_persontime_noncovid_death_VE_all
     - cox_boost_model_matched_persontime_noncovid_death_VE_all
     - cox_boost_model_unmatched_calendartime_noncovid_death_VE_all
     - cox_boost_model_unmatched_persontime_noncovid_death_VE_CKD3
     - cox_boost_model_unmatched_persontime_noncovid_death_VE_CKD4_5
     - cox_boost_model_unmatched_persontime_noncovid_death_VE_RRT
+    - cox_boost_model_unmatched_persontime_noncovid_death_VE_Tx
     outputs:
       moderately_sensitive:
         html: output/markdown/cox_VE_boost_summary.html
+        csv1: output/tables/irr_hr_summary_VE_boost.csv
+        csv2: output/tables/irr_hr_summary_VE_boost_subgroups.csv

@@ -363,14 +363,15 @@ generate_km_plot = function(surv_data) {
 generate_km_contrast_plot = function(surv_contrast) {
   
   surv_contrast %>%
+    filter(period_start>=14) %>%
     ggplot(aes(x = period_start, y = kmrr)) + geom_step(size = 0.5, colour="#023858") +
     facet_grid(outcome_clean~dose, scales="free", space="free_x") +
     geom_rect(aes(xmin=period_start, xmax=period_end, ymin=kmrr.ll, ymax=kmrr.ul), alpha=0.1, colour="transparent", fill = "#023858") +
     geom_hline(aes(yintercept=1), colour='black', linetype="dotted", size=0.5) +
     scale_x_continuous(breaks=postvaxcuts, expand = c(0, 0)) +
     scale_y_log10(
-      limits = c(0.25,4),
-      breaks=c(0.25, 0.5, 1, 2, 4),
+      #limits = c(0.25,4),
+      #breaks=c(0.25, 0.5, 1, 2, 4),
       sec.axis = dup_axis(name="<- Favours BNT-BNT primary / Favours AZ-AZ primary ->", breaks = NULL)
     ) +
     labs(
