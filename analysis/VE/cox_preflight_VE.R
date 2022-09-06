@@ -200,6 +200,11 @@ if (subgroup %in% c("CKD3", "CKD4-5", "RRT", "Tx")) {
   vars2_cat <- vars2_cat[!(vars2_cat %in% c("ckd_5cat"))]
 }
 
+# Drop other_transplant category from Tx models (0 by definition)
+if (subgroup %in% c("Tx")) {
+  vars2_cat <- vars2_cat[!(vars2_cat %in% c("other_transplant"))]
+}
+
 ## Matched models to be run without additional confounder adjustment
 
 ####################################################### 
