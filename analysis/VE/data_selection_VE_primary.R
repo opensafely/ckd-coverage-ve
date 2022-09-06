@@ -273,7 +273,7 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
     "region",
     "imd",
     "sex",
-    "ethnicity",
+    #"ethnicity",
     "ckd_5cat",
     "cev",
     "prior_covid_cat",
