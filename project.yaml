@@ -41,14 +41,14 @@ actions:
 ### Import/processing for primary VE cohort
 #############################
 
-  # Extract data - primary ----
+  # Extract data - primary VE ----
   generate_study_population_VE_primary:
     run: cohortextractor:latest generate_cohort --study-definition study_definition_VE_primary --output-dir=output/data
     outputs:
       highly_sensitive:
         cohort: output/data/input_VE_primary.csv
 
-  # Process data - primary ----
+  # Process data - primary VE ----
   data_process_VE_primary:
     run: r:latest analysis/data_process_VE_primary.R
     needs: [generate_study_population_VE_primary]
@@ -57,7 +57,7 @@ actions:
         data: output/data/data_processed_VE_primary.rds
         csv: output/data/data_processed_VE_primary.csv
        
-  # Data properties (processed) - primary ----
+  # Data properties (processed) - primary VE ----
   data_properties_process_VE_primary:
     run: r:latest analysis/data_properties.R output/data/data_processed_VE_primary.rds output/data_properties
     needs: [data_process_VE_primary]
@@ -69,14 +69,14 @@ actions:
 ### Import/processing for booster VE cohort
 #############################
 
-  # Extract data - boost ----
+  # Extract data - booster VE ----
   generate_study_population_VE_boost:
     run: cohortextractor:latest generate_cohort --study-definition study_definition_VE_boost --output-dir=output/data
     outputs:
       highly_sensitive:
         cohort: output/data/input_VE_boost.csv
 
-  # Process data - boost ----
+  # Process data - booster VE ----
   data_process_VE_boost:
     run: r:latest analysis/data_process_VE_boost.R
     needs: [generate_study_population_VE_boost]
@@ -85,7 +85,7 @@ actions:
         data: output/data/data_processed_VE_boost.rds
         csv: output/data/data_processed_VE_boost.csv
        
-  # Data properties (processed) - boost ----
+  # Data properties (processed) - booster VE ----
   data_properties_process_VE_boost:
     run: r:latest analysis/data_properties.R output/data/data_processed_VE_boost.rds output/data_properties
     needs: [data_process_VE_boost]
@@ -367,17 +367,7 @@ actions:
         data: output/tables/table1_VE_primary_redacted_matched_all.rds
       moderately_sensitive:
         table: output/tables/table1_VE_primary_redacted_matched_all.html
-  
-  # Table 1 (RRT matched)
-  table_1_VE_RRT_matched:
-    run: r:latest analysis/VE/table_1_VE.R matched RRT primary
-    needs: [data_selection_VE_primary]
-    outputs:
-      highly_sensitive:
-        data: output/tables/table1_VE_primary_redacted_matched_RRT.rds
-      moderately_sensitive:
-        table: output/tables/table1_VE_primary_redacted_matched_RRT.html
-   
+
 #############################
 ### IRR - all, CKD3, CKD4-5, RRT - matched,unmatched
 #############################
@@ -492,10 +482,10 @@ actions:
 
 #############################
 ### Cox models - preflight then model
-### Outcomes (5): postest, hosp, A&E, death, non-Covid death
+### Outcomes (4): postest, hosp, death, non-Covid death
 ### Populations (2): unmatched, matched
 ### Timescales (3): persontime, calendartime
-### Subsets: all, CKD3, CKD4-5, RRT (matched and unmatched)
+### Subsets: all, CKD3, CKD4-5, RRT, Tx (unmatched)
 #############################
 
 ### OUTCOME #1: covid_postest test
@@ -637,6 +627,29 @@ actions:
       moderately_sensitive:
         csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_RRT.csv
         logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_postest_RRT.txt
+
+  ### unmatched persontime Tx
+  # preflight
+  cox_preflight_unmatched_persontime_covid_postest_VE_Tx:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_postest Tx primary
+    needs: [data_selection_VE_primary]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_covid_postest_Tx.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_covid_postest_Tx.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_covid_postest_Tx.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_postest_VE_Tx:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_postest Tx primary
+    needs: [data_selection_VE_primary, table_irr_unmatched_Tx, cox_preflight_unmatched_persontime_covid_postest_VE_Tx]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_Tx.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_Tx.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_postest_Tx.txt
 
 
 
@@ -780,6 +793,29 @@ actions:
         csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_hosp_RRT.csv
         logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_hosp_RRT.txt
 
+  ### unmatched persontime Tx
+  # preflight
+  cox_preflight_unmatched_persontime_covid_hosp_VE_Tx:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_hosp Tx primary
+    needs: [data_selection_VE_primary]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_covid_hosp_Tx.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_covid_hosp_Tx.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_covid_hosp_Tx.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_hosp_VE_Tx:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_hosp Tx primary
+    needs: [data_selection_VE_primary, table_irr_unmatched_Tx, cox_preflight_unmatched_persontime_covid_hosp_VE_Tx]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_covid_hosp_Tx.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_hosp_Tx.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_hosp_Tx.txt
+
 
 
 ### OUTCOME #3: covid_death test
@@ -922,6 +958,29 @@ actions:
         csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_death_RRT.csv
         logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_death_RRT.txt
 
+  ### unmatched persontime Tx
+  # preflight
+  cox_preflight_unmatched_persontime_covid_death_VE_Tx:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_death Tx primary
+    needs: [data_selection_VE_primary]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_covid_death_Tx.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_covid_death_Tx.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_covid_death_Tx.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_death_VE_Tx:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_death Tx primary
+    needs: [data_selection_VE_primary, table_irr_unmatched_Tx, cox_preflight_unmatched_persontime_covid_death_VE_Tx]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_covid_death_Tx.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_death_Tx.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_death_Tx.txt
+
 
 
 ### OUTCOME #4: noncovid_death test
@@ -1063,8 +1122,33 @@ actions:
       moderately_sensitive:
         csv: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_RRT.csv
         logs: output/model/VE_primary/log_cox_model_unmatched_persontime_noncovid_death_RRT.txt
+
+  ### unmatched persontime Tx
+  # preflight
+  cox_preflight_unmatched_persontime_noncovid_death_VE_Tx:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime noncovid_death Tx primary
+    needs: [data_selection_VE_primary]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_noncovid_death_Tx.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_noncovid_death_Tx.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_noncovid_death_Tx.txt
+  
+  # model
+  cox_model_unmatched_persontime_noncovid_death_VE_Tx:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime noncovid_death Tx primary
+    needs: [data_selection_VE_primary, table_irr_unmatched_Tx, cox_preflight_unmatched_persontime_noncovid_death_VE_Tx]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_Tx.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_Tx.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_noncovid_death_Tx.txt
         
-  # summary
+        
+        
+  ### summary of primary VE analysis
   cox_VE_summary:
     run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
     needs:
@@ -1202,16 +1286,6 @@ actions:
         data: output/tables/table1_VE_boost_redacted_matched_all.rds
       moderately_sensitive:
         table: output/tables/table1_VE_boost_redacted_matched_all.html
-  
-  # Table 1 (RRT matched)
-  table_1_VE_boost_RRT_matched:
-    run: r:latest analysis/VE/table_1_VE.R matched RRT boost
-    needs: [data_selection_VE_boost]
-    outputs:
-      highly_sensitive:
-        data: output/tables/table1_VE_boost_redacted_matched_RRT.rds
-      moderately_sensitive:
-        table: output/tables/table1_VE_boost_redacted_matched_RRT.html
    
 #############################
 ### IRR - all, CKD3, CKD4-5, RRT - matched,unmatched
@@ -1319,10 +1393,10 @@ actions:
 
 #############################
 ### Cox models for booster dose - preflight then model
-### Outcomes (5): postest, hosp, A&E, death, non-Covid death
+### Outcomes (4): postest, hosp, death, non-Covid death
 ### Populations (2): unmatched, matched
 ### Timescales (3): persontime, calendartime
-### Subsets: all, CKD3, CKD4-5, RRT (matched and unmatched)
+### Subsets: all, CKD3, CKD4-5, RRT, Tx (unmatched)
 #############################
 
 ### OUTCOME #1: covid_postest test
@@ -1465,6 +1539,29 @@ actions:
         csv: output/model/VE_boost/modelcox*unmatched_persontime_covid_postest_RRT.csv
         logs: output/model/VE_boost/log_cox_model_unmatched_persontime_covid_postest_RRT.txt
 
+  ### unmatched persontime Tx
+  # preflight
+  cox_boost_preflight_unmatched_persontime_covid_postest_VE_Tx:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_postest Tx boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_boost/data*unmatched_persontime_covid_postest_Tx.rds
+        formulas: output/model/VE_boost/formulas*unmatched_persontime_covid_postest_Tx.rds
+      moderately_sensitive:
+        logs: output/model/VE_boost/log_cox_preflight_unmatched_persontime_covid_postest_Tx.txt
+  
+  # model
+  cox_boost_model_unmatched_persontime_covid_postest_VE_Tx:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_postest Tx boost
+    needs: [data_selection_VE_boost, table_irr_boost_unmatched_Tx, cox_boost_preflight_unmatched_persontime_covid_postest_VE_Tx]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_boost/modelcox*unmatched_persontime_covid_postest_Tx.rds
+      moderately_sensitive:
+        csv: output/model/VE_boost/modelcox*unmatched_persontime_covid_postest_Tx.csv
+        logs: output/model/VE_boost/log_cox_model_unmatched_persontime_covid_postest_Tx.txt
+
 
 
 ### OUTCOME #2: covid_hosp test
@@ -1606,6 +1703,29 @@ actions:
       moderately_sensitive:
         csv: output/model/VE_boost/modelcox*unmatched_persontime_covid_hosp_RRT.csv
         logs: output/model/VE_boost/log_cox_model_unmatched_persontime_covid_hosp_RRT.txt
+        
+  ### unmatched persontime Tx
+  # preflight
+  cox_boost_preflight_unmatched_persontime_covid_hosp_VE_Tx:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_hosp Tx boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_boost/data*unmatched_persontime_covid_hosp_Tx.rds
+        formulas: output/model/VE_boost/formulas*unmatched_persontime_covid_hosp_Tx.rds
+      moderately_sensitive:
+        logs: output/model/VE_boost/log_cox_preflight_unmatched_persontime_covid_hosp_Tx.txt
+  
+  # model
+  cox_boost_model_unmatched_persontime_covid_hosp_VE_Tx:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_hosp Tx boost
+    needs: [data_selection_VE_boost, table_irr_boost_unmatched_Tx, cox_boost_preflight_unmatched_persontime_covid_hosp_VE_Tx]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_boost/modelcox*unmatched_persontime_covid_hosp_Tx.rds
+      moderately_sensitive:
+        csv: output/model/VE_boost/modelcox*unmatched_persontime_covid_hosp_Tx.csv
+        logs: output/model/VE_boost/log_cox_model_unmatched_persontime_covid_hosp_Tx.txt
 
 
 
@@ -1748,6 +1868,29 @@ actions:
       moderately_sensitive:
         csv: output/model/VE_boost/modelcox*unmatched_persontime_covid_death_RRT.csv
         logs: output/model/VE_boost/log_cox_model_unmatched_persontime_covid_death_RRT.txt
+        
+  ### unmatched persontime Tx
+  # preflight
+  cox_boost_preflight_unmatched_persontime_covid_death_VE_Tx:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_death Tx boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_boost/data*unmatched_persontime_covid_death_Tx.rds
+        formulas: output/model/VE_boost/formulas*unmatched_persontime_covid_death_Tx.rds
+      moderately_sensitive:
+        logs: output/model/VE_boost/log_cox_preflight_unmatched_persontime_covid_death_Tx.txt
+  
+  # model
+  cox_boost_model_unmatched_persontime_covid_death_VE_Tx:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_death Tx boost
+    needs: [data_selection_VE_boost, table_irr_boost_unmatched_Tx, cox_boost_preflight_unmatched_persontime_covid_death_VE_Tx]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_boost/modelcox*unmatched_persontime_covid_death_Tx.rds
+      moderately_sensitive:
+        csv: output/model/VE_boost/modelcox*unmatched_persontime_covid_death_Tx.csv
+        logs: output/model/VE_boost/log_cox_model_unmatched_persontime_covid_death_Tx.txt
 
 
 
@@ -1890,8 +2033,33 @@ actions:
       moderately_sensitive:
         csv: output/model/VE_boost/modelcox*unmatched_persontime_noncovid_death_RRT.csv
         logs: output/model/VE_boost/log_cox_model_unmatched_persontime_noncovid_death_RRT.txt
+        
+  ### unmatched persontime Tx
+  # preflight
+  cox_boost_preflight_unmatched_persontime_noncovid_death_VE_Tx:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime noncovid_death Tx boost
+    needs: [data_selection_VE_boost]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_boost/data*unmatched_persontime_noncovid_death_Tx.rds
+        formulas: output/model/VE_boost/formulas*unmatched_persontime_noncovid_death_Tx.rds
+      moderately_sensitive:
+        logs: output/model/VE_boost/log_cox_preflight_unmatched_persontime_noncovid_death_Tx.txt
+  
+  # model
+  cox_boost_model_unmatched_persontime_noncovid_death_VE_Tx:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime noncovid_death Tx boost
+    needs: [data_selection_VE_boost, table_irr_boost_unmatched_Tx, cox_boost_preflight_unmatched_persontime_noncovid_death_VE_Tx]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_boost/modelcox*unmatched_persontime_noncovid_death_Tx.rds
+      moderately_sensitive:
+        csv: output/model/VE_boost/modelcox*unmatched_persontime_noncovid_death_Tx.csv
+        logs: output/model/VE_boost/log_cox_model_unmatched_persontime_noncovid_death_Tx.txt
 
-  # summary
+
+
+  ### summary of booster VE analysis
   cox_VE_boost_summary:
     run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_boost_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
     needs:

@@ -22,7 +22,7 @@ args <- commandArgs(trailingOnly=TRUE)
 # arg1: db = matched / unmatched
 # arg2: timescale = persontime / calendartime
 # arg3: outcome = covid_postest / covid_emergency / covid_hosp / covid_death / noncovid_death
-# arg4: subset = all / CKD3 / CKD4-5 / RRT
+# arg4: subset = all / CKD3 / CKD4-5 / RRT / Tx
 # arg5: vaccine = primary / boost
 
 if(length(args)==0){
@@ -104,16 +104,8 @@ irr_table = read_rds(here::here("output", "tables", glue("table_irr_{vaccine}_re
 
 ## Specify irr strata and full levels
 irr_sub = subset(irr_table, outcome_clean==selected_outcome_clean)[,c("period", "BNT_n", "BNT_events", "AZ_n", "AZ_events")]
-
-if (vaccine=="primary") {
-  irr_sub_strata <- irr_sub %>% filter(period %in% postvax_list$postvax_periods)
-  irr_sub_full <- irr_sub %>% filter(!(period %in% postvax_list$postvax_periods))
-} else if (vaccine=="boost") {
-  irr_sub_strata <- irr_sub %>% filter(period %in% postvax_list$postvax_periods)
-  irr_sub_full <- irr_sub %>% filter(!(period %in% postvax_list$postvax_periods))
-} else {
-  stop ("Arguments not specified correctly.")
-}
+irr_sub_strata <- irr_sub %>% filter(period %in% postvax_list$postvax_periods)
+irr_sub_full <- irr_sub %>% filter(!(period %in% postvax_list$postvax_periods))
 
 ## Create directory for full model outputs
 dir.create(here::here("output", "model", paste0("VE_",vaccine)), showWarnings = FALSE, recursive=TRUE)

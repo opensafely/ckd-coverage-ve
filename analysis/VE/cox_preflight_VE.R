@@ -25,7 +25,7 @@ args <- commandArgs(trailingOnly=TRUE)
 # arg1: db = matched / unmatched
 # arg2: timescale = persontime / calendartime 
 # arg3: outcome = covid_postest / covid_emergency / covid_hosp / covid_death / noncovid_death
-# arg4: subset = all / CKD3 / CKD4-5 / RRT / JCVI2 / JCVI3 / JCVI4 / JCVI5 / JCVI6
+# arg4: subset = all / CKD3 / CKD4-5 / RRT / Tx
 # arg5: vaccine = primary / boost
 
 if(length(args)==0){
@@ -34,7 +34,7 @@ if(length(args)==0){
   timescale = "persontime"
   selected_outcome = "covid_postest"
   subgroup = "all"
-  vaccine = "boost"
+  vaccine = "primary"
 } else {
   db = args[[1]]
   timescale = args[[2]]
@@ -74,12 +74,6 @@ data_cohort <- read_rds(here::here("output", "data", input_name)) %>%
          vax_day = get(selected_vax_day)
   )
 
-## Update prior COVID variable name to be consistent between primary and booster data
-if (vaccine == "boost") {
-  data_cohort <- data_cohort %>%
-    mutate(prior_covid_cat = prior_covid_cat_dose1)
-}
-
 ## Select subset
 if (subgroup=="all") {
   data_cohort = data_cohort
@@ -90,15 +84,8 @@ if (subgroup=="all") {
   data_cohort = subset(data_cohort, ckd_3cat == "CKD4-5")
 } else if (subgroup=="RRT") {
   data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
-  ## JCVI subgroups
-} else if (subgroup=="JCVI3") {
-  data_cohort = subset(data_cohort, jcvi_group == "3 (75+)")
-} else if (subgroup=="JCVI4") {
-  data_cohort = subset(data_cohort, jcvi_group == "4 (70+ or clinically extremely vulnerable)")
-} else if (subgroup=="JCVI5") {
-  data_cohort = subset(data_cohort, jcvi_group == "5 (65+)")
-} else if (subgroup=="JCVI6") {
-  data_cohort = subset(data_cohort, jcvi_group == "6 (16-65 and clinically vulnerable)")
+} else if (subgroup=="Tx") {
+  data_cohort = subset(data_cohort, ckd_5cat == "RRT (Tx)")
 } else {
   stop ("Arguments not specified correctly.")
 }
@@ -202,14 +189,15 @@ expo = "vax2_az"
 vars0 = "timesincevax_pw"
 vars1 = c("vax_day", "region")
 vars2_cont = "age"
-vars2_cat = c("sex", "imd", "ethnicity", "rural_urban_group", "ckd_3cat",
-              "sev_obesity", "chd", "diabetes", "cld", "any_resp_dis", "chronic_neuro_dis_inc_sig_learn_dis", # previously multimorb
-              "other_transplant", "immunosuppression", "haem_cancer", "asplenia", # previously any_immunosuppression 
-              "learning_disability", "sev_mental_ill", "prior_covid_cat", "prevax_tests_cat")
+vars2_cat = c("sex", "ethnicity", "imd", "rural_urban_group", 
+              "ckd_5cat",
+              "immunosuppression", "sev_obesity", "diabetes", "any_resp_dis", "chd", "cld", "asplenia", "haem_cancer",
+              "other_transplant",  "chronic_neuro_dis_inc_sig_learn_dis", "learning_disability", "sev_mental_ill", 
+              "prior_covid_cat", "prevax_tests_fixed_cat")
 
-## Drop ckd_3cat category from subgroup analyses
-if (subgroup %in% c("CKD3", "CKD4-5", "RRT")) {
-  vars2_cat <- vars2_cat[!(vars2_cat %in% c("ckd_3cat"))]
+## Drop ckd_5cat category from subgroup analyses
+if (subgroup %in% c("CKD3", "CKD4-5", "RRT", "Tx")) {
+  vars2_cat <- vars2_cat[!(vars2_cat %in% c("ckd_5cat"))]
 }
 
 ## Matched models to be run without additional confounder adjustment
@@ -394,7 +382,7 @@ merge_levels <- function(.data, var, strata=FALSE) {
   ## If more than 2 levels, prepare levels to reorder factor according to event frequency
   old_levs <- levels(.data[[var]])
   ## Which variables do we want to reorder by frequency of events?
-  if (var %in% c("ethnicity", "rural_urban_group")) {
+  if (var %in% c("ethnicity", "rural_urban_group", "ckd_5cat")) {
     ## if (length(old_levs) > 2) {
     new_levs <- .data %>%
       filter(ind_outcome) %>%
