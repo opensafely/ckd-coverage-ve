@@ -29,7 +29,7 @@ data_processed <- read_rds(here::here("output", "data", "data_processed_VE_prima
                   unit = "days"))) 
 
 ## Vaccine initiation dates
-first_dose_min = as_date("2021-01-18") # AZ in use from 04/01/2022, but JCVI 3 eligibility from 18/01/2022 (https://www.bbc.co.uk/news/uk-55698132)
+first_dose_min = as_date("2021-01-04") # AZ in use from 04/01/2022, but JCVI 3 eligibility from 18/01/2022 (https://www.bbc.co.uk/news/uk-55698132)
 
 ## Set analysis end date
 data_processed$end_date = as_date("2021-11-14")
