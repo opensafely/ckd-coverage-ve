@@ -399,11 +399,11 @@ write_csv(collate_subgroups, here::here("output", "tables", "irr_hr_summary_VE_p
 collate_subgroups %>%
   gt(groupname_col = "outcome_clean") %>%
   tab_spanner(
-    label = "BNT-BNT-BNT",
+    label = "BNT-BNT",
     columns = c("N, BNT", "N events, BNT", "Person-years, BNT", "Rate (per p-y), BNT", "N, matched, BNT", "N events, matched, BNT")
   ) %>%
   tab_spanner(
-    label = "AZ-AZ-AZ",
+    label = "AZ-AZ",
     columns = c("N, AZ", "N events, AZ", "Person-years, AZ", "Rate (per p-y), AZ", "N, matched, AZ", "N events, matched, AZ")
   ) %>%
    tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%

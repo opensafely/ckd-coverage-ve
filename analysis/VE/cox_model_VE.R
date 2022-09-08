@@ -157,14 +157,14 @@ cox_model_VE <- function(number, stratified=TRUE) {
       robust = TRUE, # compute robust variance
       id = patient_id, # required since multiple rows per subject
       na.action = "na.fail",
-      control = coxph.control(iter.max = 100)
+      control = coxph.control(iter.max = 50)
     )
   } else {
     ## If stratified = FALSE, fit model on full dataset
     coxmod <- coxph(
       formula = formula_cox,
       data = data_cox_full,
-      control = coxph.control(iter.max = 100)
+      control = coxph.control(iter.max = 50)
       )
   }
   ## Print warnings

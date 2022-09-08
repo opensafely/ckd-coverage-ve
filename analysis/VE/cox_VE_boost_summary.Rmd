@@ -404,7 +404,7 @@ collate_subgroups %>%
     columns = c("N, BNT", "N events, BNT", "Person-years, BNT", "Rate (per p-y), BNT", "N, matched, BNT", "N events, matched, BNT")
   ) %>%
   tab_spanner(
-    label = "AZ-AZ-AZ",
+    label = "AZ-AZ-BNT",
     columns = c("N, AZ", "N events, AZ", "Person-years, AZ", "Rate (per p-y), AZ", "N, matched, AZ", "N events, matched, AZ")
   ) %>%
    tab_options(row_group.font.weight="bold", column_labels.font.weigh="bold") %>%
