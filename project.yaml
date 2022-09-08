@@ -1224,14 +1224,6 @@ actions:
       moderately_sensitive:
         csv1: output/tables/flowchart_VE_boost.csv
         csv2: output/tables/flowchart_VE_boost_matched.csv
-
-# Descriptive plots of vaccination profile
-  km_rr_plots:
-    run: r:latest -e 'rmarkdown::render("analysis/VE/km_rr_plots.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
-    needs: [data_selection_VE_primary, data_selection_VE_boost]
-    outputs:
-      moderately_sensitive:
-        html: output/markdown/km_rr_plots.html
         
 #############################
 ### VE table 1 - all, CKD3, CKD4-5, RRT - matched,unmatched
@@ -2123,3 +2115,11 @@ actions:
         html: output/markdown/cox_VE_boost_summary.html
         csv1: output/tables/irr_hr_summary_VE_boost.csv
         csv2: output/tables/irr_hr_summary_VE_boost_subgroups.csv
+
+  ### summary of primary/booster VE analysis
+  cox_VE_combined_summary:
+    run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_combined_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
+    needs: [data_selection_VE_primary, data_selection_VE_boost, cox_VE_primary_summary, cox_VE_boost_summary]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/cox_VE_combined_summary.html

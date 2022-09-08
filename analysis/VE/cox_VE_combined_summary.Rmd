@@ -22,6 +22,8 @@ library('fs')
 library('survival')
 library('survminer')
 library('scales')
+library('stringr')
+
 
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
@@ -69,7 +71,7 @@ lastfupday_boost = max(postvaxcuts_boost)
 ## Set rounding threshold for calculation of KM steps
 threshold = 5
 ```
-<br/><br/>  
+<br/><br/>
 
 #### Summary of population size by vaccine type and kidney disease status
 
@@ -94,9 +96,10 @@ round_any(table(data_tte_matched_boost$vax2_type_descr, data_tte_matched_boost$c
 ```
 <br/><br/>
 
-#### Cumulative incidence plots and risk ratios over time 
-Cumulative incidence = 1 - Kaplan-Meier estimate for probability of survival in unadjusted models. Steps occur every 5 events.
-<br/><br/>
+#### Cumulative incidence plots and risk ratios over time
+
+Cumulative incidence = 1 - Kaplan-Meier estimate for probability of survival in unadjusted models. Steps occur every 5 events. <br/><br/>
+
 ```{r}
 ### Functions for data manipulation and plotting 
 
@@ -477,7 +480,8 @@ collate_km_contrasts = function(data_tte_primary, data_tte_boost) {
 }
 ```
 
-#### Whole population - unmatched
+##### Whole population - unmatched
+
 ```{r fig.width=14, fig.height=9}
 surv_combined = collate_rounded_km(data_tte_unmatched, data_tte_unmatched_boost)
 surv_contrasts = collate_km_contrasts(data_tte_unmatched, data_tte_unmatched_boost)
@@ -487,7 +491,8 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 <br><br>
 
-#### Whole population - matched
+##### Whole population - matched
+
 ```{r fig.width=14, fig.height=9}
 surv_combined = collate_rounded_km(data_tte_matched, data_tte_matched_boost)
 surv_contrasts = collate_km_contrasts(data_tte_matched, data_tte_matched_boost)
@@ -497,7 +502,8 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 <br><br>
 
-#### CKD3 - unmatched
+##### CKD3 - unmatched
+
 ```{r fig.width=14, fig.height=9}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="CKD3"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD3"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="CKD3"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD3"))
@@ -507,7 +513,8 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 <br><br>
 
-#### CKD3 - matched
+##### CKD3 - matched
+
 ```{r fig.width=14, fig.height=9}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="CKD3"), subset(data_tte_matched_boost, ckd_3cat=="CKD3"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="CKD3"), subset(data_tte_matched_boost, ckd_3cat=="CKD3"))
@@ -517,7 +524,8 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 <br><br>
 
-#### CKD4-5 - unmatched
+##### CKD4-5 - unmatched
+
 ```{r fig.width=14, fig.height=9}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="CKD4-5"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD4-5"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="CKD4-5"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD4-5"))
@@ -527,7 +535,8 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 <br><br>
 
-#### CKD4-5 - matched
+##### CKD4-5 - matched
+
 ```{r fig.width=14, fig.height=9}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="CKD4-5"), subset(data_tte_matched_boost, ckd_3cat=="CKD4-5"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="CKD4-5"), subset(data_tte_matched_boost, ckd_3cat=="CKD4-5"))
@@ -537,7 +546,8 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 <br><br>
 
-#### RRT (any) - unmatched
+##### RRT (any) - unmatched
+
 ```{r fig.width=14, fig.height=9}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="RRT (any)"), subset(data_tte_unmatched_boost, ckd_3cat=="RRT (any)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="RRT (any)"), subset(data_tte_unmatched_boost, ckd_3cat=="RRT (any)"))
@@ -547,7 +557,8 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 <br><br>
 
-#### RRT (any) - matched
+##### RRT (any) - matched
+
 ```{r fig.width=14, fig.height=9}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="RRT (any)"), subset(data_tte_matched_boost, ckd_3cat=="RRT (any)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="RRT (any)"), subset(data_tte_matched_boost, ckd_3cat=="RRT (any)"))
@@ -557,7 +568,8 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 <br><br>
 
-#### RRT (Tx) - unmatched
+##### RRT (Tx) - unmatched
+
 ```{r fig.width=14, fig.height=9}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_5cat=="RRT (Tx)"), subset(data_tte_unmatched_boost, ckd_5cat=="RRT (Tx)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_5cat=="RRT (Tx)"), subset(data_tte_unmatched_boost, ckd_5cat=="RRT (Tx)"))
@@ -567,12 +579,179 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 <br><br>
 
-#### RRT (Tx) - matched
+##### RRT (Tx) - matched
+
 ```{r fig.width=14, fig.height=9}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_5cat=="RRT (Tx)"), subset(data_tte_matched_boost, ckd_5cat=="RRT (Tx)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_5cat=="RRT (Tx)"), subset(data_tte_matched_boost, ckd_5cat=="RRT (Tx)"))
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
           ncol=2, align = "h", axis = "tb")
+```
+
+#### Hazard ratios - whole population 
+```{r fig.width=9, fig.height=9}
+## Read in primary model outputs
+primary <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_primary.csv")) %>%
+  pivot_longer(c(starts_with("Person-time"), starts_with("Calendar-time"), starts_with("Matched")), 
+                         names_to = "model", values_to = "HR_CI")  %>%
+  separate(HR_CI, c('HR','CI'), sep = '\\ \\(') %>%
+  separate(CI, c('lowerCI','upperCI'), sep = '-') %>%
+  separate(upperCI, c('upperCI','bracket'), sep = '\\)') %>%
+  select(-bracket) %>%
+  mutate(HR = as.numeric(HR), lowerCI = as.numeric(lowerCI), upperCI = as.numeric(upperCI), 
+         dose = "Primary vaccination", 
+         period_alt = ifelse(`Period (days)` == "15-182", "All", `Period (days)`))
+
+## Read in booster model outputs
+boost <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_boost.csv")) %>%
+  pivot_longer(c(starts_with("Person-time"), starts_with("Calendar-time"), starts_with("Matched")), 
+                         names_to = "model", values_to = "HR_CI")  %>%
+  separate(HR_CI, c('HR','CI'), sep = '\\ \\(') %>%
+  separate(CI, c('lowerCI','upperCI'), sep = '-') %>%
+  separate(upperCI, c('upperCI','bracket'), sep = '\\)') %>%
+  select(-bracket) %>%
+  mutate(HR = as.numeric(HR), lowerCI = as.numeric(lowerCI), upperCI = as.numeric(upperCI), 
+         dose = "BNT boost", 
+         period_alt = ifelse(`Period (days)` == "15-126", "All", `Period (days)`))
+
+## Collate 
+d = rbind(primary, boost)
+d$model = factor(d$model, levels = unique(d$model))
+d$outcome[d$outcome=="Positive SARS-CoV-2 test"] = "SARS-CoV-2+"
+d$outcome[d$outcome=="COVID-related hospitalisation"] = "COVID-19 hosp."
+d$outcome[d$outcome=="COVID-related death"] = "COVID-19 death"
+d$outcome = factor(d$outcome, levels = unique(d$outcome))
+d$period_alt = factor(d$period_alt, levels = unique(d$period_alt))
+
+## Read in data for cumulative incidence curves
+ggplot(data = d) +
+  geom_point(size = 2.5, aes(y=HR, x=factor(period_alt), colour=model), alpha = 0.8, position = position_dodge(width = 0.6)) +
+  geom_linerange(aes(ymin=lowerCI, ymax=upperCI, x=factor(period_alt), colour=model), alpha = 1, position = position_dodge(width = 0.6)) +
+  geom_hline(aes(yintercept=1), colour='grey') +
+  theme_bw()+
+  facet_grid(outcome~dose, scales="free_x", space="free_x") +
+    scale_y_log10(
+      limits = c(0.25,4),
+      breaks=c(0.25, 0.5, 1, 2, 4),
+      sec.axis = dup_axis(name="<- Favours BNT-BNT primary / Favours AZ-AZ primary ->", breaks = NULL)
+    ) + 
+  #scale_x_continuous(breaks=c(0,14,70,126,182), expand = c(0, 0)) +
+  scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#7570B3", "#B40F20", "grey")) +
+  labs(
+    y="Hazard ratio (95% CI)",
+    x="Time since vaccination (days)",
+    colour=NULL,
+    title=NULL
+  ) +
+  #annotate("rect", xmin = lastfupday, xmax =  lastfupday+period_length, ymin = 0.25, ymax = 4, alpha = .3, fill = "grey") +
+  #annotate("text", x =lastfupday+period_length/2, y = 3.3, label = "All", size=7) +
+  #geom_text(aes(x = term_midpoint, y = 1, label = redaction), size=6) +
+  theme(
+    strip.text.x = element_text(size=12), # set as white to avoid repeating text in aligned plot
+    strip.text.y = element_text(size=10), # set as white to avoid repeating text in aligned plot
+    axis.text = element_text(size=12),
+    axis.title.y.left = element_text(size=12, margin = margin(t = 0, r = 10, b = 0, l = 0)),
+    axis.title.y.right = element_text(size=10, margin = margin(t = 0, r = 0, b = 0, l = 20)),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+    axis.title = element_text(size=12),
+    legend.text = element_text(size=12),
+    panel.border = element_blank(),
+    axis.line.x = element_line(colour = "black"),
+    axis.line.y = element_line(colour = "black"),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    strip.text.y.left = element_text(angle = 0),
+    panel.spacing = unit(1, "lines"),
+    plot.title = element_text(hjust = 0),
+    plot.title.position = "plot",
+    plot.caption.position = "plot",
+    plot.caption = element_text(hjust = 0, face= "italic"),
+    legend.position = "right",
+    axis.line.y.right = element_line(size=0)
+  )
+```
+<br/><br/>
+
+#### Hazard ratios - subgroups
+```{r fig.width=5, fig.height=8}
+## Read in primary model outputs
+primary <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_primary_subgroups.csv")) %>%
+  separate(`HR (95% CI)`, c('HR','CI'), sep = '\\ \\(') %>%
+  separate(CI, c('lowerCI','upperCI'), sep = '-') %>%
+  separate(upperCI, c('upperCI','bracket'), sep = '\\)') %>%
+  select(-bracket) %>%
+  mutate(HR = as.numeric(HR), lowerCI = as.numeric(lowerCI), upperCI = as.numeric(upperCI), 
+         dose = "Primary vaccination")
+
+## Read in booster model outputs
+boost <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_boost_subgroups.csv")) %>%
+  separate(`HR (95% CI)`, c('HR','CI'), sep = '\\ \\(') %>%
+  separate(CI, c('lowerCI','upperCI'), sep = '-') %>%
+  separate(upperCI, c('upperCI','bracket'), sep = '\\)') %>%
+  select(-bracket) %>%
+  mutate(HR = as.numeric(HR), lowerCI = as.numeric(lowerCI), upperCI = as.numeric(upperCI), 
+         dose = "BNT boost")
+
+## Collate 
+d = rbind(primary, boost)
+d$outcome_clean[d$outcome_clean=="Positive SARS-CoV-2 test"] = "SARS-CoV-2+"
+d$outcome_clean[d$outcome_clean=="COVID-related hospitalisation"] = "COVID-19 hosp."
+d$outcome_clean[d$outcome_clean=="COVID-related death"] = "COVID-19 death"
+d$Dose = factor(d$dose, levels = unique(d$dose))
+d$Outcome = factor(d$outcome_clean, levels = unique(d$outcome_clean))
+d$Subgroup = factor(d$Subgroup, levels = unique(d$Subgroup))
+
+## Render plot
+ggplot(data = d) +
+  geom_point(size = 2.5, aes(y=HR, x=factor(Subgroup), colour=Subgroup), alpha = 0.8, position = position_dodge(width = 0.6)) +
+  geom_linerange(aes(ymin=lowerCI, ymax=upperCI, x=factor(Subgroup), colour=Subgroup), alpha = 1, position = position_dodge(width = 0.6)) +
+  geom_hline(aes(yintercept=1), colour='grey') +
+  theme_bw() +
+  facet_grid(Outcome~Dose, scales="free_x", space="free_x") +
+    scale_y_log10(
+      limits = c(0.25,4),
+      breaks=c(0.25, 0.5, 1, 2, 4),
+      sec.axis = dup_axis(name="<- Favours BNT-BNT primary / Favours AZ-AZ primary ->", breaks = NULL)
+    ) + 
+  #scale_x_continuous(breaks=c(0,14,70,126,182), expand = c(0, 0)) +
+  scale_colour_manual(values = c("#993404", "#0570b0", "#045a8d", "#023858")) +
+  labs(
+    y="Hazard ratio (95% CI)",
+    x="",
+    colour=NULL,
+    title=NULL
+  ) +
+  #annotate("rect", xmin = lastfupday, xmax =  lastfupday+period_length, ymin = 0.25, ymax = 4, alpha = .3, fill = "grey") +
+  #annotate("text", x =lastfupday+period_length/2, y = 3.3, label = "All", size=7) +
+  #geom_text(aes(x = term_midpoint, y = 1, label = redaction), size=6) +
+  theme(
+    strip.text.x = element_text(size=12), # set as white to avoid repeating text in aligned plot
+    strip.text.y = element_text(size=10), # set as white to avoid repeating text in aligned plot
+    axis.text = element_text(size=12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y.left = element_text(size=12, margin = margin(t = 0, r = 10, b = 0, l = 0)),
+    axis.title.y.right = element_text(size=10, margin = margin(t = 0, r = 0, b = 0, l = 20)),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+    axis.title = element_text(size=12),
+    legend.text = element_text(size=12),
+    panel.border = element_blank(),
+    axis.line.x = element_line(colour = "black"),
+    axis.line.y = element_line(colour = "black"),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    strip.text.y.left = element_text(angle = 0),
+    panel.spacing = unit(1, "lines"),
+    plot.title = element_text(hjust = 0),
+    plot.title.position = "plot",
+    plot.caption.position = "plot",
+    plot.caption = element_text(hjust = 0, face= "italic"),
+    legend.position = "none",
+    axis.line.y.right = element_line(size=0)
+  )
 ```
 .
