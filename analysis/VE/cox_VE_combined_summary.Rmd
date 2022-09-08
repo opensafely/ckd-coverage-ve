@@ -367,9 +367,11 @@ generate_km_plot = function(surv_data) {
 generate_km_contrast_plot = function(surv_contrast) {
   
   # surv_contrast$kmrr[surv_contrast$kmrr>4] = 4
-  # surv_contrast$kmrr.ul[surv_contrast$kmrr.ul>4] = 4
   # surv_contrast$kmrr[surv_contrast$kmrr<0.25] = 0.25
-  # surv_contrast$kmrr[surv_contrast$kmrr.ll<0.25] = 0.25
+  ## Limit CIs to 0.25/4
+  surv_contrast$kmrr.ul[surv_contrast$kmrr.ul>4] = 4
+  surv_contrast$kmrr[surv_contrast$kmrr.ll<0.25] = 0.25
+  
   surv_contrast %>%
     filter(period_start>=14) %>%
     ggplot(aes(x = period_start, y = kmrr)) + geom_step(size = 0.5, colour="#023858") +
@@ -589,7 +591,9 @@ plot_grid(generate_km_plot(surv_combined),
           ncol=2, align = "h", axis = "tb")
 ```
 
-#### Hazard ratios - whole population 
+#### Hazard ratios - whole population
+See *cox_VE_primary_summary.html* and *cox_VE_boost_summary.html* for tabulated values.
+
 ```{r fig.width=9, fig.height=9}
 ## Read in primary model outputs
 primary <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_primary.csv")) %>%
@@ -617,11 +621,15 @@ boost <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_boost.csv"))
 
 ## Collate 
 d = rbind(primary, boost)
+d$model[d$model=="Person-time (unadjusted)"] = "Unadjusted"
+d$model[d$model=="Person-time (region/date adjusted)"] = "Region/date adjusted"
+d$model[d$model=="Person-time (fully adjusted)"] = "Fully adjusted"
+d$model[d$model=="Calendar-time (fully adjusted)"] = "Calendar-time"
 d$model = factor(d$model, levels = unique(d$model))
-d$outcome[d$outcome=="Positive SARS-CoV-2 test"] = "SARS-CoV-2+"
-d$outcome[d$outcome=="COVID-related hospitalisation"] = "COVID-19 hosp."
-d$outcome[d$outcome=="COVID-related death"] = "COVID-19 death"
-d$outcome = factor(d$outcome, levels = unique(d$outcome))
+d$outcome_clean[d$outcome_clean=="Positive SARS-CoV-2 test"] = "SARS-CoV-2+"
+d$outcome_clean[d$outcome_clean=="COVID-related hospitalisation"] = "COVID-19 hosp."
+d$outcome_clean[d$outcome_clean=="COVID-related death"] = "COVID-19 death"
+d$outcome = factor(d$outcome_clean, levels = unique(d$outcome_clean))
 d$period_alt = factor(d$period_alt, levels = unique(d$period_alt))
 
 ## Read in data for cumulative incidence curves
@@ -676,6 +684,8 @@ ggplot(data = d) +
 <br/><br/>
 
 #### Hazard ratios - subgroups
+See *cox_VE_primary_summary.html* and *cox_VE_boost_summary.html* for tabulated values.
+
 ```{r fig.width=5, fig.height=8}
 ## Read in primary model outputs
 primary <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_primary_subgroups.csv")) %>%
