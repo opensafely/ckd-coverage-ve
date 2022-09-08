@@ -686,7 +686,7 @@ ggplot(data = d) +
 #### Hazard ratios - subgroups
 See *cox_VE_primary_summary.html* and *cox_VE_boost_summary.html* for tabulated values.
 
-```{r fig.width=5, fig.height=8}
+```{r fig.width=5.5, fig.height=8}
 ## Read in primary model outputs
 primary <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_primary_subgroups.csv")) %>%
   separate(`HR (95% CI)`, c('HR','CI'), sep = '\\ \\(') %>%
@@ -727,7 +727,7 @@ ggplot(data = d) +
       sec.axis = dup_axis(name="<- Favours BNT-BNT primary / Favours AZ-AZ primary ->", breaks = NULL)
     ) + 
   #scale_x_continuous(breaks=c(0,14,70,126,182), expand = c(0, 0)) +
-  scale_colour_manual(values = c("#993404", "#0570b0", "#045a8d", "#023858")) +
+  scale_colour_manual(values = c("#993404", "#3690c0", "#0570b0", "#045a8d", "#023858")) +
   labs(
     y="Hazard ratio (95% CI)",
     x="",
