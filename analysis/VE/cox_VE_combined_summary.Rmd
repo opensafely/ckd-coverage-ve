@@ -631,6 +631,7 @@ d$outcome_clean[d$outcome_clean=="COVID-related hospitalisation"] = "COVID-19 ho
 d$outcome_clean[d$outcome_clean=="COVID-related death"] = "COVID-19 death"
 d$outcome = factor(d$outcome_clean, levels = unique(d$outcome_clean))
 d$period_alt = factor(d$period_alt, levels = unique(d$period_alt))
+d$dose = factor(d$dose, levels = unique(d$dose))
 
 ## Read in data for cumulative incidence curves
 ggplot(data = d) +
@@ -686,7 +687,7 @@ ggplot(data = d) +
 #### Hazard ratios - subgroups
 See *cox_VE_primary_summary.html* and *cox_VE_boost_summary.html* for tabulated values.
 
-```{r fig.width=5.5, fig.height=8}
+```{r fig.width=5, fig.height=8}
 ## Read in primary model outputs
 primary <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_primary_subgroups.csv")) %>%
   separate(`HR (95% CI)`, c('HR','CI'), sep = '\\ \\(') %>%
@@ -712,6 +713,9 @@ d$outcome_clean[d$outcome_clean=="COVID-related hospitalisation"] = "COVID-19 ho
 d$outcome_clean[d$outcome_clean=="COVID-related death"] = "COVID-19 death"
 d$Dose = factor(d$dose, levels = unique(d$dose))
 d$Outcome = factor(d$outcome_clean, levels = unique(d$outcome_clean))
+d$Subgroup[d$Subgroup=="all"] = "All"
+d$Subgroup[d$Subgroup=="RRT"] = "RRT (any)"
+d$Subgroup[d$Subgroup=="Tx"] = "RRT (Tx)"
 d$Subgroup = factor(d$Subgroup, levels = unique(d$Subgroup))
 
 ## Render plot
