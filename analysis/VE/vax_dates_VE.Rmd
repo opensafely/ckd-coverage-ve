@@ -36,7 +36,7 @@ data_unfiltered <- read_rds(here::here("output", "data", "data_cohort_coverage.r
                               "6 (16-65 and clinically vulnerable)" = "JCVI 6"))
 
 ## Read in filtered data
-data_filtered <- read_rds(here::here("output", "data", "data_cohort_VE.rds")) %>%
+data_filtered <- read_rds(here::here("output", "data", "data_cohort_VE_primary.rds")) %>%
   mutate(jcvi_simple = recode(jcvi_group, 
                               "2 (80+ or health/social care worker)" = "JCVI 2", 
                               "3 (75+)" = "JCVI 3",
