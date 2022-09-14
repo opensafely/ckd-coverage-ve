@@ -48,9 +48,9 @@ if (matching_status=="unmatched" & vaccine=="primary") {
 # Modify dates to avoid timestamps causing inequalities for dates on the same day
 data_cohort <- data_cohort %>%
   mutate(across(where(is.Date), 
-              ~ floor_date(
-                as.Date(.x, format="%Y-%m-%d"),
-                unit = "days")))
+                ~ floor_date(
+                  as.Date(.x, format="%Y-%m-%d"),
+                  unit = "days")))
 
 ## Specify output path names
 output_csv = paste0("table_irr_",vaccine,"_redacted_",matching_status,"_",subgroup,".csv")
@@ -103,12 +103,12 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
     mutate(
       outcome_date = get(endpoint_date), 
       valid_outcome = get(ind_endpoint),
-  
+      
       ## Select minimum date of censorship or outcome - used to exclude from analysis
       stop_date = pmin(censor_date, outcome_date, na.rm=TRUE),
-      )
-   
-  if (vaccine=="primary") {
+    )
+  
+  #if (vaccine=="primary") {
     data_cohort_irr = data_cohort_irr %>%
       mutate(
         ## Time to censorship or outcome
@@ -127,51 +127,51 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
         
         ## Person-days contributed to window 4 (all follow-up)
         persondays_window4 = tte_stop
-    )
-  } else {
-    data_cohort_irr = data_cohort_irr %>%
-      mutate(
-        ## Time to censorship or outcome
-        tte_stop = tte(vax3_date - 1, stop_date, na.censor=TRUE),
-        
-        ## Person-days contributed to window 1
-        persondays_window1 = ifelse(tte_stop>postvaxcuts[1] & tte_stop<=postvaxcuts[2], tte_stop, period_length),
-        
-        ## Person-days contributed to window 2
-        persondays_window2 = ifelse(tte_stop>postvaxcuts[2] & tte_stop<=postvaxcuts[3], tte_stop-postvaxcuts[2], period_length),
-        persondays_window2 = ifelse(tte_stop<=postvaxcuts[2], 0, persondays_window2),
-        
-        ## Person-days contributed to window 3 (all follow-up)
-        persondays_window3 = tte_stop
       )
-  }
+  # } else {
+  #   data_cohort_irr = data_cohort_irr %>%
+  #     mutate(
+  #       ## Time to censorship or outcome
+  #       tte_stop = tte(vax3_date - 1, stop_date, na.censor=TRUE),
+  #       
+  #       ## Person-days contributed to window 1
+  #       persondays_window1 = ifelse(tte_stop>postvaxcuts[1] & tte_stop<=postvaxcuts[2], tte_stop, period_length),
+  #       
+  #       ## Person-days contributed to window 2
+  #       persondays_window2 = ifelse(tte_stop>postvaxcuts[2] & tte_stop<=postvaxcuts[3], tte_stop-postvaxcuts[2], period_length),
+  #       persondays_window2 = ifelse(tte_stop<=postvaxcuts[2], 0, persondays_window2),
+  #       
+  #       ## Person-days contributed to window 3 (all follow-up)
+  #       persondays_window3 = tte_stop
+  #     )
+  # }
   
   ## Split into vaccine-specific data frames
   data_cohort_AZ <- subset(data_cohort_irr, vax2_type=="az")
   data_cohort_BNT <- subset(data_cohort_irr, vax2_type=="pfizer")
   
   ## Create IRR dataframe to fill in
-  if (vaccine=="primary") {
+  # if (vaccine=="primary") {
     postvax_irr <- data.frame(
       period = c(postvax_periods, paste0(postvaxcuts[1]+1,"-",lastfupday)),
       period_start = c(postvaxcuts[1:3]+1,postvaxcuts[1]+1),
       period_end = c(postvaxcuts[2:4], lastfupday)
     )
-  } else {
-    postvax_irr <- data.frame(
-      period = c(postvax_periods, paste0(postvaxcuts[1]+1,"-",lastfupday)),
-      period_start = c(postvaxcuts[1:2]+1,postvaxcuts[1]+1),
-      period_end = c(postvaxcuts[2:3], lastfupday)
-    )
-  }
+  # } else {
+  #   postvax_irr <- data.frame(
+  #     period = c(postvax_periods, paste0(postvaxcuts[1]+1,"-",lastfupday)),
+  #     period_start = c(postvaxcuts[1:2]+1,postvaxcuts[1]+1),
+  #     period_end = c(postvaxcuts[2:3], lastfupday)
+  #   )
+  # }
   
-## Calculate vaccine-specific N, event rates, person-time, and rates
+  ## Calculate vaccine-specific N, event rates, person-time, and rates
   for (i in 1:nrow(postvax_irr)) {
     postvax_irr$BNT_n[i] = sum(data_cohort_BNT$tte_stop>=postvax_irr$period_start[i])
     postvax_irr$BNT_events[i] = sum(data_cohort_BNT$valid_outcome==TRUE & data_cohort_BNT[,tte_endpoint]>=postvax_irr$period_start[i] & data_cohort_BNT[,tte_endpoint]<=postvax_irr$period_end[i], na.rm = T)
     postvax_irr$BNT_personyears[i] = round(sum(data_cohort_BNT[,paste0("persondays_window",i)])/365.25,2)
     postvax_irr$BNT_rate[i] = round(postvax_irr$BNT_events[i]/postvax_irr$BNT_personyears[i]*1000,2)
-
+    
     postvax_irr$AZ_n[i] = sum(data_cohort_AZ$tte_stop>=postvax_irr$period_start[i])
     postvax_irr$AZ_events[i] = sum(data_cohort_AZ$valid_outcome==TRUE & data_cohort_AZ[,tte_endpoint]>=postvax_irr$period_start[i] & data_cohort_AZ[,tte_endpoint]<=postvax_irr$period_end[i], na.rm = T)
     postvax_irr$AZ_personyears[i] = round(sum(data_cohort_AZ[,paste0("persondays_window",i)])/365.25,2)
@@ -198,14 +198,14 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
   
   ## Redact values and corresponding IRRs for non-zero counts under redaction threshold
   for (i in 1:nrow(postvax_irr)) {
-     if (as.numeric(postvax_irr$AZ_n[i])>0 & as.numeric(postvax_irr$AZ_n[i])<=redaction_threshold) { postvax_irr[i,c("AZ_n", "AZ_rate")] = "[Redacted]" }
-     if (as.numeric(postvax_irr$BNT_n[i])>0 & as.numeric(postvax_irr$BNT_n[i])<=redaction_threshold) { postvax_irr[i,c("BNT_n", "BNT_rate")] = "[Redacted]" }
-
-     if (as.numeric(postvax_irr$AZ_events[i])>0 & as.numeric(postvax_irr$AZ_events[i])<=redaction_threshold) { postvax_irr[i,c("AZ_events", "AZ_rate")] = "[Redacted]" }
-     if (as.numeric(postvax_irr$BNT_events[i])>0 & as.numeric(postvax_irr$BNT_events[i])<=redaction_threshold) { postvax_irr[i,c("BNT_events", "BNT_rate")] = "[Redacted]" }
-
-     if (postvax_irr$AZ_rate[i]=="[Redacted]" | postvax_irr$BNT_rate[i]=="[Redacted]" ) { postvax_irr[i,c("rr")] = "--" }
-     if (postvax_irr$AZ_events[i]==0 & postvax_irr$BNT_events[i]==0 ) { postvax_irr[i,c("rr")] = "--" }
+    if (as.numeric(postvax_irr$AZ_n[i])>0 & as.numeric(postvax_irr$AZ_n[i])<=redaction_threshold) { postvax_irr[i,c("AZ_n", "AZ_rate")] = "[Redacted]" }
+    if (as.numeric(postvax_irr$BNT_n[i])>0 & as.numeric(postvax_irr$BNT_n[i])<=redaction_threshold) { postvax_irr[i,c("BNT_n", "BNT_rate")] = "[Redacted]" }
+    
+    if (as.numeric(postvax_irr$AZ_events[i])>0 & as.numeric(postvax_irr$AZ_events[i])<=redaction_threshold) { postvax_irr[i,c("AZ_events", "AZ_rate")] = "[Redacted]" }
+    if (as.numeric(postvax_irr$BNT_events[i])>0 & as.numeric(postvax_irr$BNT_events[i])<=redaction_threshold) { postvax_irr[i,c("BNT_events", "BNT_rate")] = "[Redacted]" }
+    
+    if (postvax_irr$AZ_rate[i]=="[Redacted]" | postvax_irr$BNT_rate[i]=="[Redacted]" ) { postvax_irr[i,c("rr")] = "--" }
+    if (postvax_irr$AZ_events[i]==0 & postvax_irr$BNT_events[i]==0 ) { postvax_irr[i,c("rr")] = "--" }
   }
   
   ## Add endpoint
@@ -217,12 +217,12 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
 
 ## Collate IRR table based on function above
 irr_collated = rbind(
-    redacted_irr_table(ind_endpoint = "ind_covid_postest", endpoint_date = "postvax_positive_test_date", tte_endpoint = "tte_covid_postest"),
-    #redacted_irr_table(ind_endpoint = "ind_covid_emergency", endpoint_date = "postvax_covid_emergency_date", tte_endpoint = "tte_covid_emergency"),
-    redacted_irr_table(ind_endpoint = "ind_covid_hosp", endpoint_date = "postvax_covid_hospitalisation_date", tte_endpoint = "tte_covid_hosp"),
-    redacted_irr_table(ind_endpoint = "ind_covid_death", endpoint_date = "postvax_covid_death_date", tte_endpoint = "tte_covid_death"),
-    redacted_irr_table(ind_endpoint = "ind_noncovid_death", endpoint_date = "noncoviddeath_date", tte_endpoint = "tte_noncovid_death")
-  )
+  redacted_irr_table(ind_endpoint = "ind_covid_postest", endpoint_date = "postvax_positive_test_date", tte_endpoint = "tte_covid_postest"),
+  #redacted_irr_table(ind_endpoint = "ind_covid_emergency", endpoint_date = "postvax_covid_emergency_date", tte_endpoint = "tte_covid_emergency"),
+  redacted_irr_table(ind_endpoint = "ind_covid_hosp", endpoint_date = "postvax_covid_hospitalisation_date", tte_endpoint = "tte_covid_hosp"),
+  redacted_irr_table(ind_endpoint = "ind_covid_death", endpoint_date = "postvax_covid_death_date", tte_endpoint = "tte_covid_death"),
+  redacted_irr_table(ind_endpoint = "ind_noncovid_death", endpoint_date = "noncoviddeath_date", tte_endpoint = "tte_noncovid_death")
+)
 
 ## Add clean names
 irr_collated$outcome_clean = "Positive SARS-CoV-2 test"
@@ -243,7 +243,7 @@ if (vaccine=="primary" & subgroup!="all") {
 }
 
 if (vaccine=="boost" & subgroup!="all") {
-  irr_collated = subset(irr_collated, period=="15-126")
+  irr_collated = subset(irr_collated, period=="15-182")
 }
 
 ## Save output

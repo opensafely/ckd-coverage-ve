@@ -50,7 +50,7 @@ write_rds(
 
 ## Set and store analysis intervals and last follow-up day
 period_length <- 56 # match primary VE analysis
-n_periods <- 2
+n_periods <- 3
 postvaxcuts <- period_length*0:(n_periods)+14
 postvax_periods = paste0(postvaxcuts[1:((length(postvaxcuts)-1))]+1,"-",postvaxcuts[2:length(postvaxcuts)])
 postvax_periods_weeks = paste0((postvaxcuts/7)[1:((length(postvaxcuts)-1))]+1,"-",(postvaxcuts/7)[2:length(postvaxcuts)])
