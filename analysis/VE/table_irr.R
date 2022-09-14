@@ -108,7 +108,7 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
       stop_date = pmin(censor_date, outcome_date, na.rm=TRUE),
     )
   
-  #if (vaccine=="primary") {
+  if (vaccine=="primary") {
     data_cohort_irr = data_cohort_irr %>%
       mutate(
         ## Time to censorship or outcome
@@ -128,23 +128,27 @@ redacted_irr_table = function(ind_endpoint, endpoint_date, tte_endpoint) {
         ## Person-days contributed to window 4 (all follow-up)
         persondays_window4 = tte_stop
       )
-  # } else {
-  #   data_cohort_irr = data_cohort_irr %>%
-  #     mutate(
-  #       ## Time to censorship or outcome
-  #       tte_stop = tte(vax3_date - 1, stop_date, na.censor=TRUE),
-  #       
-  #       ## Person-days contributed to window 1
-  #       persondays_window1 = ifelse(tte_stop>postvaxcuts[1] & tte_stop<=postvaxcuts[2], tte_stop, period_length),
-  #       
-  #       ## Person-days contributed to window 2
-  #       persondays_window2 = ifelse(tte_stop>postvaxcuts[2] & tte_stop<=postvaxcuts[3], tte_stop-postvaxcuts[2], period_length),
-  #       persondays_window2 = ifelse(tte_stop<=postvaxcuts[2], 0, persondays_window2),
-  #       
-  #       ## Person-days contributed to window 3 (all follow-up)
-  #       persondays_window3 = tte_stop
-  #     )
-  # }
+  } else {
+    data_cohort_irr = data_cohort_irr %>%
+      mutate(
+        ## Time to censorship or outcome
+        tte_stop = tte(vax3_date - 1, stop_date, na.censor=TRUE),
+
+        ## Person-days contributed to window 1
+        persondays_window1 = ifelse(tte_stop>postvaxcuts[1] & tte_stop<=postvaxcuts[2], tte_stop, period_length),
+        
+        ## Person-days contributed to window 2
+        persondays_window2 = ifelse(tte_stop>postvaxcuts[2] & tte_stop<=postvaxcuts[3], tte_stop-postvaxcuts[2], period_length),
+        persondays_window2 = ifelse(tte_stop<=postvaxcuts[2], 0, persondays_window2),
+        
+        ## Person-days contributed to window 3
+        persondays_window3 = ifelse(tte_stop>postvaxcuts[3] & tte_stop<=postvaxcuts[4], tte_stop-postvaxcuts[3], period_length),
+        persondays_window3 = ifelse(tte_stop<=postvaxcuts[3], 0, persondays_window3),
+        
+        ## Person-days contributed to window 4 (all follow-up)
+        persondays_window4 = tte_stop
+      )
+  }
   
   ## Split into vaccine-specific data frames
   data_cohort_AZ <- subset(data_cohort_irr, vax2_type=="az")
