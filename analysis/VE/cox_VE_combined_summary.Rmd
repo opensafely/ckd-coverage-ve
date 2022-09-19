@@ -443,8 +443,8 @@ collate_rounded_km = function(data_tte_primary, data_tte_boost) {
   ## Simplify outcome names for plotting
   surv_combined$outcome_clean <- recode_factor(surv_combined$outcome_clean, 
                                                `Positive SARS-CoV-2 test` = "SARS-CoV-2+", 
-                                               `COVID-related hospitalisation` = "COVID-19 hosp.",
-                                               `COVID-related death` = "COVID-19 death") 
+                                               `COVID-19-related hospitalisation` = "COVID-19 hosp.",
+                                               `COVID-19-related death` = "COVID-19 death") 
   return(surv_combined)
 }
 
@@ -474,8 +474,8 @@ collate_km_contrasts = function(data_tte_primary, data_tte_boost) {
   ## Simplify outcome names for plotting
   surv_combined_contrast$outcome_clean <- recode_factor(surv_combined_contrast$outcome_clean, 
                                                `Positive SARS-CoV-2 test` = "SARS-CoV-2+", 
-                                               `COVID-related hospitalisation` = "COVID-19 hosp.",
-                                               `COVID-related death` = "COVID-19 death") 
+                                               `COVID-19-related hospitalisation` = "COVID-19 hosp.",
+                                               `COVID-19-related death` = "COVID-19 death") 
   return(surv_combined_contrast)
 }
 ```
@@ -707,8 +707,8 @@ boost <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_boost_subgro
 ## Collate 
 d = rbind(primary, boost)
 d$outcome_clean[d$outcome_clean=="Positive SARS-CoV-2 test"] = "SARS-CoV-2+"
-d$outcome_clean[d$outcome_clean=="COVID-related hospitalisation"] = "COVID-19 hosp."
-d$outcome_clean[d$outcome_clean=="COVID-related death"] = "COVID-19 death"
+d$outcome_clean[d$outcome_clean=="COVID-19-related hospitalisation"] = "COVID-19 hosp."
+d$outcome_clean[d$outcome_clean=="COVID-19-related death"] = "COVID-19 death"
 d$Dose = factor(d$dose, levels = unique(d$dose))
 d$Outcome = factor(d$outcome_clean, levels = unique(d$outcome_clean))
 d$Subgroup[d$Subgroup=="all"] = "All"
