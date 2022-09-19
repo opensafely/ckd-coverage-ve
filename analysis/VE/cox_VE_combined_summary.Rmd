@@ -681,6 +681,58 @@ ggplot(data = d) +
     axis.line.y.right = element_line(size=0)
   )
 ```
+
+#### Hazard ratios - whole population without days 1-14
+```{r fig.width=9, fig.height=9}
+## Read in data for cumulative incidence curves
+ggplot(data = subset(d, period_alt!="1-14")) +
+  geom_point(size = 2.5, aes(y=HR, x=factor(period_alt), colour=model), alpha = 0.8, position = position_dodge(width = 0.6)) +
+  geom_linerange(aes(ymin=lowerCI, ymax=upperCI, x=factor(period_alt), colour=model), alpha = 1, position = position_dodge(width = 0.6)) +
+  geom_hline(aes(yintercept=1), colour='grey') +
+  theme_bw()+
+  facet_grid(outcome~dose, scales="free_x", space="free_x") +
+    scale_y_log10(
+      limits = c(0.25,4),
+      breaks=c(0.25, 0.5, 1, 2, 4),
+      sec.axis = dup_axis(name="<- Favours BNT-BNT primary / Favours AZ-AZ primary ->", breaks = NULL)
+    ) + 
+  #scale_x_continuous(breaks=c(0,14,70,126,182), expand = c(0, 0)) +
+  scale_colour_manual(values = c("#3B9AB2", "#E1AF00", "#7570B3", "#B40F20", "grey")) +
+  labs(
+    y="Hazard ratio (95% CI)",
+    x="Time since vaccination (days)",
+    colour=NULL,
+    title=NULL
+  ) +
+  #annotate("rect", xmin = lastfupday, xmax =  lastfupday+period_length, ymin = 0.25, ymax = 4, alpha = .3, fill = "grey") +
+  #annotate("text", x =lastfupday+period_length/2, y = 3.3, label = "All", size=7) +
+  #geom_text(aes(x = term_midpoint, y = 1, label = redaction), size=6) +
+  theme(
+    strip.text.x = element_text(size=12), # set as white to avoid repeating text in aligned plot
+    strip.text.y = element_text(size=10), # set as white to avoid repeating text in aligned plot
+    axis.text = element_text(size=12),
+    axis.title.y.left = element_text(size=12, margin = margin(t = 0, r = 10, b = 0, l = 0)),
+    axis.title.y.right = element_text(size=10, margin = margin(t = 0, r = 0, b = 0, l = 20)),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+    axis.title = element_text(size=12),
+    legend.text = element_text(size=12),
+    panel.border = element_blank(),
+    axis.line.x = element_line(colour = "black"),
+    axis.line.y = element_line(colour = "black"),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    strip.text.y.left = element_text(angle = 0),
+    panel.spacing = unit(1, "lines"),
+    plot.title = element_text(hjust = 0),
+    plot.title.position = "plot",
+    plot.caption.position = "plot",
+    plot.caption = element_text(hjust = 0, face= "italic"),
+    legend.position = "right",
+    axis.line.y.right = element_line(size=0)
+  )
+```
 <br/><br/>
 
 #### Hazard ratios - subgroups
