@@ -371,7 +371,7 @@ generate_km_contrast_plot = function(surv_contrast) {
   surv_contrast$kmrr[surv_contrast$kmrr.ll<0.25] = 0.25
   
   surv_contrast %>%
-    filter(period_start>=14) %>%
+    #filter(period_start>=14) %>%
     ggplot(aes(x = period_start, y = kmrr)) + geom_step(size = 0.5, colour="#023858") +
     facet_grid(outcome_clean~dose, scales="free", space="free_x") +
     geom_rect(aes(xmin=period_start, xmax=period_end, ymin=kmrr.ll, ymax=kmrr.ul), alpha=0.1, colour="transparent", fill = "#023858") +
@@ -482,7 +482,7 @@ collate_km_contrasts = function(data_tte_primary, data_tte_boost) {
 
 ##### Whole population - unmatched
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=14, fig.height=10}
 surv_combined = collate_rounded_km(data_tte_unmatched, data_tte_unmatched_boost)
 surv_contrasts = collate_km_contrasts(data_tte_unmatched, data_tte_unmatched_boost)
 plot_grid(generate_km_plot(surv_combined), 
@@ -493,7 +493,7 @@ plot_grid(generate_km_plot(surv_combined),
 
 ##### Whole population - matched
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=14, fig.height=10}
 surv_combined = collate_rounded_km(data_tte_matched, data_tte_matched_boost)
 surv_contrasts = collate_km_contrasts(data_tte_matched, data_tte_matched_boost)
 plot_grid(generate_km_plot(surv_combined), 
@@ -504,7 +504,7 @@ plot_grid(generate_km_plot(surv_combined),
 
 ##### CKD3 - unmatched
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=14, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="CKD3"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD3"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="CKD3"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD3"))
 plot_grid(generate_km_plot(surv_combined), 
@@ -515,7 +515,7 @@ plot_grid(generate_km_plot(surv_combined),
 
 ##### CKD3 - matched
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=14, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="CKD3"), subset(data_tte_matched_boost, ckd_3cat=="CKD3"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="CKD3"), subset(data_tte_matched_boost, ckd_3cat=="CKD3"))
 plot_grid(generate_km_plot(surv_combined), 
@@ -526,7 +526,7 @@ plot_grid(generate_km_plot(surv_combined),
 
 ##### CKD4-5 - unmatched
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=14, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="CKD4-5"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD4-5"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="CKD4-5"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD4-5"))
 plot_grid(generate_km_plot(surv_combined), 
@@ -537,7 +537,7 @@ plot_grid(generate_km_plot(surv_combined),
 
 ##### CKD4-5 - matched
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=14, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="CKD4-5"), subset(data_tte_matched_boost, ckd_3cat=="CKD4-5"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="CKD4-5"), subset(data_tte_matched_boost, ckd_3cat=="CKD4-5"))
 plot_grid(generate_km_plot(surv_combined), 
@@ -548,7 +548,7 @@ plot_grid(generate_km_plot(surv_combined),
 
 ##### RRT (any) - unmatched
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=14, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="RRT (any)"), subset(data_tte_unmatched_boost, ckd_3cat=="RRT (any)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="RRT (any)"), subset(data_tte_unmatched_boost, ckd_3cat=="RRT (any)"))
 plot_grid(generate_km_plot(surv_combined), 
@@ -559,7 +559,7 @@ plot_grid(generate_km_plot(surv_combined),
 
 ##### RRT (any) - matched
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=14, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="RRT (any)"), subset(data_tte_matched_boost, ckd_3cat=="RRT (any)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="RRT (any)"), subset(data_tte_matched_boost, ckd_3cat=="RRT (any)"))
 plot_grid(generate_km_plot(surv_combined), 
@@ -570,7 +570,7 @@ plot_grid(generate_km_plot(surv_combined),
 
 ##### RRT (Tx) - unmatched
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=14, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_5cat=="RRT (Tx)"), subset(data_tte_unmatched_boost, ckd_5cat=="RRT (Tx)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_5cat=="RRT (Tx)"), subset(data_tte_unmatched_boost, ckd_5cat=="RRT (Tx)"))
 plot_grid(generate_km_plot(surv_combined), 
@@ -581,7 +581,7 @@ plot_grid(generate_km_plot(surv_combined),
 
 ##### RRT (Tx) - matched
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=14, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_5cat=="RRT (Tx)"), subset(data_tte_matched_boost, ckd_5cat=="RRT (Tx)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_5cat=="RRT (Tx)"), subset(data_tte_matched_boost, ckd_5cat=="RRT (Tx)"))
 plot_grid(generate_km_plot(surv_combined), 
@@ -592,7 +592,7 @@ plot_grid(generate_km_plot(surv_combined),
 #### Hazard ratios - whole population
 See *cox_VE_primary_summary.html* and *cox_VE_boost_summary.html* for tabulated values.
 
-```{r fig.width=9, fig.height=9}
+```{r fig.width=12, fig.height=9}
 ## Read in primary model outputs
 primary <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_primary.csv")) %>%
   pivot_longer(c(starts_with("Person-time"), starts_with("Calendar-time"), starts_with("Matched")), 
@@ -603,7 +603,7 @@ primary <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_primary.cs
   select(-bracket) %>%
   mutate(HR = as.numeric(HR), lowerCI = as.numeric(lowerCI), upperCI = as.numeric(upperCI), 
          dose = "Primary vaccination", 
-         period_alt = ifelse(`Period (days)` == "15-182", "All", `Period (days)`))
+         period_alt = ifelse(`Period (days)` == "1-182", "All", `Period (days)`))
 
 ## Read in booster model outputs
 boost <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_boost.csv")) %>%
@@ -615,7 +615,7 @@ boost <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_boost.csv"))
   select(-bracket) %>%
   mutate(HR = as.numeric(HR), lowerCI = as.numeric(lowerCI), upperCI = as.numeric(upperCI), 
          dose = "BNT boost", 
-         period_alt = ifelse(`Period (days)` == "15-126", "All", `Period (days)`))
+         period_alt = ifelse(`Period (days)` == "1-182", "All", `Period (days)`))
 
 ## Collate 
 d = rbind(primary, boost)
@@ -625,8 +625,9 @@ d$model[d$model=="Person-time (fully adjusted)"] = "Fully adjusted"
 d$model[d$model=="Calendar-time (fully adjusted)"] = "Calendar-time"
 d$model = factor(d$model, levels = unique(d$model))
 d$outcome_clean[d$outcome_clean=="Positive SARS-CoV-2 test"] = "SARS-CoV-2+"
-d$outcome_clean[d$outcome_clean=="COVID-related hospitalisation"] = "COVID-19 hosp."
-d$outcome_clean[d$outcome_clean=="COVID-related death"] = "COVID-19 death"
+d$outcome_clean[d$outcome_clean=="COVID-19-related hospitalisation"] = "COVID-19 hosp."
+d$outcome_clean[d$outcome_clean=="COVID-19-related death"] = "COVID-19 death"
+d$outcome_clean[d$outcome_clean=="Non-COVID-19 death"] = "Non-COVID-19 death"
 d$outcome = factor(d$outcome_clean, levels = unique(d$outcome_clean))
 d$period_alt = factor(d$period_alt, levels = unique(d$period_alt))
 d$dose = factor(d$dose, levels = unique(d$dose))
