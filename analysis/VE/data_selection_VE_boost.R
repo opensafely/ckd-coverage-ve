@@ -38,8 +38,8 @@ data_processed$end_date = as_date("2022-04-21")
 ## Set and store outcomes list
 outcomes_list <- list(
   short_name = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death", "noncovid_death"),
-  clean_name = c("Positive SARS-CoV-2 test", "COVID-related A&E admission", "COVID-related hospitalisation", "COVID-related death", "Non-COVID death"),
-  short_name = c("SARS-CoV-2+", "COVID-19 A&E", "COVID-19 hosp.", "COVID-19 death", "Non-COVID death"),
+clean_name = c("Positive SARS-CoV-2 test", "COVID-19-related A&E admission", "COVID-19-related hospitalisation", "COVID-19-related death", "Non-COVID-19 death"),
+  short_name = c("SARS-CoV-2+", "COVID-19 A&E", "COVID-19 hosp.", "COVID-19 death", "Non-COVID-19 death"),
   date_name = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date", "noncoviddeath_date")
 )
 dir.create(here::here("output", "lib"), showWarnings = FALSE, recursive=TRUE)
@@ -51,7 +51,7 @@ write_rds(
 ## Set and store analysis intervals and last follow-up day
 period_length <- 56 # match primary VE analysis
 n_periods <- 3
-postvaxcuts <- period_length*0:(n_periods)+14
+postvaxcuts <- c(0,period_length*0:(n_periods)+14)
 postvax_periods = paste0(postvaxcuts[1:((length(postvaxcuts)-1))]+1,"-",postvaxcuts[2:length(postvaxcuts)])
 postvax_periods_weeks = paste0((postvaxcuts/7)[1:((length(postvaxcuts)-1))]+1,"-",(postvaxcuts/7)[2:length(postvaxcuts)])
 lastfupday <- max(postvaxcuts)
@@ -273,7 +273,6 @@ if(Sys.getenv("OPENSAFELY_BACKEND") %in% c("", "expectations")) {
     "region",
     "imd",
     "sex",
-    #"ethnicity",
     "ckd_5cat",
     "cev",
     "prior_covid_cat",
