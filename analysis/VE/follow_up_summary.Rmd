@@ -83,7 +83,7 @@ g1 = ggplot(summary_df, aes(x=date, y=n_enrolled/1000)) +
     scale_x_date(labels = date_format("%m/%y"),
                limits = c(as.Date("2021-01-01"), as.Date("2021-11-30")), 
                breaks = c(as.Date("2021-01-01"), as.Date("2021-04-01"), as.Date("2021-07-01"), as.Date("2021-10-01"))) +
-    theme_bw() + xlab(" ") + ylab("N followed up\n(1000s)") + 
+    theme_bw() + xlab(" ") + ylab("N followed up\n(1000s)") + ylim(0,450) + 
     geom_vline(xintercept = as.Date(c("2021-01-01", "2021-11-14")), linetype="dotted", colour=palette1[3]) +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
@@ -94,7 +94,7 @@ g2 = ggplot(summary_df, aes(x=date, y=n_cases, fill=variant)) +
     scale_x_date(labels = date_format("%m/%y"),
                limits = c(as.Date("2021-01-01"), as.Date("2021-11-30")), 
                breaks = c(as.Date("2021-01-01"), as.Date("2021-04-01"), as.Date("2021-07-01"), as.Date("2021-10-01"))) +
-    theme_bw() + xlab(" ") + ylab("N cases (weekly)") + 
+    theme_bw() + xlab(" ") + ylab("N cases (weekly)") +
     geom_vline(xintercept = as.Date(c("2021-01-01", "2021-11-14")), linetype="dotted", colour=palette1[3]) +
     scale_fill_manual(values = c(palette2[1], palette2[2])) +
     labs(fill = "Major variant") +
@@ -109,7 +109,7 @@ g3 = ggplot(summary_df, aes(x=date, y=cumulative_nextvax/1000)) +
     scale_x_date(labels = date_format("%m/%y"),
                limits = c(as.Date("2021-01-01"), as.Date("2021-11-30")), 
                breaks = c(as.Date("2021-01-01"), as.Date("2021-04-01"), as.Date("2021-07-01"), as.Date("2021-10-01"))) +
-    theme_bw() + xlab("Date") + ylab("Cumulative 3rd dose\ncount (1000s)") + 
+    theme_bw() + xlab("Date") + ylab("Cumulative 3rd dose\ncount (1000s)") + ylim(0,450) + 
     geom_vline(xintercept = as.Date(c("2021-01-01", "2021-11-14")), linetype="dotted", colour=palette1[3]) +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
@@ -125,14 +125,14 @@ data.frame(
   Quartile = c("25%", "Median", "75%")
   ) %>% 
   mutate(
-  `SARS-CoV-2 test` = plyr::round_any(quantile(d$tte_covid_postest_or_censor)[2:4], round_threshold),
-  `COVID-19 hosp.` = plyr::round_any(quantile(d$tte_covid_hosp_or_censor)[2:4], round_threshold),
-  `COVID-19 death` = plyr::round_any(quantile(d$tte_covid_death_or_censor)[2:4], round_threshold),
-  `Non-COVID-19 death` = plyr::round_any(quantile(d$tte_noncovid_death_or_censor)[2:4], round_threshold)
+  `SARS-CoV-2 test` = quantile(d$tte_covid_postest_or_censor)[2:4],
+  `COVID-19 hosp.` = quantile(d$tte_covid_hosp_or_censor)[2:4],
+  `COVID-19 death` = quantile(d$tte_covid_death_or_censor)[2:4],
+  `Non-COVID-19 death` = quantile(d$tte_noncovid_death_or_censor)[2:4]
   ) %>% 
   gt()
 ```
-<br>Quartiles are rounded to the nearest 5 as a precaution against small-number disclosures.<br><br>
+<br>Follow-up quartiles could theoretically relate to individuals but are measured in person-time with varying study entry date; they therefore present no meaningful disclosure risk.<br><br>
 
 #### Uncensored at start of follow-up
 ```{r}
@@ -149,7 +149,7 @@ data.frame(
 ```
 <br><br>
 
-#### Uncensored at end of follow-up
+#### Uncensored at day 182
 ```{r}
 data.frame(
   Day = c("Day 182")
@@ -210,7 +210,7 @@ g1 = ggplot(summary_df, aes(x=date, y=n_enrolled/1000)) +
     scale_x_date(labels = date_format("%m/%y"),
                limits = c(as.Date("2021-09-01"), as.Date("2022-04-30")), 
                breaks = c(as.Date("2021-09-01"), as.Date("2021-11-01"), as.Date("2022-01-01"), as.Date("2022-03-01"))) +
-    theme_bw() + xlab(" ") + ylab("N followed up\n(1000s)") + 
+    theme_bw() + xlab(" ") + ylab("N followed up\n(1000s)") + ylim(0,400) + 
     geom_vline(xintercept = as.Date(c("2021-09-01", "2022-04-21")), linetype="dotted", colour=palette1[3]) +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
@@ -236,7 +236,7 @@ g3 = ggplot(summary_df, aes(x=date, y=cumulative_nextvax/1000)) +
     scale_x_date(labels = date_format("%m/%y"),
                limits = c(as.Date("2021-09-01"), as.Date("2022-04-30")), 
                breaks = c(as.Date("2021-09-01"), as.Date("2021-11-01"), as.Date("2022-01-01"), as.Date("2022-03-01"))) +
-    theme_bw() + xlab("Date") + ylab("Cumulative 4th dose\ncount (1000s)") + 
+    theme_bw() + xlab("Date") + ylab("Cumulative 4th dose\ncount (1000s)") + ylim(0,400) + 
     geom_vline(xintercept = as.Date(c("2021-09-01", "2022-04-21")), linetype="dotted", colour=palette1[3]) +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
@@ -252,10 +252,10 @@ data.frame(
   Quartile = c("25%", "Median", "75%")
   ) %>% 
   mutate(
-  `SARS-CoV-2 test` = plyr::round_any(quantile(d$tte_covid_postest_or_censor)[2:4], round_threshold),
-  `COVID-19 hosp.` = plyr::round_any(quantile(d$tte_covid_hosp_or_censor)[2:4], round_threshold),
-  `COVID-19 death` = plyr::round_any(quantile(d$tte_covid_death_or_censor)[2:4], round_threshold),
-  `Non-COVID-19 death` = plyr::round_any(quantile(d$tte_noncovid_death_or_censor)[2:4], round_threshold)
+  `SARS-CoV-2 test` = quantile(d$tte_covid_postest_or_censor)[2:4],
+  `COVID-19 hosp.` = quantile(d$tte_covid_hosp_or_censor)[2:4],
+  `COVID-19 death` = quantile(d$tte_covid_death_or_censor)[2:4],
+  `Non-COVID-19 death` = quantile(d$tte_noncovid_death_or_censor)[2:4]
   ) %>% 
   gt()
 ```
@@ -274,9 +274,9 @@ data.frame(
   ) %>% 
   gt()
 ```
-<br><br>
+<br>Follow-up quartiles could theoretically relate to individuals but are measured in person-time with varying study entry date; they therefore present no meaningful disclosure risk.<br><br>
 
-#### Uncensored at end of follow-up
+#### Uncensored at day 182
 ```{r}
 data.frame(
   Day = c("Day 182")
