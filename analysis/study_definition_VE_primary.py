@@ -18,7 +18,7 @@ from cohortextractor import (
 from codelists import *
 
 ### Set initial date parameters
-start_date = "2020-12-01"
+start_date = "2021-01-04" # date of first ChAdOx1-S doses
 end_date = "2021-11-30" # 2 months (rounded up) after launch of fall booster campaign (14-09-2021)
 # if end_date updated, also update return_expectations in defined variables for consistency
 
@@ -48,10 +48,11 @@ study = StudyDefinition(
         AND
         covid_vax_date_1 <= enddate
         """,
-        # registered before vaccine campaign commenced
+        # registered for at least 3 months before first recorded dose
         registered = patients.registered_as_of(
             "covid_vax_date_1 - 3 months",
         ),
+        # baseline variables defined on the day before the first dose (start date = date of first ChAdOx1-S doses)
         has_died = patients.died_from_any_cause(
             on_or_before = "covid_vax_date_1 - 1 day",
             returning = "binary_flag",
@@ -69,7 +70,7 @@ study = StudyDefinition(
     # Date of first COVID vaccination - source nhs-covid-vaccination-coverage
     covid_vax_date_1=patients.with_tpp_vaccination_record(
         target_disease_matches="SARS-2 CORONAVIRUS",
-        between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
+        between=["2021-01-04",end_date], # any dose recorded after 01/12/2020
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -125,7 +126,7 @@ study = StudyDefinition(
     # Date of first COVID vaccination - pfizer
     pfizer_date_1=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Comirnaty 30micrograms/0.3ml dose conc for susp for inj MDV (Pfizer)",
-        between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
+        between=["2021-01-04",end_date], # any dose recorded after 01/12/2020
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -174,7 +175,7 @@ study = StudyDefinition(
     # Date of first COVID vaccination - astrazeneca
     az_date_1=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 Vaccine Vaxzevria 0.5ml inj multidose vials (AstraZeneca)",
-        between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
+        between=["2021-01-04",end_date], # any dose recorded after 01/12/2020
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -223,7 +224,7 @@ study = StudyDefinition(
     # Date of first COVID vaccination - moderna
     moderna_date_1=patients.with_tpp_vaccination_record(
         product_name_matches="COVID-19 mRNA Vaccine Spikevax (nucleoside modified) 0.1mg/0.5mL dose disp for inj MDV (Moderna)",
-        between=["2020-12-01",end_date], # any dose recorded after 01/12/2020
+        between=["2021-01-04",end_date], # any dose recorded after 01/12/2020
         find_first_match_in_period=True,
         returning="date",
         date_format="YYYY-MM-DD"
@@ -397,7 +398,7 @@ study = StudyDefinition(
     returning = "date_of_death",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2020-01-18", "latest" : "2021-11-30"},
+      "date": {"earliest": "2021-01-04", "latest" : "2021-11-30"},
       "rate": "uniform",
       "incidence": 0.05
     },
@@ -600,11 +601,11 @@ study = StudyDefinition(
   imd = patients.categorised_as(
     {
         "Unknown": "DEFAULT",
-        "1 (most deprived)": "imd_num >= 0 AND imd_num < 32800*1/5",
-         "2": "imd_num >= 32800*1/5 AND imd_num < 32800*2/5",
-         "3": "imd_num >= 32800*2/5 AND imd_num < 32800*3/5",
-         "4": "imd_num >= 32800*3/5 AND imd_num < 32800*4/5",
-         "5 (least deprived)": "imd_num >= 32800*4/5 AND imd_num <= 32800",
+        "1 (most deprived)": "imd_num >= 0 AND imd_num < 32844*1/5",
+         "2": "imd_num >= 32844*1/5 AND imd_num < 32844*2/5",
+         "3": "imd_num >= 32844*2/5 AND imd_num < 32844*3/5",
+         "4": "imd_num >= 32844*3/5 AND imd_num < 32844*4/5",
+         "5 (least deprived)": "imd_num >= 32844*4/5 AND imd_num <= 32844",
       },
    imd_num = patients.address_as_of(
             "covid_vax_date_1 - 1 day",
@@ -923,7 +924,7 @@ study = StudyDefinition(
     find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
     return_expectations = {
-      "date": {"earliest": "2020-02-01", "latest": "2021-01-18"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-02-01", "latest": "2021-01-03"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.02,
     },
@@ -941,7 +942,7 @@ study = StudyDefinition(
     on_or_before = "covid_vax_date_1 - 1 day",
     find_first_match_in_period=True,
     return_expectations = {
-      "date": {"earliest": "2020-02-01", "latest": "2021-01-18"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-02-01", "latest": "2021-01-03"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.02,
     },
@@ -955,7 +956,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2020-02-01", "latest": "2021-01-18"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-02-01", "latest": "2021-01-03"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.005,
     },
@@ -970,7 +971,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2020-02-01", "latest": "2021-01-18"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-02-01", "latest": "2021-01-03"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.005,
     },
@@ -990,7 +991,7 @@ study = StudyDefinition(
     find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
     return_expectations = {
-      "date": {"earliest": "2020-10-18", "latest": "2021-01-18"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-10-06", "latest": "2021-01-03"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.02,
     },
@@ -1008,7 +1009,7 @@ study = StudyDefinition(
     between=["covid_vax_date_1 - 90 days","covid_vax_date_1 - 1 day"], # anything post dose 1 may be linked with comparative VE
     find_first_match_in_period=True,
     return_expectations = {
-      "date": {"earliest": "2020-10-18", "latest": "2021-01-18"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-10-06", "latest": "2021-01-03"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.02,
     },
@@ -1022,7 +1023,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2020-10-18", "latest": "2021-01-18"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-10-06", "latest": "2021-01-03"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.005,
     },
@@ -1037,7 +1038,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2020-10-18", "latest": "2021-01-18"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2020-10-06", "latest": "2021-01-03"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.005,
     },
@@ -1061,7 +1062,7 @@ study = StudyDefinition(
     pathogen = "SARS-CoV-2",
     test_result = "any",
     returning = "number_of_matches_in_period",
-    between=["2020-10-20","2021-01-17"],
+    between=["2020-10-06","2021-01-03"],
     restrict_to_earliest_specimen_date = False,
     return_expectations={
       "int": {"distribution": "normal", "mean": 4, "stddev": 1},
@@ -1083,7 +1084,7 @@ study = StudyDefinition(
     find_first_match_in_period = True,
     restrict_to_earliest_specimen_date = False,
     return_expectations = {
-      "date": {"earliest": "2021-01-18", "latest": "2021-05-01"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2021-01-04", "latest": "2021-05-01"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.02,
     },
@@ -1101,7 +1102,7 @@ study = StudyDefinition(
     between=["covid_vax_date_1","covid_vax_date_2 - 1 day"],
     find_first_match_in_period=True,
     return_expectations = {
-      "date": {"earliest": "2021-01-18", "latest": "2021-05-01"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2021-01-04", "latest": "2021-05-01"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.02,
     },
@@ -1115,7 +1116,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-01-18", "latest": "2021-05-01"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2021-01-04", "latest": "2021-05-01"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.005,
     },
@@ -1130,7 +1131,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-01-18", "latest": "2021-05-01"}, # need both earliest/latest to obtain expected incidence
+      "date": {"earliest": "2021-01-04", "latest": "2021-05-01"}, # need both earliest/latest to obtain expected incidence
       "rate": "uniform",
       "incidence": 0.005,
     },
