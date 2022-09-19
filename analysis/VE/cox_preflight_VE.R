@@ -162,7 +162,6 @@ logoutput(
 ## Create dataset containing one row per patient per post-vaccination period
 postvaxcuts = postvax_list$postvaxcuts
 postvax_periods = postvax_list$postvax_periods
-period_length = postvaxcuts[2]-postvaxcuts[1]
 lastfupday = max(postvaxcuts)
 
 postvax_time <- data_cohort %>%
@@ -339,7 +338,7 @@ if (!full) {
 if (strata) {
   ## Only keep postvaxcuts during which there are >2 events for each level of expo
   data_cox_strata_keep <- data_cox_strata %>%
-    filter(!is.na(timesincevax_pw) & timesincevax_pw!="183+" & timesincevax_pw!="127+") %>% ## Added to cut periods of 1-14d and 183d+ (primary) or 127+ (boost)
+    filter(!is.na(timesincevax_pw) & timesincevax_pw!="183+") %>% ## Added to cut periods of 183d+
     group_by(across(all_of(c(vars0, expo)))) %>%
     mutate(check_events_strata = sum(ind_outcome)) %>%
     ungroup() %>%

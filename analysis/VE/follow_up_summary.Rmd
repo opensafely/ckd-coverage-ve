@@ -1,0 +1,323 @@
+---
+title: "Descriptive statistics for follow-up periods in "
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+## Import libraries
+library('here')
+library('tidyverse')
+library('readr')
+library('tidyr')
+library('lubridate')
+library('glue')
+library('gt')
+library('gtsummary')
+library('reshape2')
+library('kableExtra')
+library('cowplot')
+library('fs')
+library('survival')
+library('survminer')
+library('scales')
+
+## Import custom user functions
+source(here::here("analysis", "functions.R"))
+
+## Set rounding and redaction thresholds
+round_threshold = 5
+redaction_threshold = 10
+
+## Import outcome time periods
+postvax_list <- read_rds(here::here("output", "lib", "postvax_list.rds"))
+postvaxcuts = postvax_list$postvaxcuts
+postvax_periods = postvax_list$postvax_periods
+lastfupday = max(postvaxcuts)
+```
+<br><br>  
+
+#### Primary vaccination cohort
+```{r, fig.width=5, fig.height=6}
+## Set palette
+palette1 = c("#fe9929", "#d95f0e", "#993404")
+palette2 = c("#018571", "#a6611a")
+
+## Read in data
+d <- read_rds(here::here("output", "data", "data_cohort_VE_primary.rds")) %>%
+  mutate(
+    stop_date = pmin(censor_date, postvax_positive_test_date, na.rm=TRUE),
+    tte_stop = tte(vax2_date - 1, stop_date, na.censor=TRUE)
+  )
+
+## Create summary data frame
+summary_df = data.frame(
+  date = seq(as.Date("2021-01-04", format="%Y-%m-%d"), as.Date("2021-11-30", format="%Y-%m-%d"), "weeks")
+)
+
+## Calculate number enrolled, cumulative next dose administration, and case counts over time
+for (i in 1:nrow(summary_df)) {
+  selected_date = summary_df$date[i]
+  summary_df$n_enrolled[i] = plyr::round_any(nrow(subset(d, (vax2_date-1)<=selected_date & stop_date>selected_date)), round_threshold)
+  summary_df$cumulative_nextvax[i] = plyr::round_any(sum(d$vax3_date<=selected_date, na.rm = TRUE), round_threshold)
+
+  if (i == 1) {
+    summary_df$n_cases[i] = plyr::round_any(sum(d$postvax_positive_test_date==selected_date, na.rm = TRUE), round_threshold)
+  } else {
+    previous_date = summary_df$date[i-1]
+    summary_df$n_cases[i] = plyr::round_any(sum(d$postvax_positive_test_date<=selected_date & d$postvax_positive_test_date>previous_date, na.rm = TRUE), round_threshold)
+  }
+}
+
+## Set non-zero values below redaction threshold to 0
+summary_df$n_enrolled[summary_df$date>as.Date("2021-11-14") | (summary_df$n_enrolled>0 & summary_df$n_enrolled<=redaction_threshold)] = NA
+summary_df$cumulative_nextvax[summary_df$date>as.Date("2021-11-14") | (summary_df$cumulative_nextvax>0 & summary_df$cumulative_nextvax<=redaction_threshold)] = NA
+summary_df$n_cases[summary_df$date>as.Date("2021-11-14") | (summary_df$n_cases>0 & summary_df$n_cases<=redaction_threshold)] = NA
+
+## Set variant
+summary_df$variant = "Delta"
+summary_df$variant[summary_df$date>as.Date("2021-12-15")] = "Omicron"
+
+g1 = ggplot(summary_df, aes(x=date, y=n_enrolled/1000)) + 
+    geom_bar(stat="identity", fill = palette1[1]) +
+    scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2021-01-01"), as.Date("2021-11-30")), 
+               breaks = c(as.Date("2021-01-01"), as.Date("2021-04-01"), as.Date("2021-07-01"), as.Date("2021-10-01"))) +
+    theme_bw() + xlab(" ") + ylab("N followed up\n(1000s)") + 
+    geom_vline(xintercept = as.Date(c("2021-01-01", "2021-11-14")), linetype="dotted", colour=palette1[3]) +
+    theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12))
+
+g2 = ggplot(summary_df, aes(x=date, y=n_cases, fill=variant)) + 
+    geom_bar(stat="identity") +
+    scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2021-01-01"), as.Date("2021-11-30")), 
+               breaks = c(as.Date("2021-01-01"), as.Date("2021-04-01"), as.Date("2021-07-01"), as.Date("2021-10-01"))) +
+    theme_bw() + xlab(" ") + ylab("N cases (weekly)") + 
+    geom_vline(xintercept = as.Date(c("2021-01-01", "2021-11-14")), linetype="dotted", colour=palette1[3]) +
+    scale_fill_manual(values = c(palette2[1], palette2[2])) +
+    labs(fill = "Major variant") +
+    theme(strip.background = element_blank(), strip.text = element_text(size=12),
+          legend.position = "right",
+          axis.text = element_text(size=12), axis.title = element_text(size=12),
+          legend.title = element_text(size=12), legend.text = element_text(size=12),
+          axis.title.y.left = element_text(size=12, margin = margin(t = 0, r = 8, b = 0, l = 0)))
+
+g3 = ggplot(summary_df, aes(x=date, y=cumulative_nextvax/1000)) + 
+    geom_line(colour =  palette1[3]) +
+    scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2021-01-01"), as.Date("2021-11-30")), 
+               breaks = c(as.Date("2021-01-01"), as.Date("2021-04-01"), as.Date("2021-07-01"), as.Date("2021-10-01"))) +
+    theme_bw() + xlab("Date") + ylab("Cumulative 3rd dose\ncount (1000s)") + 
+    geom_vline(xintercept = as.Date(c("2021-01-01", "2021-11-14")), linetype="dotted", colour=palette1[3]) +
+    theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12))
+
+plot_grid(g1, g2, g3, ncol=1, align="v", axis = "lr")
+```
+<br><br>  
+
+#### Follow-up time by outcome (days)
+```{r}
+data.frame(
+  Quartile = c("25%", "Median", "75%")
+  ) %>% 
+  mutate(
+  `SARS-CoV-2 test` = plyr::round_any(quantile(d$tte_covid_postest_or_censor)[2:4], round_threshold),
+  `COVID-19 hosp.` = plyr::round_any(quantile(d$tte_covid_hosp_or_censor)[2:4], round_threshold),
+  `COVID-19 death` = plyr::round_any(quantile(d$tte_covid_death_or_censor)[2:4], round_threshold),
+  `Non-COVID-19 death` = plyr::round_any(quantile(d$tte_noncovid_death_or_censor)[2:4], round_threshold)
+  ) %>% 
+  gt()
+```
+<br>Quartiles are rounded to the nearest 5 as a precaution against small-number disclosures.<br><br>
+
+#### Uncensored at start of follow-up
+```{r}
+data.frame(
+  Day = c("Day 1")
+  ) %>% 
+  mutate(
+  `SARS-CoV-2 test` = plyr::round_any(sum(d$tte_covid_postest_or_censor>=1), round_threshold),
+  `COVID-19 hosp.` = plyr::round_any(sum(d$tte_covid_hosp_or_censor>=1), round_threshold),
+  `COVID-19 death` = plyr::round_any(sum(d$tte_covid_death_or_censor>=1), round_threshold),
+  `Non-COVID-19 death` = plyr::round_any(sum(d$tte_noncovid_death_or_censor>=1), round_threshold)
+  ) %>% 
+  gt()
+```
+<br><br>
+
+#### Uncensored at end of follow-up
+```{r}
+data.frame(
+  Day = c("Day 182")
+  ) %>% 
+  mutate(
+  `SARS-CoV-2 test` = plyr::round_any(sum(d$tte_covid_postest_or_censor==182), round_threshold),
+  `COVID-19 hosp.` = plyr::round_any(sum(d$tte_covid_hosp_or_censor==182), round_threshold),
+  `COVID-19 death` = plyr::round_any(sum(d$tte_covid_death_or_censor==182), round_threshold),
+  `Non-COVID-19 death` = plyr::round_any(sum(d$tte_noncovid_death_or_censor==182), round_threshold)
+  ) %>% 
+  gt()
+```
+<br>Frequencies are rounded to the nearest 5.<br><br>
+
+#### Booster vaccination cohort
+```{r, fig.width=5, fig.height=6}
+## Set palette
+palette1 = c("#74a9cf", "#2b8cbe", "#045a8d")
+
+## Read in data
+d <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds")) %>%
+  mutate(
+    stop_date = pmin(censor_date, postvax_positive_test_date, na.rm=TRUE),
+    tte_stop = tte(vax3_date - 1, stop_date, na.censor=TRUE)
+  )
+
+## Create summary data frame
+summary_df = data.frame(
+  date = seq(as.Date("2021-09-01", format="%Y-%m-%d"), as.Date("2022-04-30", format="%Y-%m-%d"), "weeks")
+)
+
+## Calculate number enrolled, cumulative next dose administration, and case counts over time
+for (i in 1:nrow(summary_df)) {
+  selected_date = summary_df$date[i]
+  summary_df$n_enrolled[i] = plyr::round_any(nrow(subset(d, (vax3_date-1)<=selected_date & stop_date>selected_date)), round_threshold)
+  summary_df$cumulative_nextvax[i] = plyr::round_any(sum(d$vax4_date<=selected_date, na.rm = TRUE), round_threshold)
+
+  if (i == 1) {
+    summary_df$n_cases[i] = plyr::round_any(sum(d$postvax_positive_test_date==selected_date, na.rm = TRUE), round_threshold)
+  } else {
+    previous_date = summary_df$date[i-1]
+    summary_df$n_cases[i] = plyr::round_any(sum(d$postvax_positive_test_date<=selected_date & d$postvax_positive_test_date>previous_date, na.rm = TRUE), round_threshold)
+  }
+}
+
+## Set non-zero values below redaction threshold to 0
+summary_df$n_enrolled[summary_df$date>as.Date("2022-04-21") | (summary_df$n_enrolled>0 & summary_df$n_enrolled<=redaction_threshold)] = NA
+summary_df$cumulative_nextvax[summary_df$date>as.Date("2022-04-21") | (summary_df$cumulative_nextvax>0 & summary_df$cumulative_nextvax<=redaction_threshold)] = NA
+summary_df$n_cases[summary_df$date>as.Date("2022-04-21") | (summary_df$n_cases>0 & summary_df$n_cases<=redaction_threshold)] = NA
+
+## Set variant
+summary_df$variant = "Delta"
+summary_df$variant[summary_df$date>as.Date("2021-12-15")] = "Omicron"
+
+## Generate plots
+g1 = ggplot(summary_df, aes(x=date, y=n_enrolled/1000)) + 
+    geom_bar(stat="identity", fill = palette1[1]) +
+    scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2021-09-01"), as.Date("2022-04-30")), 
+               breaks = c(as.Date("2021-09-01"), as.Date("2021-11-01"), as.Date("2022-01-01"), as.Date("2022-03-01"))) +
+    theme_bw() + xlab(" ") + ylab("N followed up\n(1000s)") + 
+    geom_vline(xintercept = as.Date(c("2021-09-01", "2022-04-21")), linetype="dotted", colour=palette1[3]) +
+    theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12))
+
+g2 = ggplot(summary_df, aes(x=date, y=n_cases, fill=variant)) + 
+    geom_bar(stat="identity") +
+    scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2021-09-01"), as.Date("2022-04-30")), 
+               breaks = c(as.Date("2021-09-01"), as.Date("2021-11-01"), as.Date("2022-01-01"), as.Date("2022-03-01"))) +
+    theme_bw() + xlab(" ") + ylab("N cases (weekly)") + 
+    geom_vline(xintercept = as.Date(c("2021-09-01", "2022-04-21")), linetype="dotted", colour=palette1[3]) +
+    scale_fill_manual(values = c(palette2[1], palette2[2])) +
+    labs(fill = "Major variant") +
+    theme(strip.background = element_blank(), strip.text = element_text(size=12),
+          legend.position = "right",
+          axis.text = element_text(size=12), axis.title = element_text(size=12),
+          legend.title = element_text(size=12), legend.text = element_text(size=12),
+          axis.title.y.left = element_text(size=12, margin = margin(t = 0, r = 8, b = 0, l = 0)))
+
+g3 = ggplot(summary_df, aes(x=date, y=cumulative_nextvax/1000)) + 
+    geom_line(colour =  palette1[3]) +
+    scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2021-09-01"), as.Date("2022-04-30")), 
+               breaks = c(as.Date("2021-09-01"), as.Date("2021-11-01"), as.Date("2022-01-01"), as.Date("2022-03-01"))) +
+    theme_bw() + xlab("Date") + ylab("Cumulative 4th dose\ncount (1000s)") + 
+    geom_vline(xintercept = as.Date(c("2021-09-01", "2022-04-21")), linetype="dotted", colour=palette1[3]) +
+    theme(strip.background = element_blank(), strip.text = element_text(size=12),
+           axis.text = element_text(size=12), axis.title = element_text(size=12),
+           legend.title = element_text(size=12), legend.text = element_text(size=12))
+
+plot_grid(g1, g2, g3, ncol=1, align="v", axis = "lr")
+```
+<br><br>
+
+#### Follow-up time by outcome (days)
+```{r}
+data.frame(
+  Quartile = c("25%", "Median", "75%")
+  ) %>% 
+  mutate(
+  `SARS-CoV-2 test` = plyr::round_any(quantile(d$tte_covid_postest_or_censor)[2:4], round_threshold),
+  `COVID-19 hosp.` = plyr::round_any(quantile(d$tte_covid_hosp_or_censor)[2:4], round_threshold),
+  `COVID-19 death` = plyr::round_any(quantile(d$tte_covid_death_or_censor)[2:4], round_threshold),
+  `Non-COVID-19 death` = plyr::round_any(quantile(d$tte_noncovid_death_or_censor)[2:4], round_threshold)
+  ) %>% 
+  gt()
+```
+<br>Quartiles are rounded to the nearest 5 as a precaution against small-number disclosures.<br><br>
+
+#### Uncensored at start of follow-up
+```{r}
+data.frame(
+  Day = c("Day 1")
+  ) %>% 
+  mutate(
+  `SARS-CoV-2 test` = plyr::round_any(sum(d$tte_covid_postest_or_censor>=1), round_threshold),
+  `COVID-19 hosp.` = plyr::round_any(sum(d$tte_covid_hosp_or_censor>=1), round_threshold),
+  `COVID-19 death` = plyr::round_any(sum(d$tte_covid_death_or_censor>=1), round_threshold),
+  `Non-COVID-19 death` = plyr::round_any(sum(d$tte_noncovid_death_or_censor>=1), round_threshold)
+  ) %>% 
+  gt()
+```
+<br><br>
+
+#### Uncensored at end of follow-up
+```{r}
+data.frame(
+  Day = c("Day 182")
+  ) %>% 
+  mutate(
+  `SARS-CoV-2 test` = plyr::round_any(sum(d$tte_covid_postest_or_censor==182), round_threshold),
+  `COVID-19 hosp.` = plyr::round_any(sum(d$tte_covid_hosp_or_censor==182), round_threshold),
+  `COVID-19 death` = plyr::round_any(sum(d$tte_covid_death_or_censor==182), round_threshold),
+  `Non-COVID-19 death` = plyr::round_any(sum(d$tte_noncovid_death_or_censor==182), round_threshold)
+  ) %>% 
+  gt()
+```
+<br>Frequencies are rounded to the nearest 5.<br><br>
+
+#### Variant breakdown in booster cohort
+```{r}
+## Subselect individuals followed up until case date
+d1 = subset(d, postvax_positive_test_date==stop_date)
+d1_Delta = subset(d, postvax_positive_test_date==stop_date & postvax_positive_test_date<as.Date("2021-12-15"))
+d1_Omicron = subset(d, postvax_positive_test_date==stop_date & postvax_positive_test_date>=as.Date("2021-12-15"))
+
+## Create variant dataframe to fill in
+collated = data.frame(
+  period = c(postvax_periods, paste0(postvaxcuts[1]+1,"-",lastfupday)),
+  period_start = c(postvaxcuts[1:4]+1,postvaxcuts[1]+1),
+  period_end = c(postvaxcuts[2:5], lastfupday)
+)
+
+## Calculate variant profile by period
+for (i in 1:nrow(collated)) {
+  collated$`Count, total`[i] = plyr::round_any(sum(d1$tte_stop>=collated$period_start[i] & 
+                                                  d1$tte_stop<=collated$period_end[i]), round_threshold)
+  collated$`Count, Delta`[i] = plyr::round_any(sum(d1_Delta$tte_stop>=collated$period_start[i] & 
+                                                  d1_Delta$tte_stop<=collated$period_end[i]), round_threshold)
+  collated$`Count, Omicron`[i] = plyr::round_any(sum(d1_Omicron$tte_stop>=collated$period_start[i] & 
+                                                    d1_Omicron$tte_stop<=collated$period_end[i]), round_threshold)
+}
+
+collated$`%, Omicron` = round(collated$`Count, Omicron`/collated$`Count, total`*100,1)
+collated %>% 
+  select(-c(period_start, period_end)) %>%
+  gt()
+```
+<br>Counts are rounded to the nearest 5 and percentages calculated from rounded counts.<br><br>

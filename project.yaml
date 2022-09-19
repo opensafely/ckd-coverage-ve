@@ -2116,6 +2116,14 @@ actions:
         csv1: output/tables/irr_hr_summary_VE_boost.csv
         csv2: output/tables/irr_hr_summary_VE_boost_subgroups.csv
 
+  ### summary of primary/booster VE analysis - follow-up time
+  follow_up_summary:
+    run: r:latest -e 'rmarkdown::render("analysis/VE/follow_up_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
+    needs: [data_selection_VE_primary, data_selection_VE_boost]
+    outputs:
+      moderately_sensitive:
+        html: output/markdown/follow_up_summary.html
+
   ### summary of primary/booster VE analysis
   cox_VE_combined_summary:
     run: r:latest -e 'rmarkdown::render("analysis/VE/cox_VE_combined_summary.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'

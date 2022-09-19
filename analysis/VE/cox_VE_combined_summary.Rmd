@@ -49,7 +49,6 @@ postvax_list <- read_rds(
 )
 postvaxcuts = postvax_list$postvaxcuts
 postvax_periods = postvax_list$postvax_periods
-period_length = postvaxcuts[2]-postvaxcuts[1]
 lastfupday = max(postvaxcuts)
 
 ## Read in booster cohort data for cumulative incidence curves
@@ -65,7 +64,6 @@ postvax_list_boost <- read_rds(
 )
 postvaxcuts_boost = postvax_list_boost$postvaxcuts
 postvax_periods_boost = postvax_list_boost$postvax_periods
-period_length_boost = postvaxcuts_boost[2]-postvaxcuts_boost[1]
 lastfupday_boost = max(postvaxcuts_boost)
 
 ## Set rounding threshold for calculation of KM steps
