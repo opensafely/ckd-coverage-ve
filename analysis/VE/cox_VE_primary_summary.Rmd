@@ -334,7 +334,7 @@ create_subgroup_table = function(selected_subgroup="CKD3") {
   ## Update column names
   table_irr$Subgroup = selected_subgroup
   table_irr <- table_irr %>%
-    filter(period == "15-182") %>%
+    filter(period == "1-182") %>%
     select(c(outcome_clean, Subgroup, 
            BNT_n, BNT_events, BNT_personyears, BNT_rate, BNT_n_matched, BNT_events_matched,
            AZ_n, AZ_events, AZ_personyears, AZ_rate, AZ_n_matched, AZ_events_matched,
@@ -359,7 +359,7 @@ create_subgroup_table = function(selected_subgroup="CKD3") {
       read_rds(here::here("output", "model","VE_primary", paste0("modelcox_tidy_reduced_unmatched_persontime_",outcome_list[5],"_",selected_subgroup,".rds"))) %>%
         mutate(outcome_clean = clean_list[5])
       ) %>% 
-      filter(model == 2, term == "15-182") %>%
+      filter(model == 2, term == "1-182") %>%
     select(c(outcome_clean, estimate, conf.low, conf.high))
 
   ## Remove redacted components from plot
