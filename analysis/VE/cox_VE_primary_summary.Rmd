@@ -117,7 +117,8 @@ table_1 <- rbind(
   read_rds(here::here("output", "tables", "table1_VE_primary_redacted_unmatched_CKD3.rds")) %>% mutate(subgroup = "CKD3", subgroup_id = 3),
   read_rds(here::here("output", "tables", "table1_VE_primary_redacted_unmatched_CKD4-5.rds")) %>% mutate(subgroup = "CKD4-5", subgroup_id = 4),
   read_rds(here::here("output", "tables", "table1_VE_primary_redacted_unmatched_RRT.rds")) %>% mutate(subgroup = "RRT (any)", subgroup_id = 5),
-  read_rds(here::here("output", "tables", "table1_VE_primary_redacted_unmatched_Tx.rds")) %>% mutate(subgroup = "RRT (Tx)", subgroup_id = 6)
+  read_rds(here::here("output", "tables", "table1_VE_primary_redacted_unmatched_Tx.rds")) %>% mutate(subgroup = "RRT (Tx)", subgroup_id = 6),
+  read_rds(here::here("output", "tables", "table1_VE_primary_redacted_unmatched_dialysis.rds")) %>% mutate(subgroup = "RRT (dialysis)", subgroup_id = 7)
 )
 
 table_1_wide = table_1 %>% 
@@ -153,6 +154,10 @@ table_1_wide %>%
     tab_spanner(
       label = "RRT (Tx) subgroup (unmatched)",
       columns = paste0(c("ChAdOx1-S", "BNT162b2")," [6]")
+    ) %>%
+    tab_spanner(
+      label = "RRT (dialysis) subgroup (unmatched)",
+      columns = paste0(c("ChAdOx1-S", "BNT162b2")," [7]")
     ) %>%
 
     tab_options(table.font.size = pct(70)) %>%
@@ -389,7 +394,8 @@ collate_subgroups = rbind(
   create_subgroup_table("CKD3"),
   create_subgroup_table("CKD4-5"),
   create_subgroup_table("RRT"),
-  create_subgroup_table("Tx")
+  create_subgroup_table("Tx"),
+  create_subgroup_table("dialysis")
 ) %>% arrange(outcome_clean)
 
 ## Save collated table
@@ -417,7 +423,7 @@ collate_subgroups %>%
 
 ```{r}
 ## Additional code to generate covariate model outputs
-dir.create(here::here("output", "model", "VE_primary_summary"), showWarnings = FALSE, recursive=TRUE)
+dir.create(here::here("output", "model", "summary"), showWarnings = FALSE, recursive=TRUE)
 cols_to_keep = c("label", "term", "variable", "estimate", "conf.low", "conf.high", "outcome_clean")
 outcome_list_sub = outcome_list[outcome_list!="covid_emergency"]
 
@@ -432,6 +438,7 @@ for (i in 1:length(outcome_list_sub)) {
   ckd4_5 <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_full_unmatched_persontime_{selected_outcome}_CKD4-5.csv"))) %>% filter(model==2) %>% mutate(label="CKD4-5")
   rrt_any <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_full_unmatched_persontime_{selected_outcome}_RRT.csv"))) %>% filter(model==2) %>% mutate(label="RRT (any)")
   rrt_tx <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_full_unmatched_persontime_{selected_outcome}_Tx.csv"))) %>% filter(model==2) %>% mutate(label="RRT (Tx)")
+  rrt_dialysis <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_full_unmatched_persontime_{selected_outcome}_dialysis.csv"))) %>% filter(model==2) %>% mutate(label="RRT (dialysis)")
   all_strata <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_strata_unmatched_persontime_{selected_outcome}_all.csv"))) %>% filter(model==2) %>% mutate(label="All - strata")
   all_ct_strata <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_strata_unmatched_calendartime_{selected_outcome}_all.csv"))) %>% filter(model==2) %>% mutate(label="All (CT) - strata")
 
@@ -442,6 +449,7 @@ for (i in 1:length(outcome_list_sub)) {
     ckd3[,cols_to_keep], 
     ckd4_5[,cols_to_keep], 
     rrt_tx[,cols_to_keep],
+    rrt_dialysis[,cols_to_keep],
     all_strata[,cols_to_keep],
     all_ct_strata[,cols_to_keep]
   ) %>%
@@ -456,7 +464,7 @@ for (i in 1:length(outcome_list_sub)) {
     mutate(outcome = selected_outcome, level = selected_level)
   
   ## Save
-  write_csv(merged_wide, here::here("output", "model", "VE_primary_summary", "covariate_summary_{selected_outcome}.csv"))
+  write_csv(merged_wide, here::here("output", "model", "summary", glue("VE_primary_covariate_estimates_{selected_outcome}.csv")))
 }
 ```
 .
