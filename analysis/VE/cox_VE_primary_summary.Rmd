@@ -461,7 +461,7 @@ for (i in 1:length(outcome_list_sub)) {
   merged_wide = merged %>%
     select(term, variable, label, HR) %>%
     pivot_wider(names_from = "label", values_from = "HR") %>%
-    mutate(outcome = selected_outcome, level = selected_level)
+    mutate(outcome = selected_outcome)
   
   ## Save
   write_csv(merged_wide, here::here("output", "model", "summary", glue("VE_primary_covariate_estimates_{selected_outcome}.csv")))
