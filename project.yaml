@@ -358,6 +358,16 @@ actions:
       moderately_sensitive:
         table: output/tables/table1_VE_primary_redacted_unmatched_Tx.html
         
+  # Table 1 (dialysis unmatched)
+  table_1_VE_dialysis_unmatched:
+    run: r:latest analysis/VE/table_1_VE.R unmatched dialysis primary
+    needs: [data_selection_VE_primary]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table1_VE_primary_redacted_unmatched_dialysis.rds
+      moderately_sensitive:
+        table: output/tables/table1_VE_primary_redacted_unmatched_dialysis.html
+        
   # Table 1 (all matched)
   table_1_VE_all_matched:
     run: r:latest analysis/VE/table_1_VE.R matched all primary
@@ -422,6 +432,16 @@ actions:
       moderately_sensitive:
         csv: output/tables/table_irr_primary_redacted_unmatched_Tx.csv
   
+  # Table IRR (dialysis unmatched)
+  table_irr_unmatched_dialysis:
+    run: r:latest analysis/VE/table_irr.R unmatched dialysis primary
+    needs: [data_selection_VE_primary]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_primary_redacted_unmatched_dialysis.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_primary_redacted_unmatched_dialysis.csv
+  
   # Table IRR (all matched)
   table_irr_matched_all:
     run: r:latest analysis/VE/table_irr.R matched all primary
@@ -471,7 +491,17 @@ actions:
         data: output/tables/table_irr_primary_redacted_matched_Tx.rds
       moderately_sensitive:
         csv: output/tables/table_irr_primary_redacted_matched_Tx.csv
-  
+ 
+  # Table IRR (dialysis matched)
+  table_irr_matched_dialysis:
+    run: r:latest analysis/VE/table_irr.R matched dialysis primary
+    needs: [data_selection_VE_primary]
+    outputs:
+      highly_sensitive:
+        data: output/tables/table_irr_primary_redacted_matched_dialysis.rds
+      moderately_sensitive:
+        csv: output/tables/table_irr_primary_redacted_matched_dialysis.csv
+        
   # Table IRR - verification (adapted from prior scripts)
   table_irr_verification:
     run: r:latest analysis/VE/table_irr_verification.R
@@ -651,6 +681,28 @@ actions:
         csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_Tx.csv
         logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_postest_Tx.txt
 
+  ### unmatched persontime dialysis
+  # preflight
+  cox_preflight_unmatched_persontime_covid_postest_VE_dialysis:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_postest dialysis primary
+    needs: [data_selection_VE_primary]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_covid_postest_dialysis.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_covid_postest_dialysis.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_covid_postest_dialysis.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_postest_VE_dialysis:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_postest dialysis primary
+    needs: [data_selection_VE_primary, table_irr_unmatched_dialysis, cox_preflight_unmatched_persontime_covid_postest_VE_dialysis]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_dialysis.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_postest_dialysis.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_postest_dialysis.txt
 
 
 ### OUTCOME #2: covid_hosp test
@@ -816,6 +868,28 @@ actions:
         csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_hosp_Tx.csv
         logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_hosp_Tx.txt
 
+  ### unmatched persontime dialysis
+  # preflight
+  cox_preflight_unmatched_persontime_covid_hosp_VE_dialysis:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_hosp dialysis primary
+    needs: [data_selection_VE_primary]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_covid_hosp_dialysis.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_covid_hosp_dialysis.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_covid_hosp_dialysis.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_hosp_VE_dialysis:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_hosp dialysis primary
+    needs: [data_selection_VE_primary, table_irr_unmatched_dialysis, cox_preflight_unmatched_persontime_covid_hosp_VE_dialysis]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_covid_hosp_dialysis.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_hosp_dialysis.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_hosp_dialysis.txt
 
 
 ### OUTCOME #3: covid_death test
@@ -981,6 +1055,28 @@ actions:
         csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_death_Tx.csv
         logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_death_Tx.txt
 
+  ### unmatched persontime dialysis
+  # preflight
+  cox_preflight_unmatched_persontime_covid_death_VE_dialysis:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime covid_death dialysis primary
+    needs: [data_selection_VE_primary]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_covid_death_dialysis.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_covid_death_dialysis.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_covid_death_dialysis.txt
+  
+  # model
+  cox_model_unmatched_persontime_covid_death_VE_dialysis:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime covid_death dialysis primary
+    needs: [data_selection_VE_primary, table_irr_unmatched_dialysis, cox_preflight_unmatched_persontime_covid_death_VE_dialysis]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_covid_death_dialysis.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_covid_death_dialysis.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_covid_death_dialysis.txt
 
 
 ### OUTCOME #4: noncovid_death test
@@ -1145,7 +1241,29 @@ actions:
       moderately_sensitive:
         csv: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_Tx.csv
         logs: output/model/VE_primary/log_cox_model_unmatched_persontime_noncovid_death_Tx.txt
-        
+ 
+  ### unmatched persontime dialysis
+  # preflight
+  cox_preflight_unmatched_persontime_noncovid_death_VE_dialysis:
+    run: r:latest analysis/VE/cox_preflight_VE.R unmatched persontime noncovid_death dialysis primary
+    needs: [data_selection_VE_primary]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/data*unmatched_persontime_noncovid_death_dialysis.rds
+        formulas: output/model/VE_primary/formulas*unmatched_persontime_noncovid_death_dialysis.rds
+      moderately_sensitive:
+        logs: output/model/VE_primary/log_cox_preflight_unmatched_persontime_noncovid_death_dialysis.txt
+  
+  # model
+  cox_model_unmatched_persontime_noncovid_death_VE_dialysis:
+    run: r:latest analysis/VE/cox_model_VE.R unmatched persontime noncovid_death dialysis primary
+    needs: [data_selection_VE_primary, table_irr_unmatched_dialysis, cox_preflight_unmatched_persontime_noncovid_death_VE_dialysis]
+    outputs:
+      highly_sensitive:
+        data: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_dialysis.rds
+      moderately_sensitive:
+        csv: output/model/VE_primary/modelcox*unmatched_persontime_noncovid_death_dialysis.csv
+        logs: output/model/VE_primary/log_cox_model_unmatched_persontime_noncovid_death_dialysis.txt
         
         
   ### summary of primary VE analysis
@@ -1158,17 +1276,20 @@ actions:
     - table_1_VE_CKD4_5_unmatched
     - table_1_VE_RRT_unmatched
     - table_1_VE_Tx_unmatched
+    - table_1_VE_dialysis_unmatched
     - table_1_VE_all_matched
     - table_irr_unmatched_all
     - table_irr_unmatched_CKD3
     - table_irr_unmatched_CKD4_5
     - table_irr_unmatched_RRT
     - table_irr_unmatched_Tx
+    - table_irr_unmatched_dialysis
     - table_irr_matched_all
     - table_irr_matched_CKD3
     - table_irr_matched_CKD4_5
     - table_irr_matched_RRT
     - table_irr_matched_Tx
+    - table_irr_matched_dialysis
     - cox_model_unmatched_persontime_covid_postest_VE_all
     - cox_model_matched_persontime_covid_postest_VE_all
     - cox_model_unmatched_calendartime_covid_postest_VE_all
@@ -1176,6 +1297,7 @@ actions:
     - cox_model_unmatched_persontime_covid_postest_VE_CKD4_5
     - cox_model_unmatched_persontime_covid_postest_VE_RRT
     - cox_model_unmatched_persontime_covid_postest_VE_Tx
+    - cox_model_unmatched_persontime_covid_postest_VE_dialysis
     - cox_model_unmatched_persontime_covid_hosp_VE_all
     - cox_model_matched_persontime_covid_hosp_VE_all
     - cox_model_unmatched_calendartime_covid_hosp_VE_all
@@ -1183,6 +1305,7 @@ actions:
     - cox_model_unmatched_persontime_covid_hosp_VE_CKD4_5
     - cox_model_unmatched_persontime_covid_hosp_VE_RRT
     - cox_model_unmatched_persontime_covid_hosp_VE_Tx
+    - cox_model_unmatched_persontime_covid_hosp_VE_dialysis
     - cox_model_unmatched_persontime_covid_death_VE_all
     - cox_model_matched_persontime_covid_death_VE_all
     - cox_model_unmatched_calendartime_covid_death_VE_all
@@ -1190,6 +1313,7 @@ actions:
     - cox_model_unmatched_persontime_covid_death_VE_CKD4_5
     - cox_model_unmatched_persontime_covid_death_VE_RRT
     - cox_model_unmatched_persontime_covid_death_VE_Tx
+    - cox_model_unmatched_persontime_covid_death_VE_dialysis
     - cox_model_unmatched_persontime_noncovid_death_VE_all
     - cox_model_matched_persontime_noncovid_death_VE_all
     - cox_model_unmatched_calendartime_noncovid_death_VE_all
@@ -1197,11 +1321,16 @@ actions:
     - cox_model_unmatched_persontime_noncovid_death_VE_CKD4_5
     - cox_model_unmatched_persontime_noncovid_death_VE_RRT
     - cox_model_unmatched_persontime_noncovid_death_VE_Tx
+    - cox_model_unmatched_persontime_noncovid_death_VE_dialysis
     outputs:
       moderately_sensitive:
         html: output/markdown/cox_VE_primary_summary.html
         csv1: output/tables/irr_hr_summary_VE_primary.csv
         csv2: output/tables/irr_hr_summary_VE_primary_subgroups.csv
+        csv3: output/model/VE_primary_summary/covariate_summary_covid_postest.csv
+        csv4: output/model/VE_primary_summary/covariate_summary_covid_hosp.csv
+        csv5: output/model/VE_primary_summary/covariate_summary_covid_death.csv
+        csv6: output/model/VE_primary_summary/covariate_summary_noncovid_death.csv
 
 
 

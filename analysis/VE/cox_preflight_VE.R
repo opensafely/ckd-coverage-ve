@@ -25,7 +25,7 @@ args <- commandArgs(trailingOnly=TRUE)
 # arg1: db = matched / unmatched
 # arg2: timescale = persontime / calendartime 
 # arg3: outcome = covid_postest / covid_emergency / covid_hosp / covid_death / noncovid_death
-# arg4: subset = all / CKD3 / CKD4-5 / RRT / Tx
+# arg4: subset = all / CKD3 / CKD4-5 / RRT / Tx / dialysis
 # arg5: vaccine = primary / boost
 
 if(length(args)==0){
@@ -86,6 +86,8 @@ if (subgroup=="all") {
   data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
 } else if (subgroup=="Tx") {
   data_cohort = subset(data_cohort, ckd_5cat == "RRT (Tx)")
+} else if (subgroup=="dialysis") {
+  data_cohort = subset(data_cohort, ckd_5cat == "RRT (dialysis)")
 } else {
   stop ("Arguments not specified correctly.")
 }
@@ -195,7 +197,7 @@ vars2_cat = c("sex", "ethnicity", "imd", "rural_urban_group",
               "prior_covid_cat", "prevax_tests_fixed_cat")
 
 ## Drop ckd_5cat category from subgroup analyses
-if (subgroup %in% c("CKD3", "CKD4-5", "RRT", "Tx")) {
+if (subgroup %in% c("CKD3", "CKD4-5", "RRT", "Tx", "dialysis")) {
   vars2_cat <- vars2_cat[!(vars2_cat %in% c("ckd_5cat"))]
 }
 

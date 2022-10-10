@@ -25,7 +25,7 @@ if(length(args)==0){
   vaccine = "primary"
 } else {
   matching_status = args[[1]] # can be unmatched or matched
-  subgroup = args[[2]] # can be all / CKD3 / CKD4-5 / RRT / Tx
+  subgroup = args[[2]] # can be all / CKD3 / CKD4-5 / RRT / Tx / dialysis
   vaccine = args[[3]] # can be primary or boost
 }
 
@@ -64,6 +64,8 @@ if (subgroup=="all") {
   data_cohort = subset(data_cohort, ckd_3cat == "RRT (any)")
 } else if (subgroup=="Tx") {
   data_cohort = subset(data_cohort, ckd_5cat == "RRT (Tx)")
+} else if (subgroup=="dialysis") {
+  data_cohort = subset(data_cohort, ckd_5cat == "RRT (dialysis)")
 } else {
   stop ("Arguments not specified correctly.")
 }

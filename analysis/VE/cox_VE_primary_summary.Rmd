@@ -414,4 +414,49 @@ collate_subgroups %>%
      ends_with("CI)") ~ px(200)
      )
 ```
+
+```{r}
+## Additional code to generate covariate model outputs
+dir.create(here::here("output", "model", "VE_primary_summary"), showWarnings = FALSE, recursive=TRUE)
+cols_to_keep = c("label", "term", "variable", "estimate", "conf.low", "conf.high", "outcome_clean")
+outcome_list_sub = outcome_list[outcome_list!="covid_emergency"]
+
+## Outer loop for outcome list
+for (i in 1:length(outcome_list_sub)) {
+  selected_outcome = outcome_list_sub[i]
+  
+  ## Read in full model outputs
+  all <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_full_unmatched_persontime_{selected_outcome}_all.csv"))) %>% filter(model==2) %>% mutate(label="All")
+  all_ct <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_full_unmatched_calendartime_{selected_outcome}_all.csv"))) %>% filter(model==2) %>% mutate(label="All (CT)")
+  ckd3 <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_full_unmatched_persontime_{selected_outcome}_CKD3.csv"))) %>% filter(model==2) %>% mutate(label="CKD3")
+  ckd4_5 <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_full_unmatched_persontime_{selected_outcome}_CKD4-5.csv"))) %>% filter(model==2) %>% mutate(label="CKD4-5")
+  rrt_any <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_full_unmatched_persontime_{selected_outcome}_RRT.csv"))) %>% filter(model==2) %>% mutate(label="RRT (any)")
+  rrt_tx <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_full_unmatched_persontime_{selected_outcome}_Tx.csv"))) %>% filter(model==2) %>% mutate(label="RRT (Tx)")
+  all_strata <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_strata_unmatched_persontime_{selected_outcome}_all.csv"))) %>% filter(model==2) %>% mutate(label="All - strata")
+  all_ct_strata <- read_csv(here::here("output", "model", "VE_primary", glue("modelcox_tidy_strata_unmatched_calendartime_{selected_outcome}_all.csv"))) %>% filter(model==2) %>% mutate(label="All (CT) - strata")
+
+  ## Collate 
+  merged = rbind(
+    all[,cols_to_keep], 
+    all_ct[,cols_to_keep], 
+    ckd3[,cols_to_keep], 
+    ckd4_5[,cols_to_keep], 
+    rrt_tx[,cols_to_keep],
+    all_strata[,cols_to_keep],
+    all_ct_strata[,cols_to_keep]
+  ) %>%
+    ## Calculate exponentiated HRs and CIs, then clean ref values
+    mutate(HR =  paste0(round(exp(estimate),2)," (",round(exp(conf.low),2),"-",round(exp(conf.high),2),")")) %>%
+    mutate(HR = ifelse(HR == "1 (NA-NA)", "1", HR))
+  
+  ## Pivot to wide format
+  merged_wide = merged %>%
+    select(term, variable, label, HR) %>%
+    pivot_wider(names_from = "label", values_from = "HR") %>%
+    mutate(outcome = selected_outcome, level = selected_level)
+  
+  ## Save
+  write_csv(merged_wide, here::here("output", "model", "VE_primary_summary", "covariate_summary_{selected_outcome}.csv"))
+}
+```
 .

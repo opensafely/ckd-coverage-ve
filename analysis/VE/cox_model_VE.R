@@ -22,7 +22,7 @@ args <- commandArgs(trailingOnly=TRUE)
 # arg1: db = matched / unmatched
 # arg2: timescale = persontime / calendartime
 # arg3: outcome = covid_postest / covid_emergency / covid_hosp / covid_death / noncovid_death
-# arg4: subset = all / CKD3 / CKD4-5 / RRT / Tx
+# arg4: subset = all / CKD3 / CKD4-5 / RRT / Tx / dialysis
 # arg5: vaccine = primary / boost
 
 if(length(args)==0){
