@@ -40,8 +40,9 @@ lastfupday = max(postvaxcuts)
 #### Primary vaccination cohort
 ```{r, fig.width=5, fig.height=6}
 ## Set palette
-palette1 = c("#fe9929", "#d95f0e", "#993404")
-palette2 = c("#018571", "#a6611a")
+#palette1 = c("#fe9929", "#d95f0e", "#993404") # oranges
+palette1 = c("#74a9cf", "#2b8cbe", "#045a8d") # blues
+palette2 = c("#fe9929", "#018571", "#a6611a")
 
 ## Read in data
 d <- read_rds(here::here("output", "data", "data_cohort_VE_primary.rds")) %>%
@@ -75,8 +76,10 @@ summary_df$cumulative_nextvax[summary_df$date>as.Date("2021-11-14") | (summary_d
 summary_df$n_cases[summary_df$date>as.Date("2021-11-14") | (summary_df$n_cases>0 & summary_df$n_cases<=redaction_threshold)] = NA
 
 ## Set variant
-summary_df$variant = "Delta"
+summary_df$variant = "Alpha"
+summary_df$variant[summary_df$date>as.Date("2021-06-04")] = "Delta"
 summary_df$variant[summary_df$date>as.Date("2021-12-15")] = "Omicron"
+summary_df$variant = factor(summary_df$variant, levels = c("Alpha", "Delta", "Omicron"))
 
 g1 = ggplot(summary_df, aes(x=date, y=n_enrolled/1000)) + 
     geom_bar(stat="identity", fill = palette1[1]) +
@@ -96,7 +99,7 @@ g2 = ggplot(summary_df, aes(x=date, y=n_cases, fill=variant)) +
                breaks = c(as.Date("2021-01-01"), as.Date("2021-04-01"), as.Date("2021-07-01"), as.Date("2021-10-01"))) +
     theme_bw() + xlab(" ") + ylab("N cases (weekly)") +
     geom_vline(xintercept = as.Date(c("2021-01-01", "2021-11-14")), linetype="dotted", colour=palette1[3]) +
-    scale_fill_manual(values = c(palette2[1], palette2[2])) +
+    scale_fill_manual(values = c("Alpha"=palette2[1], "Delta"=palette2[2], "Omicron"=palette2[3])) +
     labs(fill = "Major variant") +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
           legend.position = "right",
@@ -164,6 +167,37 @@ data.frame(
 ```
 <br>Frequencies are rounded to the nearest 5.<br><br>
 
+#### Variant breakdown in primary cohort
+```{r}
+## Subselect individuals followed up until case date
+d1 = subset(d, postvax_positive_test_date==stop_date)
+d1_Alpha = subset(d, postvax_positive_test_date==stop_date & postvax_positive_test_date<as.Date("2021-06-04"))
+d1_Delta = subset(d, postvax_positive_test_date==stop_date & postvax_positive_test_date>=as.Date("2021-06-04"))
+
+## Create variant dataframe to fill in
+collated = data.frame(
+  period = c(postvax_periods, paste0(postvaxcuts[1]+1,"-",lastfupday)),
+  period_start = c(postvaxcuts[1:4]+1,postvaxcuts[1]+1),
+  period_end = c(postvaxcuts[2:5], lastfupday)
+)
+
+## Calculate variant profile by period
+for (i in 1:nrow(collated)) {
+  collated$`Count, total`[i] = plyr::round_any(sum(d1$tte_stop>=collated$period_start[i] & 
+                                                  d1$tte_stop<=collated$period_end[i]), round_threshold)
+  collated$`Count, Alpha`[i] = plyr::round_any(sum(d1_Alpha$tte_stop>=collated$period_start[i] & 
+                                                  d1_Alpha$tte_stop<=collated$period_end[i]), round_threshold)
+  collated$`Count, Delta`[i] = plyr::round_any(sum(d1_Delta$tte_stop>=collated$period_start[i] & 
+                                                    d1_Delta$tte_stop<=collated$period_end[i]), round_threshold)
+}
+
+collated$`%, Delta` = round(collated$`Count, Delta`/collated$`Count, total`*100,1)
+collated %>% 
+  select(-c(period_start, period_end)) %>%
+  gt()
+```
+<br>Counts are rounded to the nearest 5 and percentages calculated from rounded counts.<br><br>
+
 #### Booster vaccination cohort
 ```{r, fig.width=5, fig.height=6}
 ## Set palette
@@ -201,8 +235,10 @@ summary_df$cumulative_nextvax[summary_df$date>as.Date("2022-04-21") | (summary_d
 summary_df$n_cases[summary_df$date>as.Date("2022-04-21") | (summary_df$n_cases>0 & summary_df$n_cases<=redaction_threshold)] = NA
 
 ## Set variant
-summary_df$variant = "Delta"
+summary_df$variant = "Alpha"
+summary_df$variant[summary_df$date>as.Date("2021-06-04")] = "Delta"
 summary_df$variant[summary_df$date>as.Date("2021-12-15")] = "Omicron"
+summary_df$variant = factor(summary_df$variant, levels = c("Alpha", "Delta", "Omicron"))
 
 ## Generate plots
 g1 = ggplot(summary_df, aes(x=date, y=n_enrolled/1000)) + 
@@ -216,14 +252,14 @@ g1 = ggplot(summary_df, aes(x=date, y=n_enrolled/1000)) +
            axis.text = element_text(size=12), axis.title = element_text(size=12),
            legend.title = element_text(size=12), legend.text = element_text(size=12))
 
-g2 = ggplot(summary_df, aes(x=date, y=n_cases, fill=variant)) + 
+g2 = ggplot(summary_df, aes(x=date, y=n_cases, fill=factor(variant))) + 
     geom_bar(stat="identity") +
     scale_x_date(labels = date_format("%m/%y"),
                limits = c(as.Date("2021-09-01"), as.Date("2022-04-30")), 
                breaks = c(as.Date("2021-09-01"), as.Date("2021-11-01"), as.Date("2022-01-01"), as.Date("2022-03-01"))) +
     theme_bw() + xlab(" ") + ylab("N cases (weekly)") + 
     geom_vline(xintercept = as.Date(c("2021-09-01", "2022-04-21")), linetype="dotted", colour=palette1[3]) +
-    scale_fill_manual(values = c(palette2[1], palette2[2])) +
+    scale_fill_manual(values = c("Alpha"=palette2[1], "Delta"=palette2[2], "Omicron"=palette2[3])) +
     labs(fill = "Major variant") +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
           legend.position = "right",
