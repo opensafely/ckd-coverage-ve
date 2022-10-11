@@ -449,6 +449,7 @@ for (i in 1:length(outcome_list_sub)) {
     all_ct[,cols_to_keep], 
     ckd3[,cols_to_keep], 
     ckd4_5[,cols_to_keep], 
+    rrt_any[,cols_to_keep],
     rrt_tx[,cols_to_keep],
     rrt_dialysis[,cols_to_keep],
     all_strata[,cols_to_keep],
