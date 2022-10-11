@@ -340,7 +340,7 @@ generate_km_plot = function(surv_data) {
       strip.text.y = element_text(size=15),   
       axis.title.y.left = element_text(size=15, margin = margin(t = 0, r = 10, b = 0, l = 0)),
       axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
-      axis.text = element_text(size=13),
+      axis.text = element_text(size=15),
       axis.title = element_text(size=15),
       legend.text = element_text(size=15),
       legend.title = element_text(size=15),
@@ -397,7 +397,7 @@ generate_km_contrast_plot = function(surv_contrast) {
       axis.title.y.left = element_text(size=15, margin = margin(t = 0, r = 10, b = 0, l = 0)),
       axis.title.y.right = element_text(size=15, margin = margin(t = 0, r = 0, b = 0, l = 20)),
       axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
-      axis.text = element_text(size=13),
+      axis.text = element_text(size=15),
       axis.title = element_text(size=15),
       legend.text = element_text(size=15),
       panel.border = element_blank(),
@@ -489,134 +489,134 @@ surv_combined = collate_rounded_km(data_tte_unmatched, data_tte_unmatched_boost)
 surv_contrasts = collate_km_contrasts(data_tte_unmatched, data_tte_unmatched_boost)
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb", rel_widths = c(1.3,1))
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 <br><br>
 
 ##### Whole population - matched
 
-```{r fig.width=14, fig.height=10}
+```{r fig.width=16, fig.height=10}
 surv_combined = collate_rounded_km(data_tte_matched, data_tte_matched_boost)
 surv_contrasts = collate_km_contrasts(data_tte_matched, data_tte_matched_boost)
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb")
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 <br><br>
 
 ##### CKD3 - unmatched
 
-```{r fig.width=14, fig.height=10}
+```{r fig.width=16, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="CKD3"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD3"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="CKD3"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD3"))
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb")
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 <br><br>
 
 ##### CKD3 - matched
 
-```{r fig.width=14, fig.height=10}
+```{r fig.width=16, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="CKD3"), subset(data_tte_matched_boost, ckd_3cat=="CKD3"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="CKD3"), subset(data_tte_matched_boost, ckd_3cat=="CKD3"))
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb")
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 <br><br>
 
 ##### CKD4-5 - unmatched
 
-```{r fig.width=14, fig.height=10}
+```{r fig.width=16, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="CKD4-5"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD4-5"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="CKD4-5"), subset(data_tte_unmatched_boost, ckd_3cat=="CKD4-5"))
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb")
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 <br><br>
 
 ##### CKD4-5 - matched
 
-```{r fig.width=14, fig.height=10}
+```{r fig.width=16, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="CKD4-5"), subset(data_tte_matched_boost, ckd_3cat=="CKD4-5"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="CKD4-5"), subset(data_tte_matched_boost, ckd_3cat=="CKD4-5"))
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb")
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 <br><br>
 
 ##### RRT (any) - unmatched
 
-```{r fig.width=14, fig.height=10}
+```{r fig.width=16, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_3cat=="RRT (any)"), subset(data_tte_unmatched_boost, ckd_3cat=="RRT (any)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_3cat=="RRT (any)"), subset(data_tte_unmatched_boost, ckd_3cat=="RRT (any)"))
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb")
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 <br><br>
 
 ##### RRT (any) - matched
 
-```{r fig.width=14, fig.height=10}
+```{r fig.width=16, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_3cat=="RRT (any)"), subset(data_tte_matched_boost, ckd_3cat=="RRT (any)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_3cat=="RRT (any)"), subset(data_tte_matched_boost, ckd_3cat=="RRT (any)"))
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb")
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 <br><br>
 
 ##### RRT (Tx) - unmatched
 
-```{r fig.width=14, fig.height=10}
+```{r fig.width=16, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_5cat=="RRT (Tx)"), subset(data_tte_unmatched_boost, ckd_5cat=="RRT (Tx)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_5cat=="RRT (Tx)"), subset(data_tte_unmatched_boost, ckd_5cat=="RRT (Tx)"))
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb")
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 <br><br>
 
 ##### RRT (Tx) - matched
 
-```{r fig.width=14, fig.height=10}
+```{r fig.width=16, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_5cat=="RRT (Tx)"), subset(data_tte_matched_boost, ckd_5cat=="RRT (Tx)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_5cat=="RRT (Tx)"), subset(data_tte_matched_boost, ckd_5cat=="RRT (Tx)"))
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb")
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 <br><br>
 
 ##### RRT (dialysis) - unmatched
 
-```{r fig.width=14, fig.height=10}
+```{r fig.width=16, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_unmatched, ckd_5cat=="RRT (dialysis)"), subset(data_tte_unmatched_boost, ckd_5cat=="RRT (dialysis)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_unmatched, ckd_5cat=="RRT (dialysis)"), subset(data_tte_unmatched_boost, ckd_5cat=="RRT (dialysis)"))
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb")
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 <br><br>
 
 ##### RRT (dialysis) - matched
 
-```{r fig.width=14, fig.height=10}
+```{r fig.width=16, fig.height=10}
 surv_combined = collate_rounded_km(subset(data_tte_matched, ckd_5cat=="RRT (dialysis)"), subset(data_tte_matched_boost, ckd_5cat=="RRT (dialysis)"))
 surv_contrasts = collate_km_contrasts(subset(data_tte_matched, ckd_5cat=="RRT (dialysis)"), subset(data_tte_matched_boost, ckd_5cat=="RRT (dialysis)"))
 plot_grid(generate_km_plot(surv_combined), 
           generate_km_contrast_plot(surv_contrasts),
-          ncol=2, align = "h", axis = "tb")
+          ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 
 #### Hazard ratios - whole population
 See *cox_VE_primary_summary.html* and *cox_VE_boost_summary.html* for tabulated values.
 
-```{r fig.width=14, fig.height=9}
+```{r fig.width=13, fig.height=9}
 ## Read in primary model outputs
 primary <- read_csv(here::here("output", "tables", "irr_hr_summary_VE_primary.csv")) %>%
   pivot_longer(c(starts_with("Person-time"), starts_with("Calendar-time"), starts_with("Matched")), 
@@ -682,7 +682,7 @@ ggplot(data = d) +
   theme(
     strip.text.x = element_text(size=15), 
     strip.text.y = element_text(size=15), 
-    axis.text = element_text(size=13),
+    axis.text = element_text(size=15),
     axis.title.y.left = element_text(size=15, margin = margin(t = 0, r = 10, b = 0, l = 0)),
     axis.title.y.right = element_text(size=15, margin = margin(t = 0, r = 0, b = 0, l = 20)),
     axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
