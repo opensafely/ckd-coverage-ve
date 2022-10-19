@@ -507,11 +507,14 @@ if (db == "unmatched") {
     ## Merge levels in stratified dataset
     data_cox_strata_merged <- data_cox_strata_keep %>%
       select(-all_of(vars2_cat)) %>%
-      ## Join merged variables
-      left_join(
-        data_cox_full_merged %>% select(patient_id, any_of(vars2_cat)),
-        by = "patient_id"
+      # Join merged variables
+      bind_cols(
+        lapply(
+          vars2_cat, 
+          function(x) data_cox_full %>% merge_levels(var = x)
         )
+      )
+    logoutput(merge_summary(data_cox_full_merged))
   }
   ## Set formula updates for calendar time vs person time models
   if (timescale == "persontime") {
