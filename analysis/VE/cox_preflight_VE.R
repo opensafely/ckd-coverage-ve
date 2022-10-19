@@ -332,8 +332,7 @@ if (!full) {
   ## Stop the script if too few events to model
   error_message = "Too few outcome events to model."
   logoutput(error_message)
-  ## Wrap in try() to avoid the job from exiting with error code 1
-  try(stop(error_message))
+  stop(error_message)
 }
 
 ## Specify stratified dataset
@@ -379,7 +378,7 @@ if (!strata) {
 ####################################################### 
 
 ## Function to merge or drop variable levels if <=2 events in either category of expo 
-merge_levels <- function(.data, var, strata=FALSE) {
+merge_levels <- function(.data, var) {
   
   ## If var not already factor, convert to factor
   .data <- .data %>% mutate(across(all_of(var), as.factor))
@@ -401,12 +400,9 @@ merge_levels <- function(.data, var, strata=FALSE) {
     new_levs <- old_levs
   }
   
-  ## Define group_vars
-  if (strata) group_vars <- c(expo, vars0) else group_vars <- expo
-  
   data <- .data %>%
     ## Select only the necessary variables
-    select(all_of(c(group_vars, var, "ind_outcome"))) %>%
+    select(all_of(c(expo, var, "ind_outcome"))) %>%
     ## Reorder factor according to event frequency
     mutate(across(all_of(var), 
                   ~factor(as.character(.x), levels = new_levs)))
@@ -415,7 +411,7 @@ merge_levels <- function(.data, var, strata=FALSE) {
     
     data %>%
       filter(ind_outcome) %>%
-      group_by(across(all_of(c(group_vars, var)))) %>%
+      group_by(across(all_of(c(expo, var)))) %>%
       count() %>%
       ungroup() %>%
       summarise(min_n=min(n)) %>%
@@ -512,15 +508,11 @@ if (db == "unmatched") {
     data_cox_strata_merged <- data_cox_strata_keep %>%
       select(-all_of(vars2_cat)) %>%
       ## Join merged variables
-      bind_cols(
-        lapply(
-          vars2_cat, 
-          function(x) data_cox_strata_keep %>% merge_levels(var = x, strata = TRUE)
+      left_join(
+        data_cox_full_merged %>% select(patient_id, any_of(vars2_cat)),
+        by = "patient_id"
         )
-      )
-    logoutput(merge_summary(data_cox_strata_merged))
   }
-  
   ## Set formula updates for calendar time vs person time models
   if (timescale == "persontime") {
     formula1_update <- as.formula(". ~ . + strata(region) + ns(vax_day, 3)")
