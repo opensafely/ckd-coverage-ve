@@ -514,7 +514,7 @@ if (db == "unmatched") {
           function(x) data_cox_strata_keep %>% merge_levels(var = x)
         )
       )
-    logoutput(merge_summary(data_cox_strata_keep))
+    logoutput(merge_summary(data_cox_strata_merged))
   }
   ## Set formula updates for calendar time vs person time models
   if (timescale == "persontime") {
