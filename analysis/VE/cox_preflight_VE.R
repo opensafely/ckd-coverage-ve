@@ -511,10 +511,10 @@ if (db == "unmatched") {
       bind_cols(
         lapply(
           vars2_cat, 
-          function(x) data_cox_full %>% merge_levels(var = x)
+          function(x) data_cox_strata_keep %>% merge_levels(var = x)
         )
       )
-    logoutput(merge_summary(data_cox_full_merged))
+    logoutput(merge_summary(data_cox_strata_keep))
   }
   ## Set formula updates for calendar time vs person time models
   if (timescale == "persontime") {
