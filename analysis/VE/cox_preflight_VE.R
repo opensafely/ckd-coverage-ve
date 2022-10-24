@@ -515,7 +515,8 @@ if (db == "unmatched") {
       bind_cols(
         lapply(
           vars2_cat, 
-          function(x) data_cox_strata_keep %>% merge_levels(var = x, strata = TRUE)
+          # set strata=FALSE so that vars0="timesincevax_pw" not included in grouping vars
+          function(x) data_cox_strata_keep %>% merge_levels(var = x, strata = FALSE)
         )
       )
     logoutput(merge_summary(data_cox_strata_merged))
