@@ -33,7 +33,9 @@ first_dose_min = as_date("2021-01-04")
 third_dose_min = as_date("2021-09-01")
 
 ## Set analysis end date
-data_processed$end_date = as_date("2022-04-21")
+# 2 months after launch of spring 2022 booster campaign 
+# https://www.england.nhs.uk/2022/03/nhs-covid-19-vaccine-programme-delivers-first-spring-boosters/
+data_processed$end_date = as_date("2022-05-21") 
 
 ## Set and store outcomes list
 outcomes_list <- list(

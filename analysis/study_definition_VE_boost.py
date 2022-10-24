@@ -19,7 +19,7 @@ from codelists import *
 
 ### Set initial date parameters
 start_date = "2021-09-01" # date of third primary dose eligibility in immunosuppressed
-end_date = "2022-04-30" # 2 months (rounded up) after launch of spring booster campaign (21-02-2022)
+end_date = "2022-05-31" # 2 months (rounded up) after launch of spring booster campaign (21-03-2022)
 # if end_date updated, also update return_expectations in defined variables for consistency
 
 study = StudyDefinition(
@@ -398,7 +398,7 @@ study = StudyDefinition(
     returning = "date_of_death",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-05-31"},
       "rate": "uniform",
       "incidence": 0.05
     },
@@ -1168,7 +1168,7 @@ study = StudyDefinition(
     returning = "date",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-05-31"},
       "rate": "uniform",
       "incidence": 0.4,
     },
@@ -1182,7 +1182,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-05-31"},
       "rate": "uniform",
       "incidence": 0.2,
     },
@@ -1197,7 +1197,7 @@ study = StudyDefinition(
     date_format = "YYYY-MM-DD",
     find_first_match_in_period = True,
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-05-31"},
       "rate": "uniform",
       "incidence": 0.2,
     },
@@ -1210,7 +1210,7 @@ study = StudyDefinition(
     between=["covid_vax_date_3",end_date],
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-05-31"},
       "rate": "uniform",
       "incidence": 0.1
     },
@@ -1226,7 +1226,7 @@ study = StudyDefinition(
     returning = "date",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2021-09-01", "latest" : "2022-04-30"},
+      "date": {"earliest": "2021-09-01", "latest" : "2022-05-31"},
       "rate": "uniform",
       "incidence": 0.5,
     },

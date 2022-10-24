@@ -19,7 +19,7 @@ from codelists import *
 
 ### Set initial date parameters
 start_date = "2021-01-04" # date of first ChAdOx1-S doses
-end_date = "2021-11-30" # 2 months (rounded up) after launch of fall booster campaign (14-09-2021)
+end_date = "2021-11-30" # 2 months (rounded up) after launch of fall booster campaign (16-09-2021)
 # if end_date updated, also update return_expectations in defined variables for consistency
 
 study = StudyDefinition(
