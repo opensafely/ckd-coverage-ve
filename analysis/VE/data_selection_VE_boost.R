@@ -36,6 +36,7 @@ third_dose_min = as_date("2021-09-01")
 # 2 months after launch of spring 2022 booster campaign 
 # https://www.england.nhs.uk/2022/03/nhs-covid-19-vaccine-programme-delivers-first-spring-boosters/
 data_processed$end_date = as_date("2022-05-21") 
+data_processed$end_date_testing = as_date("2022-03-31") 
 
 ## Set and store outcomes list
 outcomes_list <- list(
@@ -74,10 +75,15 @@ data_processed <- data_processed %>%
     tte_censor = tte(vax3_date - 1, censor_date, censor_date),
     ind_censor = dplyr::if_else((censor_date>censor_date) | is.na(censor_date), FALSE, TRUE),
     
+    # set censor date for testing (last follow-up day, end date, deregistration, death, 4th dose)
+    censor_date_testing = pmin(vax3_date - 1 + lastfupday, end_date_testing, dereg_date, death_date, vax4_date, na.rm=TRUE),
+    tte_censor_testing = tte(vax3_date - 1, censor_date, censor_date),
+    ind_censor_testing = dplyr::if_else((censor_date>censor_date) | is.na(censor_date), FALSE, TRUE),
+    
     # time to positive test
-    tte_covid_postest = tte(vax3_date - 1, postvax_positive_test_date, censor_date, na.censor=TRUE),
-    tte_covid_postest_or_censor = tte(vax3_date - 1, postvax_positive_test_date, censor_date, na.censor=FALSE),
-    ind_covid_postest = dplyr::if_else((postvax_positive_test_date>censor_date) | is.na(postvax_positive_test_date), FALSE, TRUE),
+    tte_covid_postest = tte(vax3_date - 1, postvax_positive_test_date, censor_date_testing, na.censor=TRUE),
+    tte_covid_postest_or_censor = tte(vax3_date - 1, postvax_positive_test_date, censor_date_testing, na.censor=FALSE),
+    ind_covid_postest = dplyr::if_else((postvax_positive_test_date>censor_date_testing) | is.na(postvax_positive_test_date), FALSE, TRUE),
     
     # time to COVID-19 A&E attendance
     tte_covid_emergency = tte(vax3_date - 1, postvax_covid_emergency_date, censor_date, na.censor=TRUE),
@@ -100,8 +106,9 @@ data_processed <- data_processed %>%
     ind_noncovid_death = dplyr::if_else((noncoviddeath_date>censor_date) | is.na(noncoviddeath_date), FALSE, TRUE),
 
     # time dose 3 to cut-off
-    tte_dose3_to_cutoff = as.numeric(date(end_date)-date(vax3_date-1))
-    )
+    tte_dose3_to_cutoff = as.numeric(date(end_date)-date(vax3_date-1)),
+    tte_dose3_to_cutoff_testing = as.numeric(date(end_date_testing)-date(vax3_date-1))
+  )
 
 ###################################
 ### Unmatched data selection

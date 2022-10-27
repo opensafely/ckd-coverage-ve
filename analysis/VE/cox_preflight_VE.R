@@ -130,6 +130,13 @@ outcome_index = which(outcomes_list$short_name == selected_outcome)
 selected_outcome_clean = outcomes_list$clean_name[outcome_index]
 selected_outcome_date_name = outcomes_list$date_name[outcome_index]
 
+## Update censor date variables for testing outcome
+if (selected_outcome == "covid_postest") {
+  data_cohort$censor_date = data_cohort$censor_date_testing
+  data_cohort$tte_censor = data_cohort$tte_censor_testing
+  data_cohort$ind_censor = data_cohort$ind_censor_testing
+}
+
 ## Create log file
 cat(
   glue("## Script info for cox preflight ##"), 
