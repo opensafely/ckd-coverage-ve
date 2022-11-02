@@ -155,7 +155,7 @@ data_criteria <- data_processed %>%
     noncoviddeath_date_check = is.na(noncoviddeath_date) | noncoviddeath_date>=vax3_date,
     
     # Not censored pre dose 3
-    isnot_censored_early = tte_censor>0 | is.na(tte_censor),
+    isnot_censored_early = (tte_censor>0 | is.na(tte_censor)) & (tte_censor_testing>0 | is.na(tte_censor_testing)),
     
     # No COVID in window spanning dose 1 to dose 3
     nointervax_covid = intervax_covid_cat==0,
