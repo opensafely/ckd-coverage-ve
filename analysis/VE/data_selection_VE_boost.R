@@ -77,8 +77,8 @@ data_processed <- data_processed %>%
     
     # set censor date for testing (last follow-up day, end date, deregistration, death, 4th dose)
     censor_date_testing = pmin(vax3_date - 1 + lastfupday, end_date_testing, dereg_date, death_date, vax4_date, na.rm=TRUE),
-    tte_censor_testing = tte(vax3_date - 1, censor_date, censor_date),
-    ind_censor_testing = dplyr::if_else((censor_date>censor_date) | is.na(censor_date), FALSE, TRUE),
+    tte_censor_testing = tte(vax3_date - 1, censor_date_testing, censor_date),
+    ind_censor_testing = dplyr::if_else((censor_date_testing>censor_date_testing) | is.na(censor_date_testing), FALSE, TRUE),
     
     # time to positive test
     tte_covid_postest = tte(vax3_date - 1, postvax_positive_test_date, censor_date_testing, na.censor=TRUE),
