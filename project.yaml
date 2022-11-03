@@ -302,7 +302,7 @@ actions:
     needs: [data_selection_VE_primary]
     outputs:
       moderately_sensitive:
-        cohort: output/data_properties/data_selected_VE_primary*.txt
+        cohort: output/data_properties/data_cohort_VE_primary*.txt
         
 # Descriptive plots of vaccination profile
   vax_dates_VE:
@@ -1368,7 +1368,7 @@ actions:
     needs: [data_selection_VE_boost]
     outputs:
       moderately_sensitive:
-        cohort: output/data_properties/data_selected_VE_boost*.txt
+        cohort: output/data_properties/data_cohort_VE_boost*.txt
         
 #############################
 ### VE table 1 - all, CKD3, CKD4-5, RRT - matched,unmatched
