@@ -31,7 +31,7 @@ data_processed <- read_rds(here::here("output", "data", "data_processed_VE_boost
 ## Vaccine initiation dates
 first_dose_min = as_date("2021-01-04")
 third_dose_min = as_date("2021-09-01")
-third_dose_max = as_date("2021-02-28") # ensures at least 1 month of follow-up for all outcomes
+third_dose_max = as_date("2022-03-01") # ensures at least 30 days of follow-up for all outcomes
 
 ## Set analysis end date
 # 2 months after launch of spring 2022 booster campaign 
