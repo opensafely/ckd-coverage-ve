@@ -31,6 +31,7 @@ data_processed <- read_rds(here::here("output", "data", "data_processed_VE_boost
 ## Vaccine initiation dates
 first_dose_min = as_date("2021-01-04")
 third_dose_min = as_date("2021-09-01")
+third_dose_max = as_date("2021-02-28") # ensures at least 1 month of follow-up for all outcomes
 
 ## Set analysis end date
 # 2 months after launch of spring 2022 booster campaign 
@@ -136,7 +137,7 @@ data_criteria <- data_processed %>%
     
     # Vaccine profile
     vax_homol_heterol_pfi = (!is.na(vax123_type)) & (vax123_type=="az-az-pfizer" | vax123_type=="pfizer-pfizer-pfizer"),
-    vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_dose_min & (!is.na(vax3_date)) & vax3_date>=third_dose_min,
+    vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_dose_min & (!is.na(vax3_date)) & vax3_date>=third_dose_min & vax3_date<=third_dose_max,
     vax_interval_valid_1_2 = (!is.na(tbv1_2)) & tbv1_2>=(8*7) & tbv1_2<=(14*7),
     vax_interval_valid_2_3 = (!is.na(tbv2_3)) & tbv2_3>=(12*7),
     

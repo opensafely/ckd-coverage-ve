@@ -30,6 +30,7 @@ data_processed <- read_rds(here::here("output", "data", "data_processed_VE_prima
 
 ## Vaccine initiation dates
 first_dose_min = as_date("2021-01-04") # AZ in use from 04/01/2022, but JCVI 3 eligibility from 18/01/2022 (https://www.bbc.co.uk/news/uk-55698132)
+second_dose_max = as_date("2021-10-16") # ensures at least 1 month of follow-up
 
 ## Set analysis end date
 # 2 months after launch of spring 2022 booster campaign 
@@ -128,7 +129,7 @@ data_criteria <- data_processed %>%
     
     # Vaccine profile
     vax_pfi_az = (!is.na(vax12_type)) & (vax12_type=="az-az" | vax12_type=="pfizer-pfizer"),
-    vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_dose_min,
+    vax_date_valid = (!is.na(vax1_date)) & vax1_date>=first_dose_min & !is.na(vax2_date) & vax2_date<=second_dose_max,
     vax_interval_valid = (!is.na(tbv1_2)) & tbv1_2>=(8*7) & tbv1_2<=(14*7),
     
     # Population exclusions
@@ -145,7 +146,7 @@ data_criteria <- data_processed %>%
     noncoviddeath_date_check = is.na(noncoviddeath_date) | noncoviddeath_date>=vax2_date,
     
     # Not censored pre dose 2
-    isnot_censored_early = tte_censor>0 | is.na(tte_censor),
+    isnot_censored_early = tte_censor>0 & !is.na(tte_censor),
     
     # No COVID in window spanning 90 days pre dose 1
     noprevax_covid = prevax_covid_cat==0,
