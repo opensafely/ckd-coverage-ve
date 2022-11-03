@@ -296,6 +296,14 @@ actions:
         csv1: output/tables/flowchart_VE_primary.csv
         csv2: output/tables/flowchart_VE_primary_matched.csv
 
+  # Data properties (selected) - primary VE ----
+  data_properties_selected_VE_primary:
+    run: r:latest analysis/data_properties.R output/data/data_cohort_VE_primary.rds output/data_properties
+    needs: [data_selection_VE_primary]
+    outputs:
+      moderately_sensitive:
+        cohort: output/data_properties/data_selected_VE_primary*.txt
+        
 # Descriptive plots of vaccination profile
   vax_dates_VE:
     run: r:latest -e 'rmarkdown::render("analysis/VE/vax_dates_VE.Rmd", knit_root_dir = "/workspace", output_dir="/workspace/output/markdown/")'
@@ -1353,6 +1361,14 @@ actions:
       moderately_sensitive:
         csv1: output/tables/flowchart_VE_boost.csv
         csv2: output/tables/flowchart_VE_boost_matched.csv
+
+  # Data properties (selected) - booster VE ----
+  data_properties_selected_VE_boost:
+    run: r:latest analysis/data_properties.R output/data/data_cohort_VE_boost.rds output/data_properties
+    needs: [data_selection_VE_boost]
+    outputs:
+      moderately_sensitive:
+        cohort: output/data_properties/data_selected_VE_boost*.txt
         
 #############################
 ### VE table 1 - all, CKD3, CKD4-5, RRT - matched,unmatched
