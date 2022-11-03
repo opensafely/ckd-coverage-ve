@@ -41,7 +41,7 @@ data_processed$end_date_testing = as_date("2022-03-31")
 ## Set and store outcomes list
 outcomes_list <- list(
   short_name = c("covid_postest", "covid_emergency", "covid_hosp", "covid_death", "noncovid_death"),
-clean_name = c("Positive SARS-CoV-2 test", "COVID-19-related A&E admission", "COVID-19-related hospitalisation", "COVID-19-related death", "Non-COVID-19 death"),
+  clean_name = c("Positive SARS-CoV-2 test", "COVID-19-related A&E admission", "COVID-19-related hospitalisation", "COVID-19-related death", "Non-COVID-19 death"),
   short_name = c("SARS-CoV-2+", "COVID-19 A&E", "COVID-19 hosp.", "COVID-19 death", "Non-COVID-19 death"),
   date_name = c("postvax_positive_test_date", "postvax_covid_emergency_date", "postvax_covid_hospitalisation_date", "postvax_covid_death_date", "noncoviddeath_date")
 )
@@ -155,7 +155,7 @@ data_criteria <- data_processed %>%
     noncoviddeath_date_check = is.na(noncoviddeath_date) | noncoviddeath_date>=vax3_date,
     
     # Not censored pre dose 3
-    isnot_censored_early = (tte_censor>0 | is.na(tte_censor)) & (tte_censor_testing>0 | is.na(tte_censor_testing)),
+    isnot_censored_early = (tte_censor>0 & !is.na(tte_censor) & tte_censor_testing>0 & !is.na(tte_censor_testing)),
     
     # No COVID in window spanning dose 1 to dose 3
     nointervax_covid = intervax_covid_cat==0,
