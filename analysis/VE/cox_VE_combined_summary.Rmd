@@ -325,7 +325,7 @@ generate_km_plot = function(surv_data) {
     facet_grid(outcome_clean~dose, scales="free", space="free_x", switch="y") +
     geom_rect(aes(xmin=lagtime, xmax=time, ymin=(1-surv.ll)*1000, ymax=(1-surv.ul)*1000), alpha=0.1, colour="transparent") +
     scale_x_continuous(breaks=postvaxcuts, expand = c(0, 0)) +
-    scale_y_continuous(expand = expansion(mult=c(0,0.01))) +
+    scale_y_continuous(expand = expansion(mult=c(0,0.02))) +
     labs(
       x="Time since vaccination (days)",
       y = "Cumulative incidence per 1000",
@@ -493,6 +493,27 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 <br><br>
 
+##### Whole population - modified for publication - 0.05
+```{r fig.width=12, fig.height=10}
+generate_km_plot(surv_combined) + 
+  scale_y_continuous(expand = expansion(mult=c(0,0.05))) +
+  theme(legend.position = "right")
+```
+
+##### Whole population - modified for publication - 0.1
+```{r fig.width=12, fig.height=10}
+generate_km_plot(surv_combined) + 
+  scale_y_continuous(expand = expansion(mult=c(0,0.1))) +
+  theme(legend.position = "right")
+```
+
+##### Whole population - modified for publication - 0.15
+```{r fig.width=12, fig.height=10}
+generate_km_plot(surv_combined) + 
+  scale_y_continuous(expand = expansion(mult=c(0,0.15))) +
+  theme(legend.position = "right")
+```
+
 ##### Whole population - matched
 
 ```{r fig.width=16, fig.height=10}
@@ -503,25 +524,28 @@ plot_grid(generate_km_plot(surv_combined),
           ncol=2, align = "h", axis = "tb", rel_widths = c(1.2,1))
 ```
 
-##### Whole population - modified for publication
+<br><br>
+
+##### Matched population - modified for publication - 0.05
 ```{r fig.width=12, fig.height=10}
-set_breaks <- function(x) { 
-  if (max(x)<1) { seq(0, 1, 0.25) } 
-  else if (max(x)>1 & max(x)<10) { seq(0, 10, 2.5) }
-  else { seq(0, 100, 25) }
-}
-
-set_limits <- function(x) { 
-  if (max(x)<1) { c(0,1) } 
-  else if (max(x)>1 & max(x)<10) { c(0,10) }
-  else { c(0,100) }
-}
-
 generate_km_plot(surv_combined) + 
-  scale_y_continuous(expand = expansion(mult=c(0,0.01)), breaks = set_breaks, limits = set_limits) +
+  scale_y_continuous(expand = expansion(mult=c(0,0.05))) +
   theme(legend.position = "right")
 ```
-<br><br>
+
+##### Matched population - modified for publication - 0.1
+```{r fig.width=12, fig.height=10}
+generate_km_plot(surv_combined) + 
+  scale_y_continuous(expand = expansion(mult=c(0,0.1))) +
+  theme(legend.position = "right")
+```
+
+##### Matched population - modified for publication - 0.15
+```{r fig.width=12, fig.height=10}
+generate_km_plot(surv_combined) + 
+  scale_y_continuous(expand = expansion(mult=c(0,0.15))) +
+  theme(legend.position = "right")
+```
 
 ##### CKD3 - unmatched
 
