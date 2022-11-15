@@ -493,27 +493,6 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 <br><br>
 
-##### Whole population - modified for publication - 0.05
-```{r fig.width=12, fig.height=10}
-generate_km_plot(surv_combined) + 
-  scale_y_continuous(expand = expansion(mult=c(0,0.05))) +
-  theme(legend.position = "right")
-```
-
-##### Whole population - modified for publication - 0.1
-```{r fig.width=12, fig.height=10}
-generate_km_plot(surv_combined) + 
-  scale_y_continuous(expand = expansion(mult=c(0,0.1))) +
-  theme(legend.position = "right")
-```
-
-##### Whole population - modified for publication - 0.15
-```{r fig.width=12, fig.height=10}
-generate_km_plot(surv_combined) + 
-  scale_y_continuous(expand = expansion(mult=c(0,0.15))) +
-  theme(legend.position = "right")
-```
-
 ##### Whole population - matched
 
 ```{r fig.width=16, fig.height=10}
@@ -525,27 +504,6 @@ plot_grid(generate_km_plot(surv_combined),
 ```
 
 <br><br>
-
-##### Matched population - modified for publication - 0.05
-```{r fig.width=12, fig.height=10}
-generate_km_plot(surv_combined) + 
-  scale_y_continuous(expand = expansion(mult=c(0,0.05))) +
-  theme(legend.position = "right")
-```
-
-##### Matched population - modified for publication - 0.1
-```{r fig.width=12, fig.height=10}
-generate_km_plot(surv_combined) + 
-  scale_y_continuous(expand = expansion(mult=c(0,0.1))) +
-  theme(legend.position = "right")
-```
-
-##### Matched population - modified for publication - 0.15
-```{r fig.width=12, fig.height=10}
-generate_km_plot(surv_combined) + 
-  scale_y_continuous(expand = expansion(mult=c(0,0.15))) +
-  theme(legend.position = "right")
-```
 
 ##### CKD3 - unmatched
 
