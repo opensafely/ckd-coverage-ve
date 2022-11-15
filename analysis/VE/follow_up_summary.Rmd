@@ -1,5 +1,5 @@
 ---
-title: "Descriptive statistics for follow-up periods in "
+title: "Descriptive statistics for follow-up periods"
 output: html_document
 ---
 
@@ -206,7 +206,7 @@ palette1 = c("#74a9cf", "#2b8cbe", "#045a8d")
 ## Read in data
 d <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds")) %>%
   mutate(
-    stop_date = pmin(censor_date, postvax_positive_test_date, na.rm=TRUE),
+    stop_date = pmin(censor_date_testing, postvax_positive_test_date, na.rm=TRUE),
     tte_stop = tte(vax3_date - 1, stop_date, na.censor=TRUE)
   )
 
