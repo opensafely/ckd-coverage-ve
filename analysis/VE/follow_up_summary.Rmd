@@ -71,9 +71,9 @@ for (i in 1:nrow(summary_df)) {
 }
 
 ## Set non-zero values below redaction threshold to 0
-summary_df$n_enrolled[summary_df$date>as.Date("2021-11-14") | (summary_df$n_enrolled>0 & summary_df$n_enrolled<=redaction_threshold)] = NA
-summary_df$cumulative_nextvax[summary_df$date>as.Date("2021-11-14") | (summary_df$cumulative_nextvax>0 & summary_df$cumulative_nextvax<=redaction_threshold)] = NA
-summary_df$n_cases[summary_df$date>as.Date("2021-11-14") | (summary_df$n_cases>0 & summary_df$n_cases<=redaction_threshold)] = NA
+summary_df$n_enrolled[summary_df$date>as.Date("2021-11-16") | (summary_df$n_enrolled>0 & summary_df$n_enrolled<=redaction_threshold)] = NA
+summary_df$cumulative_nextvax[summary_df$date>as.Date("2021-11-16") | (summary_df$cumulative_nextvax>0 & summary_df$cumulative_nextvax<=redaction_threshold)] = NA
+summary_df$n_cases[summary_df$date>as.Date("2021-11-16") | (summary_df$n_cases>0 & summary_df$n_cases<=redaction_threshold)] = NA
 
 ## Set variant
 summary_df$variant = "Alpha"
@@ -87,7 +87,7 @@ g1 = ggplot(summary_df, aes(x=date, y=n_enrolled/1000)) +
                limits = c(as.Date("2021-01-01"), as.Date("2021-11-30")), 
                breaks = c(as.Date("2021-01-01"), as.Date("2021-04-01"), as.Date("2021-07-01"), as.Date("2021-10-01"))) +
     theme_bw() + xlab(" ") + ylab("N followed up\n(1000s)") + ylim(0,450) + 
-    geom_vline(xintercept = as.Date(c("2021-01-01", "2021-11-14")), linetype="dotted", colour=palette1[3]) +
+    geom_vline(xintercept = as.Date(c("2021-01-04", "2021-11-16")), linetype="dotted", colour=palette1[3]) +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
            legend.title = element_text(size=12), legend.text = element_text(size=12))
@@ -98,7 +98,7 @@ g2 = ggplot(summary_df, aes(x=date, y=n_cases, fill=variant)) +
                limits = c(as.Date("2021-01-01"), as.Date("2021-11-30")), 
                breaks = c(as.Date("2021-01-01"), as.Date("2021-04-01"), as.Date("2021-07-01"), as.Date("2021-10-01"))) +
     theme_bw() + xlab(" ") + ylab("N cases (weekly)") +
-    geom_vline(xintercept = as.Date(c("2021-01-01", "2021-11-14")), linetype="dotted", colour=palette1[3]) +
+    geom_vline(xintercept = as.Date(c("2021-01-04", "2021-11-16")), linetype="dotted", colour=palette1[3]) +
     scale_fill_manual(values = c("Alpha"=palette2[1], "Delta"=palette2[2], "Omicron"=palette2[3])) +
     labs(fill = "Major variant") +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
@@ -113,7 +113,7 @@ g3 = ggplot(summary_df, aes(x=date, y=cumulative_nextvax/1000)) +
                limits = c(as.Date("2021-01-01"), as.Date("2021-11-30")), 
                breaks = c(as.Date("2021-01-01"), as.Date("2021-04-01"), as.Date("2021-07-01"), as.Date("2021-10-01"))) +
     theme_bw() + xlab("Date") + ylab("Cumulative 3rd dose\ncount (1000s)") + ylim(0,450) + 
-    geom_vline(xintercept = as.Date(c("2021-01-01", "2021-11-14")), linetype="dotted", colour=palette1[3]) +
+    geom_vline(xintercept = as.Date(c("2021-01-04", "2021-11-16")), linetype="dotted", colour=palette1[3]) +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
            legend.title = element_text(size=12), legend.text = element_text(size=12))
@@ -212,7 +212,7 @@ d <- read_rds(here::here("output", "data", "data_cohort_VE_boost.rds")) %>%
 
 ## Create summary data frame
 summary_df = data.frame(
-  date = seq(as.Date("2021-09-01", format="%Y-%m-%d"), as.Date("2022-04-30", format="%Y-%m-%d"), "weeks")
+  date = seq(as.Date("2021-09-01", format="%Y-%m-%d"), as.Date("2022-04-07", format="%Y-%m-%d"), "weeks")
 )
 
 ## Calculate number enrolled, cumulative next dose administration, and case counts over time
@@ -230,9 +230,9 @@ for (i in 1:nrow(summary_df)) {
 }
 
 ## Set non-zero values below redaction threshold to 0
-summary_df$n_enrolled[summary_df$date>as.Date("2022-04-21") | (summary_df$n_enrolled>0 & summary_df$n_enrolled<=redaction_threshold)] = NA
-summary_df$cumulative_nextvax[summary_df$date>as.Date("2022-04-21") | (summary_df$cumulative_nextvax>0 & summary_df$cumulative_nextvax<=redaction_threshold)] = NA
-summary_df$n_cases[summary_df$date>as.Date("2022-04-21") | (summary_df$n_cases>0 & summary_df$n_cases<=redaction_threshold)] = NA
+summary_df$n_enrolled[summary_df$date>as.Date("2022-03-31") | (summary_df$n_enrolled>0 & summary_df$n_enrolled<=redaction_threshold)] = NA
+summary_df$cumulative_nextvax[summary_df$date>as.Date("2022-03-31") | (summary_df$cumulative_nextvax>0 & summary_df$cumulative_nextvax<=redaction_threshold)] = NA
+summary_df$n_cases[summary_df$date>as.Date("2022-03-31") | (summary_df$n_cases>0 & summary_df$n_cases<=redaction_threshold)] = NA
 
 ## Set variant
 summary_df$variant = "Alpha"
@@ -244,10 +244,10 @@ summary_df$variant = factor(summary_df$variant, levels = c("Alpha", "Delta", "Om
 g1 = ggplot(summary_df, aes(x=date, y=n_enrolled/1000)) + 
     geom_bar(stat="identity", fill = palette1[1]) +
     scale_x_date(labels = date_format("%m/%y"),
-               limits = c(as.Date("2021-09-01"), as.Date("2022-04-30")), 
+               limits = c(as.Date("2021-09-01"), as.Date("2022-04-07")), 
                breaks = c(as.Date("2021-09-01"), as.Date("2021-11-01"), as.Date("2022-01-01"), as.Date("2022-03-01"))) +
     theme_bw() + xlab(" ") + ylab("N followed up\n(1000s)") + ylim(0,400) + 
-    geom_vline(xintercept = as.Date(c("2021-09-01", "2022-04-21")), linetype="dotted", colour=palette1[3]) +
+    geom_vline(xintercept = as.Date(c("2021-09-01", "2022-03-31")), linetype="dotted", colour=palette1[3]) +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
            legend.title = element_text(size=12), legend.text = element_text(size=12))
@@ -255,10 +255,10 @@ g1 = ggplot(summary_df, aes(x=date, y=n_enrolled/1000)) +
 g2 = ggplot(summary_df, aes(x=date, y=n_cases, fill=factor(variant))) + 
     geom_bar(stat="identity") +
     scale_x_date(labels = date_format("%m/%y"),
-               limits = c(as.Date("2021-09-01"), as.Date("2022-04-30")), 
+               limits = c(as.Date("2021-09-01"), as.Date("2022-04-07")), 
                breaks = c(as.Date("2021-09-01"), as.Date("2021-11-01"), as.Date("2022-01-01"), as.Date("2022-03-01"))) +
     theme_bw() + xlab(" ") + ylab("N cases (weekly)") + 
-    geom_vline(xintercept = as.Date(c("2021-09-01", "2022-04-21")), linetype="dotted", colour=palette1[3]) +
+    geom_vline(xintercept = as.Date(c("2021-09-01", "2022-03-31")), linetype="dotted", colour=palette1[3]) +
     scale_fill_manual(values = c("Alpha"=palette2[1], "Delta"=palette2[2], "Omicron"=palette2[3])) +
     labs(fill = "Major variant") +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
@@ -270,10 +270,10 @@ g2 = ggplot(summary_df, aes(x=date, y=n_cases, fill=factor(variant))) +
 g3 = ggplot(summary_df, aes(x=date, y=cumulative_nextvax/1000)) + 
     geom_line(colour =  palette1[3]) +
     scale_x_date(labels = date_format("%m/%y"),
-               limits = c(as.Date("2021-09-01"), as.Date("2022-04-30")), 
+               limits = c(as.Date("2021-09-01"), as.Date("2022-04-07")), 
                breaks = c(as.Date("2021-09-01"), as.Date("2021-11-01"), as.Date("2022-01-01"), as.Date("2022-03-01"))) +
     theme_bw() + xlab("Date") + ylab("Cumulative 4th dose\ncount (1000s)") + ylim(0,400) + 
-    geom_vline(xintercept = as.Date(c("2021-09-01", "2022-04-21")), linetype="dotted", colour=palette1[3]) +
+    geom_vline(xintercept = as.Date(c("2021-09-01", "2022-03-31")), linetype="dotted", colour=palette1[3]) +
     theme(strip.background = element_blank(), strip.text = element_text(size=12),
            axis.text = element_text(size=12), axis.title = element_text(size=12),
            legend.title = element_text(size=12), legend.text = element_text(size=12))
