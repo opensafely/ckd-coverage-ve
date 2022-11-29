@@ -15,7 +15,7 @@ actions:
 
   # Extract data ----
   generate_study_population:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_coverage --output-dir=output/data
+    run: cohortextractor:latest generate_cohort --study-definition study_definition --output-dir=output/data
     outputs:
       highly_sensitive:
         cohort: output/data/input.csv
