@@ -31,16 +31,16 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0) {
   outcome = "vax3_date"
   outcome_label = "dose3"
-  cutoff = as.Date("2022-05-11", format = "%Y-%m-%d")
+  cutoff = as.Date("2022-10-11", format = "%Y-%m-%d")
 } else {
   if (args[[1]]=="dose3") {
     outcome = "vax3_date"
     outcome_label = "dose3"
-    cutoff = as.Date("2022-05-11", format = "%Y-%m-%d")
+    cutoff = as.Date("2022-10-11", format = "%Y-%m-%d")
   } else if (args[[1]]=="dose4") {
     outcome = "vax4_date"
     outcome_label = "dose4"
-    cutoff = as.Date("2022-05-11", format = "%Y-%m-%d")
+    cutoff = as.Date("2022-10-11", format = "%Y-%m-%d")
   } else {
     # Print error if no argument specified
     stop("No outcome specified")
