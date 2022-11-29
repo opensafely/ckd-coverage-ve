@@ -19,7 +19,7 @@ from codelists import *
 
 ### Set initial date parameters
 start_date = "2020-12-01"
-end_date = "2022-06-22" # date of most recent coverage report update (https://reports.opensafely.org/reports/vaccine-coverage/)
+end_date = "2022-10-11" # date of most recent database build (https://reports.opensafely.org/reports/opensafely-tpp-database-builds/)
 # if end_date updated, also update return_expectations in defined variables for consistency
 
 study = StudyDefinition(
@@ -389,7 +389,7 @@ study = StudyDefinition(
     returning = "date_of_death",
     date_format = "YYYY-MM-DD",
     return_expectations = {
-      "date": {"earliest": "2020-12-01", "latest" : "2022-06-22"},
+      "date": {"earliest": "2020-12-01", "latest" : "2022-10-11"},
       "rate": "uniform",
       "incidence": 0.05
     },
