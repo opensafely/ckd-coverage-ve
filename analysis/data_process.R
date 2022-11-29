@@ -295,19 +295,19 @@ data_processed <- data_extract %>%
     jcvi_group = fct_case_when(
       care_home==1 & age>=65 ~ "1 (65+ care home resident)",
       care_home==0 & (age>=80 | hscworker==1) ~ "2 (80+ or health/social care worker)",
-      care_home==0 & (age>=75 & age<80) ~ "3 (75+)",
-      care_home==0 & ((age>=70 & age<75) | (cev==1 & age>=16 & age<70)) ~ "4 (70+ or clinically extremely vulnerable)",
-      care_home==0 & cev==0 & (age>=65 & age<70) ~ "5 (65+)",
+      care_home==0 & hscworker==0 & (age>=75 & age<80) ~ "3 (75+)",
+      care_home==0 & hscworker==0 & ((age>=70 & age<75) | (cev==1 & age>=16 & age<70)) ~ "4 (70+ or clinically extremely vulnerable)",
+      care_home==0 & hscworker==0 & cev==0 & (age>=65 & age<70) ~ "5 (65+)",
       TRUE ~ "6 (16-65 and clinically vulnerable)" # Since CKD patients would be classified as clinically vulnerable, 6 is maximum JCVI group for this population
     ),
     
     # Updated JCVI priority groups: https://www.england.nhs.uk/coronavirus/wp-content/uploads/sites/52/2021/07/C1327-covid-19-vaccination-autumn-winter-phase-3-planning.pdf
     jcvi_group_update = fct_case_when(
       care_home==1 | hscworker==1  ~ "1 (care home resident or health/social care worker)",
-      care_home==0 & age_august2021>=80 ~ "2 (80+)",
-      care_home==0 & age_august2021>=75 ~ "3 (75+)",
-      care_home==0 & (age_august2021>=70 | (cev & (age_august2021>=16))) ~ "4 (70+ or clinically extremely vulnerable)",
-      care_home==0 & age_august2021>=65 ~ "5 (65+)",
+      care_home==0 & hscworker==0 & age_august2021>=80 ~ "2 (80+)",
+      care_home==0 & hscworker==0 & (age_august2021>=75 & age_august2021<80) ~ "3 (75+)",
+      care_home==0 & hscworker==0 & ((age_august2021>=70 & age_august2021<75) | (cev==1 & age_august2021>=16 & age_august2021<70)) ~ "4 (70+ or clinically extremely vulnerable)",
+      care_home==0 & hscworker==0 & cev==0 & age_august2021>=65 & age_august2021<70 ~ "5 (65+)",
       TRUE ~ "6 (16-65 and clinically vulnerable)" # Since CKD patients would be classified as clinically vulnerable, 6 is maximum JCVI group for this population
     ),
     
