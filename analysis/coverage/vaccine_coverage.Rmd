@@ -21,9 +21,10 @@ library('cowplot')
 library('fs')
 library('survival')
 library('survminer')
+library('scales')
 
 # Define analysis cut-off date
-end_date <- as_date("2022-05-11")
+end_date <- as_date("2022-08-31")
 
 ## Import custom user functions
 source(here::here("analysis", "functions.R"))
@@ -57,18 +58,15 @@ Vaccine recommendations for people with kidney disease in the UK have evolved ov
 * Maximum of 5 COVID-19 doses recorded
 * No dose intervals of <14 days across first 4 doses
 
-A total of **`r prettyNum(rounded_n)`** (rounded to the nearest 5) met the inclusion criteria (see *output/data/flowchart.csv* for additional details), of which **`r prettyNum(rounded_n_uncensored)`** remained uncensored (alive and registered) throughout follow-up (01-Dec-2020 to 11-May-2022).
+A total of **`r prettyNum(rounded_n)`** (rounded to the nearest 5) met the inclusion criteria (see *output/data/flowchart.csv* for additional details), of which **`r prettyNum(rounded_n_uncensored)`** remained uncensored (alive and registered) throughout follow-up (01-Dec-2020 to 31-August-2022).
 
-Of the total population, **`r prettyNum(rounded_n_dose4)`** were >=75 years or had a history of immunosuppression, haematologic cancer, or transplant on the index date. This population includes individuals eligible for an extended primary series or second booster dose, and was therefore included in the dose 4 analysis subset. **`r prettyNum(rounded_n_dose4_uncensored)`** of the dose 4 analysis subset remained uncensored (alive and registered) throughout follow-up (01-Dec-2020 to 11-May-2022).
+Of the total population, **`r prettyNum(rounded_n_dose4)`** were >=75 years or had a history of immunosuppression, haematologic cancer, or transplant on the index date. This population includes individuals eligible for an extended primary series or second booster dose, and was therefore included in the dose 4 analysis subset. **`r prettyNum(rounded_n_dose4_uncensored)`** of the dose 4 analysis subset remained uncensored (alive and registered) throughout follow-up (01-Dec-2020 to 31-August-2022).
 <br/><br/>  
 
 #### Cohort selection
 ```{r}
 flowchart <- read.csv(here::here("output", "tables", "flowchart_coverage.csv"))
 names(flowchart)[1] = "Criteria"
-
-# Correct wording relating to analysis cut-off
-flowchart$Criteria = str_replace(flowchart$Criteria, "20 April 2022", "analysis cut-off")
 
 # Render flowchart
 flowchart %>%
@@ -127,7 +125,7 @@ table_1 %>%
 See footnotes above. Among people with CKD4–5, `r prettyNum(ckd4_sum)` had stage 4 CKD (eGFR 15–29 ml/min/1.73 m2) and `r prettyNum(ckd5_sum)` had stage 5 CKD (eGFR <15ml/min/1.73 m2).
 <br/><br/>
 
-#### Coverage as of 11-May-2022
+#### Coverage as of 31-August-2022
 ```{r}
 #### Generate Kaplan-Meier tte data for each dose
 data_km <- data_cohort %>%
@@ -136,7 +134,7 @@ data_km <- data_cohort %>%
     start_date = as.Date("2020-12-01", format = "%Y-%m-%d"),
     
     # End date
-    end_date = as.Date("2022-05-11", format = "%Y-%m-%d"),
+    end_date = as.Date("2022-08-31", format = "%Y-%m-%d"),
     
     # Censoring
     censor_date = pmin(death_date, 
@@ -163,7 +161,7 @@ data_km <- data_cohort %>%
 data_km_dose4 <- data_dose4 %>%
   mutate(
     start_date = as.Date("2020-12-01", format = "%Y-%m-%d"),
-    end_date = as.Date("2022-05-11", format = "%Y-%m-%d"),
+    end_date = as.Date("2022-08-31", format = "%Y-%m-%d"),
     censor_date = pmin(death_date, 
                        dereg_date, 
                        end_date, 
@@ -258,7 +256,7 @@ gt(collated) %>%
 ```
 <br/><br/>
 
-#### Subgroup coverage as of 11-May-2022 (cumulative incidence based on Kaplan-Meier estimates)
+#### Subgroup coverage as of 31-August-2022 (cumulative incidence based on Kaplan-Meier estimates)
 ```{r}
 ## Function to extract subgroup-specific Kaplan-Meier estimates
 extract_subset_max = function(selected_subset) {
@@ -372,17 +370,27 @@ km_collated$dose_plot = km_collated$dose
 km_collated$dose_plot[km_collated$dose %in% c("4 (full)", "4 (subset)")] = "4"
 km_collated$dose_plot[km_collated$dose %in% c("5 (full)", "5 (subset)")] = "5"
 
+km_collated$Dose = km_collated$dose
+km_collated$Dose[km_collated$Dose == "4 (full)"] = "4"
+km_collated$Dose[km_collated$Dose == "5 (full)"] = "5"
+
 ## Create variable for full vs subset
 km_collated$Population = "Full"
 km_collated$Population[km_collated$dose %in% c("4 (subset)", "5 (subset)")] = "Subset"
 
 ## Generate plot
-km_plot = ggplot(subset(km_collated, dose!="5 (subset)"), aes(x = date, y = cum.in.floor*100, colour = factor(dose_plot))) + geom_line(aes(linetype=Population)) +
-          theme_bw()+ scale_colour_manual(values = palette[c(1,2,3,4,5)]) +
-          theme(legend.position="right") + scale_x_date(date_labels = "%b %Y") +
-          ylim(0,100) + xlab("Date") + ylab("Cumulative coverage (%)") + labs(colour="Dose") +
+km_plot = ggplot(subset(km_collated, dose!="5 (subset)"), aes(x = date, y = cum.in.floor*100)) + 
+          geom_line(aes(linetype=Dose, colour = Dose)) +
+          theme_bw() + scale_colour_manual(values = palette[c(1,2,3,4,4,5)]) +
+          scale_x_date(labels = date_format("%m/%y"),
+               limits = c(as.Date("2020-12-01"), as.Date("2022-08-31")), 
+               breaks = c(as.Date("2021-01-01"), as.Date("2021-04-01"), as.Date("2021-07-01"), as.Date("2021-10-01"),
+                          as.Date("2022-01-01"), as.Date("2022-04-01"), as.Date("2022-07-01"))) + 
+          theme(legend.position="right") + #scale_x_date(date_labels = "%b %Y") +
+          ylim(0,100) + xlab("") + ylab("Cumulative coverage (%)") + 
           theme(legend.title = element_text(size=14), legend.text = element_text(size=12), 
-              axis.text = element_text(size=14), axis.title = element_text(size=14))
+              axis.text = element_text(size=14), axis.title = element_text(size=14), 
+              axis.text.x = element_text(angle = 45, hjust = 1))
 
 ### Product profile plot
 palette = c("#8da0cb","#fc8d62","#66c2a5","grey")
@@ -435,9 +443,9 @@ total_N_lr = plyr::round_any(nrow(data_lr),5)
 vax_perc_lr = round(total_vax/total_N*100,1)
 ```
 
-Cox proportional hazards models were used to explore factors associated with completion of a 3-dose series via any product combination between **08-Dec-2020** and **11-May-2022**.  
+Cox proportional hazards models were used to explore factors associated with completion of a 3-dose series via any product combination between **08-Dec-2020** and **31-August-2022**.  
     
-Follow-up was censored on the date of death, deregistration, or the end of the study period (11-May-2022). Overall coverage among individuals uncensored on 11-May-2022 was `r vax_perc_uncensored`% (`r prettyNum(total_vax_uncensored)` / `r prettyNum(total_N_uncensored)`, rounded to nearest 5).
+Follow-up was censored on the date of death, deregistration, or the end of the study period (31-August-2022). Overall coverage among individuals uncensored on 31-August-2022 was `r vax_perc_uncensored`% (`r prettyNum(total_vax_uncensored)` / `r prettyNum(total_N_uncensored)`, rounded to nearest 5).
 <br/><br/>
    
 ##### Sequential adjustment model structure 
@@ -652,7 +660,7 @@ total_N_uncensored = plyr::round_any(sum(data_cox$uncensored_at_cut_off),5)
 vax_perc_uncensored = round(total_vax_uncensored/total_N_uncensored*100,1)
 ```
 
-Analysis restricted to individuals who were >=75 years or had a history of immunosuppression, haematologic cancer, or transplant on the index date. Follow-up was censored on the date of death, deregistration, or the end of the study period (11-May-2022). Overall coverage among individuals uncensored on 11-May-2022 was `r vax_perc_uncensored`% (`r prettyNum(total_vax_uncensored)` / `r prettyNum(total_N_uncensored)`, rounded to nearest 5). 
+Analysis restricted to individuals who were >=75 years or had a history of immunosuppression, haematologic cancer, or transplant on the index date. Follow-up was censored on the date of death, deregistration, or the end of the study period (31-August-2022). Overall coverage among individuals uncensored on 31-August-2022 was `r vax_perc_uncensored`% (`r prettyNum(total_vax_uncensored)` / `r prettyNum(total_N_uncensored)`, rounded to nearest 5). 
 <br/><br/>
 
 ##### Multivariate model outputs (scroll left/right for full table)

@@ -179,6 +179,20 @@ actions:
       moderately_sensitive:
         html: output/markdown/vaccine_coverage.html
         
+  intersection_coverage_dose3:
+    run: r:latest analysis/coverage/coverage_intersection.R dose3
+    needs: [data_selection_coverage, table_1_coverage_dose3]
+    outputs:
+      moderately_sensitive:
+        csv: output/tables/intersection_coverage_dose3.csv
+        
+  intersection_coverage_dose4:
+    run: r:latest analysis/coverage/coverage_intersection.R dose4
+    needs: [data_selection_coverage, table_1_coverage_dose3]
+    outputs:
+      moderately_sensitive:
+        csv: output/tables/intersection_coverage_dose4.csv
+        
   # Model checks ----
   # Dose 3 - full
   cox_model_check_coverage_dose3_full:

@@ -260,7 +260,9 @@ for (s in 1:length(strata)) {
   
   ## Add variable to summary table that tabulates KM estimates of coverage by group
   tbl_full$km_coverage = NA
-  tbl_full$km_cml_event_floor = NA
+  tbl_full$km_coverage_ll = NA
+  tbl_full$km_coverage_ul = NA
+  tbl_full$km_cml_event = NA
   
   ## Convert data subset to dataframe to enable variable name processing within loop
   data_subset = data.frame(data_subset)
@@ -279,20 +281,30 @@ for (s in 1:length(strata)) {
         broom::tidy() %>% 
         filter(estimate > 0) %>%
         mutate(
-          N = plyr::round_any(max(n.risk, na.rm=TRUE),5),
+          N = plyr::round_any(max(n.risk, na.rm=TRUE), rounding_threshold),
           cml.event = cumsum(replace_na(n.event, 0)),
           cml.censor = cumsum(replace_na(n.censor, 0)),
-          cml.event.floor = floor_any(cml.event, 5),
-          cml.censor.floor = floor_any(cml.censor, 5),
-          n.event.floor = diff(c(0,cml.event.floor)),
-          n.censor.floor = diff(c(0,cml.censor.floor)),
-          n.risk.floor = N - lag(cml.event.floor + cml.censor.floor,1,0),
-          surv.floor = cumprod(1 - n.event.floor / n.risk.floor),
-          cum.in.floor = 1 - surv.floor
+          cml.event = floor_any(cml.event, rounding_threshold),
+          cml.censor = floor_any(cml.censor, rounding_threshold),
+          n.event = diff(c(0,cml.event)),
+          n.censor = diff(c(0,cml.censor)),
+          n.risk = N - lag(cml.event + cml.censor,1,0),
+          summand = n.event / ((n.risk - n.event) * n.risk),
+          surv = cumprod(1 - n.event / n.risk),
+          surv.se = surv * sqrt(cumsum(replace_na(summand, 0))),
+          llsurv = log(-log(surv)),
+          llsurv.se = sqrt((1 / log(surv)^2) * cumsum(summand)),
+          surv.ll = exp(-exp(llsurv + qnorm(0.025)*llsurv.se)),
+          surv.ul = exp(-exp(llsurv + qnorm(0.975)*llsurv.se)),
+          cum.in = 1 - surv,
+          cum.in.ll = 1 - surv.ll,
+          cum.in.ul = 1 - surv.ul
         )
       # Merge KM estimates and N events (floor of 5) with main table
-      tbl_full$km_coverage[tbl_full$variable==var_list_subset[i] & tbl_full$label==levels[j]] = round(max(surv$cum.in.floor)*100,1)
-      tbl_full$km_cml_event_floor[tbl_full$variable==var_list_subset[i] & tbl_full$label==levels[j]] = max(surv$cml.event.floor)
+      tbl_full$km_coverage[tbl_full$variable==var_list_subset[i] & tbl_full$label==levels[j]] = round(max(surv$cum.in)*100,1)
+      tbl_full$km_coverage_ll[tbl_full$variable==var_list_subset[i] & tbl_full$label==levels[j]] = round(max(surv$cum.in.ll, na.rm=TRUE)*100,1)
+      tbl_full$km_coverage_ul[tbl_full$variable==var_list_subset[i] & tbl_full$label==levels[j]] = round(max(surv$cum.in.ul, na.rm=TRUE)*100,1)
+      tbl_full$km_cml_event[tbl_full$variable==var_list_subset[i] & tbl_full$label==levels[j]] = max(surv$cml.event)
     }
   }
     
@@ -360,7 +372,7 @@ for (s in 1:length(strata)) {
   tbl_summary$N_event = plyr::round_any(tbl_summary$N_event, rounding_threshold)
   tbl_summary$n_obs = plyr::round_any(tbl_summary$n_obs, rounding_threshold)
   tbl_summary$n_event = plyr::round_any(tbl_summary$n_event, rounding_threshold)
-  tbl_summary$n_uncensored_at_cut_off = plyr::roundrounding_threshold_any(tbl_summary$n_uncensored_at_cut_off, rounding_threshold)
+  tbl_summary$n_uncensored_at_cut_off = plyr::round_any(tbl_summary$n_uncensored_at_cut_off, rounding_threshold)
   tbl_summary$n_vax_at_cut_off = plyr::round_any(tbl_summary$n_vax_at_cut_off, rounding_threshold)
   tbl_summary$perc_vax_cut_off = round(tbl_summary$n_vax_at_cut_off/tbl_summary$n_uncensored_at_cut_off*100,1)
   
@@ -373,10 +385,10 @@ for (s in 1:length(strata)) {
     select(variable, group, plot_group, label_clean, # columns 1:4
            N, N_event, n_obs, # columns 5:7
            n_event, n_unvax_uncensored, # columns 8:9 - references for redaction
-           n_uncensored_at_cut_off, n_vax_at_cut_off, perc_vax_cut_off, km_cml_event_floor, km_coverage, # columns 10:14
-           estimate_minimal, conf.low_minimal, conf.high_minimal, p.value_minimal, # columns 15:18
-           estimate_partial, conf.low_partial, conf.high_partial, p.value_partial, # columns 19:22
-           estimate_full, conf.low_full, conf.high_full, p.value_full) # columns 23:26 
+           n_uncensored_at_cut_off, n_vax_at_cut_off, perc_vax_cut_off, km_cml_event, km_coverage, km_coverage_ll, km_coverage_ul, # columns 10:16
+           estimate_minimal, conf.low_minimal, conf.high_minimal, p.value_minimal, # columns 17:20
+           estimate_partial, conf.low_partial, conf.high_partial, p.value_partial, # columns 21:24
+           estimate_full, conf.low_full, conf.high_full, p.value_full) # columns 25:28 
   
   ## Redact all model outputs if events/non-events <= redaction threshold (where non-events calculated among uncensored population)
   for (i in 1:nrow(tbl_reduced)) {
@@ -384,7 +396,7 @@ for (s in 1:length(strata)) {
       (as.numeric(tbl_reduced[i,"n_event"])>0 & as.numeric(tbl_reduced[i,"n_event"])<=redaction_threshold) |
       (as.numeric(tbl_reduced[i,"n_unvax_uncensored"])>0 & as.numeric(tbl_reduced[i,"n_unvax_uncensored"])<=redaction_threshold)
       ) {  
-      tbl_reduced[i,5:26] = "[Redacted]" 
+      tbl_reduced[i,5:28] = "[Redacted]" 
       }
   }
   
