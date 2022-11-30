@@ -371,13 +371,13 @@ data_processed <- data_extract %>%
     # CEV other
     rrt_2020 = ifelse(ukrr_2020_group=="Tx" | ukrr_2020_group=="Dialysis", 1, 0),
     any_comorb = pmax(rrt_2020, 
-                      immunosuppression, sev_obesity, diabetes, any_resp_dis,
-                      chd, cld, asplenia, any_cancer, other_transplant, chronic_neuro_dis_inc_sig_learn_dis, sev_mental_ill),
+                      immunosuppression, mod_sev_obesity, diabetes, any_resp_dis,
+                      chd, cld, asplenia, cancer, haem_cancer, other_transplant, chronic_neuro_dis_inc_sig_learn_dis, sev_mental_ill),
     cev_other = ifelse(cev==1 & any_comorb==0, 1, 0),
     
     # Multiple comorbidities (non-CKD-related) - 0, 1, or 2+
     multimorb =
-      (sev_obesity) +
+      (mod_sev_obesity) +
       (chd) +
       (diabetes) +
       (cld) +

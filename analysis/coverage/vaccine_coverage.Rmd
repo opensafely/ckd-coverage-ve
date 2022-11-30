@@ -314,15 +314,15 @@ t_dose_dose4 = data.frame(table(data_cohort$vax4_type_descr)) %>%
   mutate(`Dose 4` = paste0(prettyNum(Frequency,  big.mark=",")," (",Percent,"%)"))
 
 ## Dose 5
-# t_dose_dose5 = data.frame(table(data_cohort$vax5_type_descr)) %>% 
-#   redact_table(multiple=FALSE) %>%
-#   mutate(`Dose 5` = paste0(prettyNum(Frequency,  big.mark=",")," (",Percent,"%)"))
+t_dose_dose5 = data.frame(table(data_cohort$vax5_type_descr)) %>% 
+   redact_table(multiple=FALSE) %>%
+   mutate(`Dose 5` = paste0(prettyNum(Frequency,  big.mark=",")," (",Percent,"%)"))
 
 # Render combined table
 left_join(t_dose_dose1, t_dose_dose2, by = "Combination") %>%
   left_join(.,  t_dose_dose3, by = "Combination") %>%
   left_join(.,  t_dose_dose4, by = "Combination") %>%
-  # left_join(.,  t_dose_dose5, by = "Combination") %>%
+  left_join(.,  t_dose_dose5, by = "Combination") %>%
   select(-starts_with(c("Frequency", "Percent"))) %>%
   mutate(Combination = str_replace_all(Combination, c("ChAdOx1" = "AZ", "BNT162b2" = "BNT", "Moderna" = "MOD"))) %>%
   gt() %>%
@@ -399,7 +399,8 @@ palette = c("#8da0cb","#fc8d62","#66c2a5","grey")
 collated = rbind(t_dose_dose1 %>% select(-`Dose 1`) %>% mutate(dose = 1), 
                  t_dose_dose2 %>% select(-`Dose 2`) %>% mutate(dose = 2), 
                  t_dose_dose3 %>% select(-`Dose 3`) %>% mutate(dose = 3), 
-                 t_dose_dose4 %>% select(-`Dose 4`) %>% mutate(dose = 4)) %>%
+                 t_dose_dose4 %>% select(-`Dose 4`) %>% mutate(dose = 4),
+                 t_dose_dose5 %>% select(-`Dose 5`) %>% mutate(dose = 5)) %>%
       mutate(Combination = str_replace_all(Combination, c("Moderna" = "mRNA-1273", "ChAdOx1" = "ChAdOx1-S")))
 collated$vaccine = factor(collated$Combination, levels = c("mRNA-1273", "ChAdOx1-S", "BNT162b2"))
 
@@ -422,7 +423,7 @@ plot_grid(km_plot, profile_plot,
 
 
 
-#### Covariates associated with vaccine coverage: dose 3 by 11 May 2022
+#### Covariates associated with vaccine coverage: dose 3 by 31 August 2022
 ```{r}
 data_cox <- read_rds(here::here("output", "data", "data_cox_coverage_dose3.rds"))
 
