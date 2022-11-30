@@ -27,7 +27,7 @@ redaction_threshold = 10
 ## Import data
 data <- read_rds(here::here("output", "data", "data_cohort_coverage_logistic.rds")) %>%
   mutate(
-    end_date = as.Date("2022-10-11", format = "%Y-%m-%d"),
+    end_date = as.Date("2022-08-31", format = "%Y-%m-%d"),
     covid_vax = ifelse((!is.na(vax3_date)) & vax3_date<=end_date, 1, 0)
   )
  

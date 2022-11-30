@@ -31,16 +31,16 @@ args <- commandArgs(trailingOnly=TRUE)
 if(length(args)==0) {
   outcome = "vax3_date"
   outcome_label = "dose3"
-  cutoff = as.Date("2022-10-11", format = "%Y-%m-%d")
+  cutoff = as.Date("2022-08-31", format = "%Y-%m-%d")
 } else {
   if (args[[1]]=="dose3") {
     outcome = "vax3_date"
     outcome_label = "dose3"
-    cutoff = as.Date("2022-10-11", format = "%Y-%m-%d")
+    cutoff = as.Date("2022-08-31", format = "%Y-%m-%d")
   } else if (args[[1]]=="dose4") {
     outcome = "vax4_date"
     outcome_label = "dose4"
-    cutoff = as.Date("2022-10-11", format = "%Y-%m-%d")
+    cutoff = as.Date("2022-08-31", format = "%Y-%m-%d")
   } else {
     # Print error if no argument specified
     stop("No outcome specified")
@@ -279,18 +279,18 @@ for (s in 1:length(strata)) {
         broom::tidy() %>% 
         filter(estimate > 0) %>%
         mutate(
-          N = plyr::round_any(max(n.risk, na.rm=TRUE),10),
+          N = plyr::round_any(max(n.risk, na.rm=TRUE),5),
           cml.event = cumsum(replace_na(n.event, 0)),
           cml.censor = cumsum(replace_na(n.censor, 0)),
-          cml.event.floor = floor_any(cml.event, 10),
-          cml.censor.floor = floor_any(cml.censor, 10),
+          cml.event.floor = floor_any(cml.event, 5),
+          cml.censor.floor = floor_any(cml.censor, 5),
           n.event.floor = diff(c(0,cml.event.floor)),
           n.censor.floor = diff(c(0,cml.censor.floor)),
           n.risk.floor = N - lag(cml.event.floor + cml.censor.floor,1,0),
           surv.floor = cumprod(1 - n.event.floor / n.risk.floor),
           cum.in.floor = 1 - surv.floor
         )
-      # Merge KM estimates and N events (floor of 10) with main table
+      # Merge KM estimates and N events (floor of 5) with main table
       tbl_full$km_coverage[tbl_full$variable==var_list_subset[i] & tbl_full$label==levels[j]] = round(max(surv$cum.in.floor)*100,1)
       tbl_full$km_cml_event_floor[tbl_full$variable==var_list_subset[i] & tbl_full$label==levels[j]] = max(surv$cml.event.floor)
     }
@@ -360,7 +360,7 @@ for (s in 1:length(strata)) {
   tbl_summary$N_event = plyr::round_any(tbl_summary$N_event, rounding_threshold)
   tbl_summary$n_obs = plyr::round_any(tbl_summary$n_obs, rounding_threshold)
   tbl_summary$n_event = plyr::round_any(tbl_summary$n_event, rounding_threshold)
-  tbl_summary$n_uncensored_at_cut_off = plyr::round_any(tbl_summary$n_uncensored_at_cut_off, rounding_threshold)
+  tbl_summary$n_uncensored_at_cut_off = plyr::roundrounding_threshold_any(tbl_summary$n_uncensored_at_cut_off, rounding_threshold)
   tbl_summary$n_vax_at_cut_off = plyr::round_any(tbl_summary$n_vax_at_cut_off, rounding_threshold)
   tbl_summary$perc_vax_cut_off = round(tbl_summary$n_vax_at_cut_off/tbl_summary$n_uncensored_at_cut_off*100,1)
   

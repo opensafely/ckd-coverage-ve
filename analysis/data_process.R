@@ -120,7 +120,7 @@ data_extract <- read_csv(
     learning_disability = col_logical(),
     sev_mental_ill = col_logical(),
     organ_transplant = col_logical(),
-    non_kidney_transplant = col_logical(),
+    non_kidney_transplant = col_logical()
   ),
   na = character() # more stable to convert to missing later
 )
