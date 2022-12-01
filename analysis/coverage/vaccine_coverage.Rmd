@@ -172,8 +172,8 @@ data_km_dose4 <- data_dose4 %>%
     covid_vax_dose5 = dplyr::if_else((vax5_date>censor_date) | is.na(vax5_date), 0, 1)
 )
 
-## Function to generate rounded survival table (steps delayed to include at least 10 events)
-surv_table = function(dose, dosenum, doselabel, data_input, threshold=10) {
+## Function to generate rounded survival table (steps delayed to include at least 5 events)
+surv_table = function(dose, dosenum, doselabel, data_input, threshold=5) {
   surv = survfit(as.formula(paste0("Surv(follow_up_time_",dose,", covid_vax_",dose,") ~ 1")), data = data_input) %>% 
     broom::tidy() %>% 
     filter(estimate > 0) %>%
@@ -416,7 +416,7 @@ profile_plot = ggplot(collated, aes(fill=vaccine, y=as.numeric(Frequency)/1000, 
 plot_grid(km_plot, profile_plot, 
           ncol=2,  align="h", axis = c("tb"), rel_widths=c(1.5,1))
 ```
-<br/>Kaplan-Meier steps are delayed until at least 10 events have occurred. Subset = subset of overall cohort based on fourth dose eligibility, including individuals aged >=75 years at baseline, care home residents, transplant recipients (kidney/other), individuals with any history of haematologic cancer, and individuals with any history of immunosuppression.
+<br/>Kaplan-Meier steps are delayed until at least 5 events have occurred. Subset = subset of overall cohort based on fourth dose eligibility, including individuals aged >=75 years at baseline, care home residents, transplant recipients (kidney/other), individuals with any history of haematologic cancer, and individuals with any history of immunosuppression.
 <br/><br/>
 
 
