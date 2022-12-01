@@ -192,11 +192,13 @@ for (e in 1:10) {
       } # closes j loop 
     } # closes v loop
   
+  tab_group$km_cml_nonevent = tab_group$N - tab_group$km_cml_event
   tab_group$N[tab_group$N<=redaction_threshold] = "[Redacted]"
-  tab_group$km_cml_event[tab_group$km_cml_event<=redaction_threshold] = "[Redacted]"
-  tab_group$km_coverage[tab_group$km_cml_event<=redaction_threshold | tab_group$N<=redaction_threshold] = "[Redacted]"
-  tab_group$km_coverage_ll[tab_group$km_cml_event<=redaction_threshold | tab_group$N<=redaction_threshold] = "[Redacted]"
-  tab_group$km_coverage_ul[tab_group$km_cml_event<=redaction_threshold | tab_group$N<=redaction_threshold] = "[Redacted]"
+  tab_group$km_cml_event[tab_group$km_cml_event<=redaction_threshold | tab_group$km_cml_nonevent<=redaction_threshold] = "[Redacted]"
+  tab_group$km_cml_nonevent[tab_group$km_cml_event=="[Redacted]"] = "[Redacted]"
+  tab_group$km_coverage[tab_group$km_cml_event=="[Redacted]"] = "[Redacted]"
+  tab_group$km_coverage_ll[tab_group$km_cml_event=="[Redacted]"] = "[Redacted]"
+  tab_group$km_coverage_ul[tab_group$km_cml_event=="[Redacted]"] = "[Redacted]"
   
   ## Update column names
   tab_group$imd = imd_subset$imd[1]
