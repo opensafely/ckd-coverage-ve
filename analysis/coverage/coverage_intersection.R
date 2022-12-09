@@ -85,13 +85,14 @@ data_cox <- data_cohort %>%
 
 ## Important covariate levels from table 1 output
 tab <- read_rds(here::here("output", "tables", "table1_coverage_redacted_by_CKD.rds"))[,1:2] %>%
-  filter(Group != "N" & Group != "Ethnicity" & Group != "IMD" & Group != "Region" & Group != "JCVI group" &
+  filter(Group != "N" & Group != "Ethnicity"  & Group != "Region" & Group != "JCVI group" & #Group != "IMD" &
            Variable != "Dialysis code" & Variable != "Kidney transplant code")
 
 ## Specify variable levels
 tab$var = NA
 tab$var[tab$Group=="Age"] = "ageband2"
 tab$var[tab$Group=="Sex"] = "sex"
+tab$var[tab$Group=="IMD"] = "imd"
 tab$var[tab$Group=="Setting"] = "rural_urban_group"
 tab$var[tab$Group=="Kidney disease subgroup"] = "ckd_5cat"
 tab$var[tab$Variable=="CKD3-5 code"] = "chronic_kidney_disease_stages_3_5"
@@ -125,26 +126,42 @@ data_cox[,var_list] <- lapply(data_cox[,var_list], factor)
 if (all(complete.cases(data_cox))==FALSE) stop('Incomplete data for one or more patients in model') 
 
 ## Outer loop for IMD/ethnicity subset 
-for (e in 1:10) {
-  tab_group = tab
-  tab_group$km_coverage_ul = tab_group$km_coverage_ll = tab_group$km_coverage = tab_group$km_cml_event = tab_group$N = NA
+for (e in 1:12) {
   
+  ## IMD subgroups for White ethnicity
   if (e==1) { imd_subset = subset(data_cox, ethnicity=="White" & imd=="1 (most deprived)") }
   if (e==2) { imd_subset = subset(data_cox, ethnicity=="White" & imd=="2") }
   if (e==3) { imd_subset = subset(data_cox, ethnicity=="White" & imd=="3") }
   if (e==4) { imd_subset = subset(data_cox, ethnicity=="White" & imd=="4") }
   if (e==5) { imd_subset = subset(data_cox, ethnicity=="White" & imd=="5 (least deprived)") }
+  
+  ## IMD subgroups for non-White ethnicity
   if (e==6) { imd_subset = subset(data_cox, ethnicity!="White" & imd=="1 (most deprived)") }
   if (e==7) { imd_subset = subset(data_cox, ethnicity!="White" & imd=="2") }
   if (e==8) { imd_subset = subset(data_cox, ethnicity!="White" & imd=="3") }
   if (e==9) { imd_subset = subset(data_cox, ethnicity!="White" & imd=="4") }
   if (e==10) { imd_subset = subset(data_cox, ethnicity!="White" & imd=="5 (least deprived)") }
-
+  
+  ## Combined IMD data by ethnicity
+  if (e==11) { imd_subset = subset(data_cox, ethnicity=="White") }
+  if (e==12) { imd_subset = subset(data_cox, ethnicity!="White") }
+  
+  ## Pick output for separate or aggregated subgroups
+  if (e %in% 1:10) { 
+    var_list_sub = var_list[var_list!="imd"] 
+    tab_group = subset(tab, var!="imd")
+  } else {  
+    var_list_sub = var_list[var_list=="imd"] 
+    tab_group = subset(tab, var=="imd")
+  }
+  tab_group$km_coverage_ul = tab_group$km_coverage_ll = tab_group$km_coverage = tab_group$km_cml_event = tab_group$N = NA
+  
+  
     ## Calculate KM coverage estimates via loop over variable list
-    for (v in 1:length(var_list)) {
+    for (v in 1:length(var_list_sub)) {
       
       var_subset = data.frame(imd_subset)
-      var_selected = var_list[v]
+      var_selected = var_list_sub[v]
       var_subset$var_selected = var_subset[,var_selected]
       levels = names(table(var_subset$var_selected))    
     
@@ -177,17 +194,17 @@ for (e in 1:10) {
         
         if (levels[j]!="0" & levels[j]!="1") {
           # Merge KM estimates and N events (floor of 10) with main table
-          tab_group$N[tab_group$var==var_list[v] & tab_group$Variable==levels[j]] = surv$N[1]
-          tab_group$km_cml_event[tab_group$var==var_list[v] & tab_group$Variable==levels[j]] = max(surv$cml.event)
-          tab_group$km_coverage[tab_group$var==var_list[v] & tab_group$Variable==levels[j]] = round(max(surv$cum.in)*100,1)
-          tab_group$km_coverage_ll[tab_group$var==var_list[v] & tab_group$Variable==levels[j]] = round(max(surv$cum.in.ll, na.rm=TRUE)*100,1)
-          tab_group$km_coverage_ul[tab_group$var==var_list[v] & tab_group$Variable==levels[j]] = round(max(surv$cum.in.ul, na.rm=TRUE)*100,1)
+          tab_group$N[tab_group$var==var_list_sub[v] & tab_group$Variable==levels[j]] = surv$N[1]
+          tab_group$km_cml_event[tab_group$var==var_list_sub[v] & tab_group$Variable==levels[j]] = max(surv$cml.event)
+          tab_group$km_coverage[tab_group$var==var_list_sub[v] & tab_group$Variable==levels[j]] = round(max(surv$cum.in)*100,1)
+          tab_group$km_coverage_ll[tab_group$var==var_list_sub[v] & tab_group$Variable==levels[j]] = round(max(surv$cum.in.ll, na.rm=TRUE)*100,1)
+          tab_group$km_coverage_ul[tab_group$var==var_list_sub[v] & tab_group$Variable==levels[j]] = round(max(surv$cum.in.ul, na.rm=TRUE)*100,1)
         } else if (levels[j]=="1") {
-          tab_group$N[tab_group$var==var_list[v]] = surv$N[1]
-          tab_group$km_cml_event[tab_group$var==var_list[v]] = max(surv$cml.event)
-          tab_group$km_coverage[tab_group$var==var_list[v]] = round(max(surv$cum.in)*100,1)
-          tab_group$km_coverage_ll[tab_group$var==var_list[v]] = round(max(surv$cum.in.ll, na.rm=TRUE)*100,1)
-          tab_group$km_coverage_ul[tab_group$var==var_list[v]] = round(max(surv$cum.in.ul, na.rm=TRUE)*100,1)
+          tab_group$N[tab_group$var==var_list_sub[v]] = surv$N[1]
+          tab_group$km_cml_event[tab_group$var==var_list_sub[v]] = max(surv$cml.event)
+          tab_group$km_coverage[tab_group$var==var_list_sub[v]] = round(max(surv$cum.in)*100,1)
+          tab_group$km_coverage_ll[tab_group$var==var_list_sub[v]] = round(max(surv$cum.in.ll, na.rm=TRUE)*100,1)
+          tab_group$km_coverage_ul[tab_group$var==var_list_sub[v]] = round(max(surv$cum.in.ul, na.rm=TRUE)*100,1)
         }
       } # closes j loop 
     } # closes v loop
@@ -201,7 +218,7 @@ for (e in 1:10) {
   tab_group$km_coverage_ul[tab_group$km_cml_event=="[Redacted]"] = "[Redacted]"
   
   ## Update column names
-  tab_group$imd = imd_subset$imd[1]
+  if (e %in% 1:10) { tab_group$imd = imd_subset$imd[1] } else {  tab_group$imd = NA }
   if (imd_subset$ethnicity[1]=="White") {  tab_group$ethnicity = "White" } else {  tab_group$ethnicity = "Non-white" }
   
   if (e == 1) { collated_tab = tab_group } else { collated_tab = rbind(collated_tab, tab_group) }
