@@ -458,7 +458,7 @@ Follow-up was censored on the date of death, deregistration, or the end of the s
 #### Sensitivity analysis
 Logistic regression models were used as a sensitivity analysis to explore factors associated with completion of a 3-dose among individuals who were registered and alive up to the analysis cut-off (N = `r prettyNum(total_N_lr)`, rounded to nearest 5).    
 <br/><br/>
-Overall coverage as of **11 May 2022** was `r vax_perc_lr`% (`r prettyNum(total_vax_lr)` / `r prettyNum(total_N_lr)`, rounded to nearest 5).  
+Overall coverage as of **31 August 2022** was `r vax_perc_lr`% (`r prettyNum(total_vax_lr)` / `r prettyNum(total_N_lr)`, rounded to nearest 5).  
 <br/><br/>
 Minimally adjusted, partially adjusted, and fully adjusted models were used to explore the potential influence of each covariate, reflecting the structure of the Cox proportional hazard models but with region as an additional covariate (not shown) rather than a stratification factor.
 <br/><br/>    
@@ -644,7 +644,7 @@ plot_reduced_tbl(dose3_tbl, level="partial")
 
 
 
-#### Covariates associated with vaccine coverage: dose 4 by 11 May 2022
+#### Covariates associated with vaccine coverage: dose 4 by 31 August 2022
 
 ##### Cox proportional hazards
 ```{r}
