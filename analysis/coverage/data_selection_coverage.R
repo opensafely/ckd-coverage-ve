@@ -51,8 +51,8 @@ data_criteria <- data_processed %>%
     eligible_dose4 = (age>=75 | care_home==1 | haem_cancer==1 | immunosuppression==1 | ckd_5cat=="RRT (Tx)" | other_transplant==1), 
     
     # Other
-    alive_throughout = is.na(death_date),
-    registered_throughout = is.na(dereg_date),
+    alive_throughout = is.na(death_date) | death_date > as.Date("2022-08-31", format = "%Y-%m-%d"),
+    registered_throughout = is.na(dereg_date) | dereg_date > as.Date("2022-08-31", format = "%Y-%m-%d"),
     
     # Primary outcome study population
     include = (
