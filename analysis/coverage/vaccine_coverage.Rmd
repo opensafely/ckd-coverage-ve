@@ -33,7 +33,10 @@ source(here::here("analysis", "functions.R"))
 data_cohort <- read_rds(here::here("output", "data", "data_cohort_coverage.rds"))
 data_uncensored <- read_rds(here::here("output", "data", "data_cohort_coverage_logistic.rds"))
 data_dose4 <- read_rds(here::here("output", "data", "data_cohort_coverage_dose4.rds"))
-data_dose4_uncensored <- subset(data_dose4, is.na(death_date) & is.na(dereg_date))
+data_dose4_uncensored <- subset(data_dose4, (
+  is.na(death_date) | death_date > as.Date("2022-08-31", format = "%Y-%m-%d"))
+  & (is.na(dereg_date) | dereg_date > as.Date("2022-08-31", format = "%Y-%m-%d"))
+)
 
 ## Calculate rounded population totals
 rounded_n = plyr::round_any(nrow(data_cohort), 5)
